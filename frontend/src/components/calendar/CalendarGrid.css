@@ -1,0 +1,47 @@
+.calendar-grid {
+    padding: var(--spacing-md);
+  }
+  
+  .calendar-grid__weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+  
+  .calendar-grid__weekday {
+    text-align: center;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-gray-600);
+    padding: var(--spacing-sm);
+  }
+  
+  .calendar-grid__weekday--sunday {
+    color: var(--color-error);
+  }
+  
+  .calendar-grid__weekday--saturday {
+    color: var(--color-primary-500);
+  }
+  
+  .calendar-grid__dates {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-sm);
+  }
+  
+  @media (max-width: 640px) {
+    .calendar-grid {
+      padding: var(--spacing-sm);
+    }
+  
+    .calendar-grid__weekday {
+      font-size: var(--font-size-xs);
+      padding: var(--spacing-xs);
+    }
+  
+    .calendar-grid__dates {
+      gap: var(--spacing-xs);
+    }
+  }

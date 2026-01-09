@@ -1,0 +1,20 @@
+.calendar {
+    background-color: var(--color-bg-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  
+  .calendar--loading {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  @media (max-width: 768px) {
+    .calendar {
+      border-radius: 0;
+      box-shadow: none;
+    }
+  }

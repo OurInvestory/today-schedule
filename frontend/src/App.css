@@ -1,0 +1,25 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__layout {
+  display: flex;
+  flex: 1;
+}
+
+.app__content {
+  flex: 1;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .app__layout {
+    flex-direction: column;
+  }
+
+  .app__content {
+    padding-bottom: 64px; /* Space for bottom navigation */
+  }
+}

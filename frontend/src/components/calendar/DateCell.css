@@ -1,0 +1,78 @@
+.date-cell {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background-color: transparent;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    cursor: pointer;
+    min-height: 44px;
+  }
+  
+  .date-cell:hover {
+    background-color: var(--color-gray-100);
+  }
+  
+  .date-cell:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+  
+  .date-cell__number {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-gray-900);
+  }
+  
+  .date-cell--other-month .date-cell__number {
+    color: var(--color-gray-400);
+  }
+  
+  .date-cell--today {
+    background-color: var(--color-primary-50);
+  }
+  
+  .date-cell--today .date-cell__number {
+    color: var(--color-primary-700);
+    font-weight: var(--font-weight-semibold);
+  }
+  
+  .date-cell--selected {
+    background-color: var(--color-primary-500);
+  }
+  
+  .date-cell--selected .date-cell__number {
+    color: white;
+  }
+  
+  .date-cell--selected:hover {
+    background-color: var(--color-primary-600);
+  }
+  
+  .date-cell__dot {
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: var(--color-primary-500);
+  }
+  
+  .date-cell--selected .date-cell__dot {
+    background-color: white;
+  }
+  
+  .date-cell--other-month .date-cell__dot {
+    background-color: var(--color-gray-400);
+  }
+  
+  @media (max-width: 640px) {
+    .date-cell__number {
+      font-size: var(--font-size-xs);
+    }
+  }

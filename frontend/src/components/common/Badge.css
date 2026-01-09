@@ -1,0 +1,117 @@
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+    transition: all var(--transition-base);
+  }
+  
+  /* Sizes */
+  .badge--sm {
+    padding: 2px var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    line-height: 1;
+  }
+  
+  .badge--md {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    line-height: 1.2;
+  }
+  
+  .badge--lg {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-base);
+    line-height: 1.2;
+  }
+  
+  /* Variants */
+  .badge--default {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-700);
+  }
+  
+  .badge--primary {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-700);
+  }
+  
+  .badge--success {
+    background-color: #D1FAE5;
+    color: #065F46;
+  }
+  
+  .badge--warning {
+    background-color: #FEF3C7;
+    color: #92400E;
+  }
+  
+  .badge--error {
+    background-color: #FEE2E2;
+    color: #991B1B;
+  }
+  
+  .badge--info {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+  }
+  
+  /* Priority Colors */
+  .badge--priority-high {
+    background-color: var(--color-priority-high-bg);
+    color: var(--color-priority-high-text);
+  }
+  
+  .badge--priority-medium {
+    background-color: var(--color-priority-medium-bg);
+    color: var(--color-priority-medium-text);
+  }
+  
+  .badge--priority-low {
+    background-color: var(--color-priority-low-bg);
+    color: var(--color-priority-low-text);
+  }
+  
+  /* Category Colors */
+  .badge--category-class {
+    background-color: var(--color-category-class);
+    color: #4338CA;
+  }
+  
+  .badge--category-assignment {
+    background-color: var(--color-category-assignment);
+    color: #92400E;
+  }
+  
+  .badge--category-exam {
+    background-color: var(--color-category-exam);
+    color: #991B1B;
+  }
+  
+  .badge--category-team {
+    background-color: var(--color-category-team);
+    color: #6B21A8;
+  }
+  
+  .badge--category-activity {
+    background-color: var(--color-category-activity);
+    color: #065F46;
+  }
+  
+  /* Dot variant */
+  .badge--dot {
+    padding-left: calc(var(--spacing-sm) + 6px + var(--spacing-xs));
+    position: relative;
+  }
+  
+  .badge--dot::before {
+    content: '';
+    position: absolute;
+    left: var(--spacing-sm);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+  }

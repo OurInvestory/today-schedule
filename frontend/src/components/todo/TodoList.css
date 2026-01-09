@@ -1,0 +1,33 @@
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.todo-list--loading {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.todo-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  color: var(--color-gray-400);
+  min-height: 200px;
+}
+
+.todo-list-empty svg {
+  margin-bottom: var(--spacing-md);
+}
+
+.todo-list-empty__message {
+  font-size: var(--font-size-base);
+  color: var(--color-gray-500);
+  text-align: center;
+  margin: 0;
+}

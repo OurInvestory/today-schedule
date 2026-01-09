@@ -1,0 +1,183 @@
+.todo-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-default);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+}
+
+.todo-item:hover {
+  background-color: var(--color-gray-50);
+}
+
+.todo-item--completed {
+  opacity: 0.6;
+}
+
+.todo-item--completed .todo-item__title {
+  text-decoration: line-through;
+}
+
+.todo-item--overdue {
+  background-color: var(--color-priority-high-bg);
+}
+
+/* Priority indicator */
+.todo-item__priority-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+/* Checkbox */
+.todo-item__checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.todo-item__checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.todo-item__checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+}
+
+.todo-item__checkbox input:checked ~ .todo-item__checkmark {
+  background-color: var(--color-primary-500);
+  border-color: var(--color-primary-500);
+}
+
+.todo-item__checkbox:hover .todo-item__checkmark {
+  border-color: var(--color-primary-500);
+}
+
+/* Content */
+.todo-item__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.todo-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.todo-item__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-900);
+  margin: 0;
+  flex: 1;
+  word-break: break-word;
+}
+
+.todo-item__badges {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.todo-item__description {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.todo-item__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+}
+
+.todo-item__time {
+  font-weight: var(--font-weight-medium);
+}
+
+.todo-item--overdue .todo-item__time {
+  color: var(--color-error);
+}
+
+.todo-item__estimated-time {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* Actions */
+.todo-item__actions {
+  display: none;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+.todo-item:hover .todo-item__actions {
+  display: flex;
+}
+
+.todo-item__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--color-gray-500);
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+
+.todo-item__action-btn:hover {
+  background-color: var(--color-gray-200);
+  color: var(--color-gray-700);
+}
+
+.todo-item__action-btn--danger:hover {
+  background-color: var(--color-error);
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .todo-item {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+  }
+
+  .todo-item__actions {
+    display: flex;
+  }
+
+  .todo-item__badges {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+}
