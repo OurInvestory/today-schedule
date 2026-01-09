@@ -30,14 +30,14 @@
 
 ## 👥 팀 구성
 
-- **PM + 프론트엔드**: 손민주
-- **Prompt Engineer + 도메인 전문가**: 천지우
-- **프론트엔드**: 김혜영
-- **백엔드 + AI Engineer**: 김진영, 조하영
+- **Project Manager**: 손민주
+- **Prompt Engineer + Domain Expert**: 천지우
+- **Frontend Developer**: 김혜영, 손민주
+- **Backend Developer + AI Engineer**: 김진영, 조하영
 
 ## 🚀 시작하기
 
-### 프론트엔드
+### Frontend
 
 ```bash
 cd frontend
@@ -45,18 +45,12 @@ npm install
 npm run dev
 ```
 
-### 백엔드
+### Backend
 
 ```bash
 cd backend
 # TBD
 ```
-
-## 📝 문서
-
-- [API 명세서](./docs/API.md) (TBD)
-- [데이터베이스 스키마](./docs/DATABASE.md) (TBD)
-- [프롬프트 가이드](./docs/PROMPT.md) (TBD)
 
 ### 커밋 컨벤션
 
