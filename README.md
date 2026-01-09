@@ -17,16 +17,19 @@
 ## 🛠 기술 스택
 
 ### Frontend
-- React.js
-- Vite
+- React 18.2 (UI 라이브러리)
+- Vite 5.0: (빌드 도구 및 개발 서버)
+- Axios: (HTTP 클라이언트)
+- date-fns: (날짜 처리)
+- React Icons: (아이콘 라이브러리)
 
 ### Backend
 - FastAPI
 - MySQL
+- Google Calendar API
 
 ### AI
 - watsonx.ai (자연어 처리, 우선순위 추천)
-- Google Calendar API
 
 ## 👥 팀 구성
 
