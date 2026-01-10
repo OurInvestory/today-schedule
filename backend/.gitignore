@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.log
+
+# Virtual environment
+venv/
+.env
+*.env
+
+# Editor settings
+.vscode/
+.idea/
+
+# macOS, Linux, Windows 시스템 파일
+.DS_Store
+Thumbs.db
+
+
+# pytest
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
