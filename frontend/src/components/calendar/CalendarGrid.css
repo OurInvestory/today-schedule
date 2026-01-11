@@ -1,47 +1,52 @@
 .calendar-grid {
-    padding: var(--spacing-md);
-  }
-  
-  .calendar-grid__weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-sm);
-  }
-  
-  .calendar-grid__weekday {
-    text-align: center;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-gray-600);
+  padding: var(--spacing-md);
+  background: #fff;
+}
+
+.calendar-grid__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-gray-100);
+  padding-bottom: var(--spacing-sm);
+}
+
+.calendar-grid__weekday {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-gray-500);
+  padding: var(--spacing-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calendar-grid__weekday--sunday {
+  color: #e74c3c;
+}
+
+.calendar-grid__weekday--saturday {
+  color: var(--color-primary-500);
+}
+
+.calendar-grid__dates {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--spacing-xs);
+}
+
+@media (max-width: 640px) {
+  .calendar-grid {
     padding: var(--spacing-sm);
   }
-  
-  .calendar-grid__weekday--sunday {
-    color: var(--color-error);
+
+  .calendar-grid__weekday {
+    font-size: 10px;
+    padding: var(--spacing-xs);
   }
-  
-  .calendar-grid__weekday--saturday {
-    color: var(--color-primary-500);
-  }
-  
+
   .calendar-grid__dates {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: var(--spacing-sm);
+    gap: 2px;
   }
-  
-  @media (max-width: 640px) {
-    .calendar-grid {
-      padding: var(--spacing-sm);
-    }
-  
-    .calendar-grid__weekday {
-      font-size: var(--font-size-xs);
-      padding: var(--spacing-xs);
-    }
-  
-    .calendar-grid__dates {
-      gap: var(--spacing-xs);
-    }
-  }
+}

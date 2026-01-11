@@ -115,7 +115,7 @@ const Home = () => {
       <div className="home__container">
         {/* Left: Calendar */}
         <aside className="home__calendar">
-          <Calendar onDateSelect={handleDateSelect} />
+          <Calendar onDateSelect={handleDateSelect} todos={todos} />
         </aside>
 
         {/* Right: Todo List */}

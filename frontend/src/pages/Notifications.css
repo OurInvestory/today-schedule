@@ -53,8 +53,9 @@
 .notifications__title {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #333333;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .notifications__badge {
