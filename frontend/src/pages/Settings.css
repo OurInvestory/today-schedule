@@ -44,7 +44,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-icon-bg);
   border-radius: 12px;
   color: #fff;
 }
@@ -96,7 +96,7 @@
   justify-content: center;
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-icon-bg);
   border-radius: 50%;
   color: #fff;
   font-size: 24px;
@@ -226,7 +226,7 @@
 
 .settings-item__link {
   font-size: 14px;
-  color: #667eea;
+  color: var(--color-icon-bg-solid);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -249,7 +249,7 @@
 }
 
 .settings-item__select:focus {
-  border-color: #667eea;
+  border-color: var(--color-icon-bg-solid);
 }
 
 /* 하위 설정 아이템 (들여쓰기) */
@@ -282,7 +282,7 @@
 }
 
 .settings-item__time-input:focus {
-  border-color: #667eea;
+  border-color: var(--color-icon-bg-solid);
 }
 
 /* 토글 스위치 */
@@ -299,7 +299,7 @@
 }
 
 .toggle-switch--active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-icon-bg);
 }
 
 .toggle-switch__thumb {
@@ -375,7 +375,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid #e0e0e0;
-  border-top-color: #667eea;
+  border-top-color: var(--color-icon-bg-solid);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

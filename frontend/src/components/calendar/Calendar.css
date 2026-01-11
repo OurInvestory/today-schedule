@@ -1,7 +1,6 @@
 .calendar {
   background-color: var(--color-bg-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: 15px;
   overflow: hidden;
   position: relative;
 }
@@ -27,12 +26,16 @@
   left: 50%;
   transform: translate(-50%, -50%);
   background: #fff;
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   z-index: 101;
   width: 320px;
   max-width: 90vw;
   animation: modalFadeIn 0.2s ease-out;
+}
+
+.month-picker--wheel {
+  width: 300px;
 }
 
 @keyframes modalFadeIn {
@@ -51,14 +54,43 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .month-picker__title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 600;
   color: #333333;
   margin: 0;
+}
+
+.month-picker__cancel,
+.month-picker__confirm {
+  font-size: 16px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.month-picker__cancel {
+  color: #888;
+}
+
+.month-picker__cancel:hover {
+  color: #333;
+  background: #f5f5f5;
+}
+
+.month-picker__confirm {
+  color: var(--color-primary-500);
+}
+
+.month-picker__confirm:hover {
+  background: var(--color-primary-50);
 }
 
 .month-picker__close {
@@ -80,89 +112,78 @@
   color: #333;
 }
 
-.month-picker__year-section {
+/* 휠 피커 스타일 */
+.wheel-picker {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 0;
+  height: 220px;
+  position: relative;
+  padding: 0 20px;
 }
 
-.month-picker__year-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: #f5f5f5;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #666;
-  transition: all 0.2s;
-}
-
-.month-picker__year-nav:hover {
-  background: #e5e5e5;
-  color: #333;
-}
-
-.month-picker__year-select {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  background: transparent;
-  border: none;
-  text-align: center;
-  cursor: pointer;
-  padding: 8px 12px;
-  min-width: 100px;
-}
-
-.month-picker__year-select:focus {
-  outline: none;
-}
-
-.month-picker__months {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  padding: 16px 20px 20px;
-}
-
-.month-picker__month {
-  padding: 14px 8px;
-  border: none;
-  background: #f5f5f5;
+.wheel-picker__highlight {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 44px;
+  transform: translateY(-50%);
+  background: var(--color-gray-100);
   border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wheel-picker__column {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  position: relative;
+  z-index: 1;
+}
+
+.wheel-picker__column::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-picker__item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #999;
   cursor: pointer;
+  scroll-snap-align: center;
   transition: all 0.2s;
+  user-select: none;
 }
 
-.month-picker__month:hover {
-  background: #e5e5e5;
+.wheel-picker__item--selected {
+  color: #333;
+  font-weight: 600;
+  font-size: 20px;
 }
 
-.month-picker__month--current {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-}
-
-.month-picker__month--current:hover {
-  background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+.wheel-picker__item:hover:not(.wheel-picker__item--selected) {
+  color: #666;
 }
 
 @media (max-width: 768px) {
   .calendar {
-    border-radius: 0;
-    box-shadow: none;
+    border-radius: 18px;
   }
 
   .month-picker {
     width: 90vw;
+  }
+  
+  .month-picker--wheel {
+    width: 85vw;
+    max-width: 300px;
   }
 }

@@ -7,6 +7,31 @@
   background-color: var(--color-bg-default);
 }
 
+.chat-input__file-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-600);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  flex-shrink: 0;
+}
+
+.chat-input__file-btn:hover:not(:disabled) {
+  background-color: var(--color-gray-200);
+  color: var(--color-gray-800);
+}
+
+.chat-input__file-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .chat-input__textarea {
   flex: 1;
   min-height: 44px;
