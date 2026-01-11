@@ -57,14 +57,9 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* Priority indicator */
+/* Priority indicator - 비활성화 */
 .todo-item__priority-indicator {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  display: none;
 }
 
 /* Checkbox */

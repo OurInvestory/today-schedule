@@ -113,14 +113,6 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-      {/* Priority indicator */}
-      <div 
-        className="todo-item__priority-indicator" 
-        style={{ 
-          backgroundColor: `var(--color-priority-${todo.priority}-text)` 
-        }}
-      />
-
       {/* Checkbox */}
       <label className="todo-item__checkbox" onClick={(e) => e.stopPropagation()}>
         <input

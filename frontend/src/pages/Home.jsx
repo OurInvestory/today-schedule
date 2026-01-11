@@ -121,13 +121,21 @@ const Home = () => {
         {/* Right: Todo List */}
         <main className="home__main">
           <div className="home__header">
-            <div>
-              <h1 className="home__title">
-                {formatDate(selectedDate, 'M월 D일')} 할 일
-              </h1>
-              <p className="home__subtitle">
-                {todos.filter((t) => !t.completed).length}개의 할 일이 남았습니다
-              </p>
+            <div className="home__header-left">
+              <div className="home__header-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="home__title">
+                  {formatDate(selectedDate, 'M월 D일')} 할 일
+                </h1>
+                <p className="home__subtitle">
+                  {todos.filter((t) => !t.completed).length}개의 할 일이 남았습니다
+                </p>
+              </div>
             </div>
             <Button onClick={() => setIsAddModalOpen(true)}>
               + 할 일 추가

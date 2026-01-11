@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Home from './pages/Home';
@@ -8,7 +8,37 @@ import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import './App.css';
 
+// 알림 권한 요청 함수
+const requestNotificationPermission = async () => {
+  if (!('Notification' in window)) {
+    console.log('이 브라우저는 알림을 지원하지 않습니다.');
+    return false;
+  }
+
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+
+  if (Notification.permission !== 'denied') {
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  }
+
+  return false;
+};
+
 function App() {
+  // 앱 시작 시 알림 권한 요청
+  useEffect(() => {
+    requestNotificationPermission().then((granted) => {
+      if (granted) {
+        console.log('알림 권한이 허용되었습니다.');
+      } else {
+        console.log('알림 권한이 거부되었습니다.');
+      }
+    });
+  }, []);
+
   return (
     <BrowserRouter>
       <div className="app">
