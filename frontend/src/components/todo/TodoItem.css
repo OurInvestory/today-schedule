@@ -3,9 +3,9 @@
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-md);
-  padding: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
   background-color: var(--color-bg-default);
-  border-radius: var(--radius-md);
+  border-radius: 15px;
   transition: transform 0.2s ease-out, background-color var(--transition-base);
   cursor: grab;
   user-select: none;
@@ -16,16 +16,17 @@
 }
 
 .todo-item--completed {
-  background-color: var(--color-gray-100);
+  background-color: var(--color-bg-default);
+  opacity: 0.75;
 }
 
 .todo-item--completed .todo-item__title {
   text-decoration: line-through;
-  color: var(--color-gray-500);
+  color: var(--color-gray-400);
 }
 
 .todo-item--completed .todo-item__content {
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .todo-item--overdue .todo-item__time {
@@ -37,8 +38,9 @@
 .todo-item__wrapper {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-md);
+  border-radius: 15px;
   margin-bottom: var(--spacing-sm);
+  background-color: var(--color-bg-default);
 }
 
 .todo-item__delete-bg {
@@ -46,7 +48,7 @@
   right: 0;
   top: 0;
   bottom: 0;
-  width: 100px;
+  width: 0;
   background-color: var(--color-error);
   display: flex;
   align-items: center;
@@ -55,6 +57,14 @@
   color: white;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  opacity: 0;
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+.todo-item__wrapper--swiping .todo-item__delete-bg {
+  width: 100px;
+  opacity: 1;
 }
 
 /* Priority indicator - 비활성화 */
@@ -166,7 +176,8 @@
   }
 
   .todo-item__badges {
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-xs);
   }
 }

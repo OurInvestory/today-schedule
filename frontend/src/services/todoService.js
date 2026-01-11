@@ -21,7 +21,7 @@ const sampleTodos = [
     description: '졸업 프로젝트 진행 상황 공유',
     startDate: new Date().toISOString().split('T')[0], // 오늘부터
     dueDate: new Date().toISOString().split('T')[0], // 오늘 마감
-    category: 'meeting',
+    category: 'team',
     importance: 7,
     estimatedTime: 2,
     completed: false,
@@ -33,7 +33,7 @@ const sampleTodos = [
     description: '대출 기한 만료 전 반납',
     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 일주일 전부터
     dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3일 후 마감
-    category: 'personal',
+    category: 'activity',
     importance: 5,
     estimatedTime: 1,
     completed: true,

@@ -45,7 +45,7 @@
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-icon-bg);
   border-radius: 12px;
   color: #fff;
 }
@@ -75,7 +75,7 @@
 .notifications__mark-all {
   font-size: 14px;
   font-weight: 500;
-  color: #667eea;
+  color: var(--color-icon-bg-solid);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -118,7 +118,7 @@
 }
 
 .notifications__filter-btn--active {
-  background: #667eea;
+  background: var(--color-icon-bg-solid);
   color: #fff;
 }
 
@@ -226,7 +226,7 @@
 
 .notification-item--unread {
   background: #f8f7ff;
-  border-left: 3px solid #667eea;
+  border-left: 3px solid var(--color-icon-bg-solid);
 }
 
 .notification-item--unread:hover {

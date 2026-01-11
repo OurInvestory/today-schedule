@@ -3,7 +3,7 @@
     align-items: center;
     justify-content: center;
     font-weight: var(--font-weight-medium);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-xs);
     white-space: nowrap;
     transition: all var(--transition-base);
   }
@@ -60,18 +60,24 @@
   
   /* Priority Colors */
   .badge--priority-high {
-    background-color: var(--color-priority-high-bg);
+    background-color: transparent;
     color: var(--color-priority-high-text);
+    padding: 0;
+    margin-left: 4px;
   }
   
   .badge--priority-medium {
-    background-color: var(--color-priority-medium-bg);
+    background-color: transparent;
     color: var(--color-priority-medium-text);
+    padding: 0;
+    margin-left: 4px;
   }
   
   .badge--priority-low {
-    background-color: var(--color-priority-low-bg);
+    background-color: transparent;
     color: var(--color-priority-low-text);
+    padding: 0;
+    margin-left: 4px;
   }
   
   /* Category Colors */

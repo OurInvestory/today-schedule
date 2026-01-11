@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Header.css';
 
 const Header = ({ hasNotification = false }) => {
   const navigate = useNavigate();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleNotificationClick = () => {
     navigate('/notifications');
@@ -14,13 +24,13 @@ const Header = ({ hasNotification = false }) => {
   };
 
   return (
-    <header className="header">
+    <header className={`header ${isScrolled ? 'header--scrolled' : ''}`}>
       <div className="header__container">
         <Link to="/" className="header__logo">
           <div className="header__logo-icon">
             <svg
-              width="24"
-              height="24"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

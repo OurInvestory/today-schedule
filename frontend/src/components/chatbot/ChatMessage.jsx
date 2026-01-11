@@ -2,9 +2,10 @@ import React from 'react';
 import { formatDate } from '../../utils/dateUtils';
 import './ChatMessage.css';
 
-const ChatMessage = ({ message }) => {
+const ChatMessage = ({ message, onConfirm, onCancel }) => {
   const isUser = message.role === 'user';
   const isError = message.isError;
+  const hasAction = message.hasAction || message.content?.includes('일정에 반영');
 
   const messageClass = [
     'chat-message',
@@ -13,6 +14,18 @@ const ChatMessage = ({ message }) => {
   ]
     .filter(Boolean)
     .join(' ');
+
+  const handleConfirm = () => {
+    if (onConfirm) {
+      onConfirm(message.id, message.data);
+    }
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel(message.id);
+    }
+  };
 
   return (
     <div className={messageClass}>
@@ -30,6 +43,44 @@ const ChatMessage = ({ message }) => {
       <div className="chat-message__content">
         <div className="chat-message__bubble">
           {message.content}
+          
+          {/* 인터랙티브 확인/취소 버튼 */}
+          {!isUser && hasAction && !message.actionCompleted && (
+            <div className="chat-message__actions">
+              <button 
+                type="button" 
+                className="chat-message__action-btn chat-message__action-btn--confirm"
+                onClick={handleConfirm}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                확인
+              </button>
+              <button 
+                type="button" 
+                className="chat-message__action-btn chat-message__action-btn--cancel"
+                onClick={handleCancel}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+                취소
+              </button>
+            </div>
+          )}
+          
+          {/* 액션 완료 표시 */}
+          {message.actionCompleted && (
+            <div className="chat-message__action-status">
+              {message.actionCompleted === 'confirmed' ? (
+                <span className="chat-message__action-status--confirmed">✓ 반영되었습니다</span>
+              ) : (
+                <span className="chat-message__action-status--cancelled">✗ 취소되었습니다</span>
+              )}
+            </div>
+          )}
         </div>
         <span className="chat-message__time">
           {formatDate(message.timestamp, 'HH:mm')}
