@@ -25,16 +25,13 @@ class AIChatParsed(BaseModel):
     missingFields: List[MissingField] = Field(default_factory=list)
     reasoning: Optional[str] = None
 
-# 4) Request (여기가 문제였음: alias 추가)
+# 4) Request 
 class ChatRequest(BaseModel):
     text: str
-    # JSON에서는 "baseDate"로 들어오면 자동으로 base_date에 매핑됨
     base_date: Optional[str] = Field(None, alias="baseDate") 
     timezone: str = "Asia/Seoul"
     selected_schedule_id: Optional[str] = Field(None, alias="selectedScheduleId")
     user_context: Optional[Dict[str, Any]] = Field(None, alias="userContext")
-
-    # Pydantic V2 설정 (camelCase 입력을 허용)
     model_config = ConfigDict(populate_by_name=True)
 
 # 5) Response Wrapper

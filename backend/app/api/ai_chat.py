@@ -37,11 +37,11 @@ credentials = {
     "apikey": WATSONX_API_KEY
 }
 
-# [수정 1] 생성 파라미터에 'STOP_SEQUENCES' 추가 (매우 중요!)
+# [수정 1] 생성 파라미터에 'STOP_SEQUENCES' 추가 
 # AI가 "User Input:"이라는 글자를 쓰려고 하면 즉시 멈추게 합니다.
 generate_params = {
     GenParams.DECODING_METHOD: DecodingMethods.GREEDY,
-    GenParams.MAX_NEW_TOKENS: 500,  # 너무 길게 생성하지 못하도록 줄임
+    GenParams.MAX_NEW_TOKENS: 500,  
     GenParams.MIN_NEW_TOKENS: 1,
     GenParams.TEMPERATURE: 0,
     GenParams.STOP_SEQUENCES: ["User Input:", "User:", "\n\n\n"] 
@@ -55,17 +55,14 @@ def get_watson_model():
         project_id=WATSONX_PROJECT_ID
     )
 
-# [수정 2] JSON 추출 로직 개선 (할루시네이션 방지)
 def extract_json_from_text(text: str) -> str:
     """
     텍스트에서 첫 번째 JSON 객체만 정확하게 추출합니다.
     """
     try:
-        # 혹시 AI가 Stop Sequence를 뚫고 뒷말을 더 썼을 경우를 대비해 자름
         text = text.split("User Input:")[0]
         
         start_index = text.find('{')
-        # 뒤에서부터 찾는 게 아니라, JSON 구조에 맞게 첫 덩어리만 찾음
         if start_index != -1:
             brace_count = 0
             for i, char in enumerate(text[start_index:], start=start_index):
@@ -87,7 +84,7 @@ async def chat_with_ai(req: ChatRequest):
         model = get_watson_model()
         current_date_str = req.base_date or datetime.now().strftime("%Y-%m-%d")
         
-        # [수정 3] 프롬프트 보강: CLARIFY 규칙 추가
+        # 프롬프트 보강: CLARIFY 규칙 추가
         system_prompt = f"""You are a smart academic scheduler AI.
 Analyze the user's input and output valid JSON only.
 
@@ -128,10 +125,6 @@ JSON Output:
 """
         
         generated_response = model.generate_text(prompt=system_prompt)
-        
-        print("========== [DEBUG: AI RAW OUTPUT] ==========")
-        print(generated_response)
-        print("============================================")
 
         clean_json_str = extract_json_from_text(generated_response)
         parsed_data = json.loads(clean_json_str)
