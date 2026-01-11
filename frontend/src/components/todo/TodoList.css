@@ -29,5 +29,42 @@
   font-size: var(--font-size-base);
   color: var(--color-gray-500);
   text-align: center;
-  margin: 0;
+  margin: 0 0 var(--spacing-lg) 0;
+}
+
+/* 하단 추가 버튼 */
+.todo-list__add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-sm);
+  background: transparent;
+  border: 2px dashed var(--color-gray-300);
+  border-radius: var(--radius-md);
+  color: var(--color-gray-500);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.todo-list__add-btn:hover {
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-500);
+  background: var(--color-primary-50);
+}
+
+.todo-list__add-btn--empty {
+  gap: var(--spacing-sm);
+  border-style: solid;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: #fff;
+  padding: var(--spacing-md) var(--spacing-xl);
+  width: auto;
+}
+
+.todo-list__add-btn--empty:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+  color: #fff;
 }

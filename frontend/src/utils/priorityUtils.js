@@ -80,6 +80,10 @@ export const assignPriority = (todo) => {
 
 /**
  * Todo 목록 우선순위 정렬
+ * 1. 완료 여부 (미완료 우선)
+ * 2. 우선순위 점수 (높은 순)
+ * 3. 중요도 (높은 순)
+ * 4. 마감일 (가까운 순)
  */
 export const sortByPriority = (todos) => {
   return [...todos].sort((a, b) => {
@@ -91,7 +95,23 @@ export const sortByPriority = (todos) => {
     const scoreA = a.priorityScore || 0;
     const scoreB = b.priorityScore || 0;
     
-    return scoreB - scoreA;
+    if (scoreB !== scoreA) {
+      return scoreB - scoreA;
+    }
+    
+    // 동점이면 중요도로 정렬
+    const importanceA = a.importance || 5;
+    const importanceB = b.importance || 5;
+    
+    if (importanceB !== importanceA) {
+      return importanceB - importanceA;
+    }
+    
+    // 그래도 동점이면 마감일이 가까운 순
+    const dueDateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+    const dueDateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+    
+    return dueDateA - dueDateB;
   });
 };
 

@@ -8,6 +8,14 @@
   flex-wrap: wrap;
 }
 
+.todo-filter--desktop {
+  display: flex;
+}
+
+.todo-filter__mobile-trigger {
+  display: none;
+}
+
 .todo-filter__group {
   display: flex;
   align-items: center;
@@ -49,18 +57,195 @@
   box-shadow: 0 0 0 3px rgba(43, 127, 230, 0.1);
 }
 
+/* 모바일 하단 시트 스타일 */
+.todo-filter__overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+}
+
+.todo-filter__bottom-sheet {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  z-index: 101;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.todo-filter__sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e5;
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+
+.todo-filter__sheet-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.todo-filter__sheet-close {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #666;
+}
+
+.todo-filter__sheet-content {
+  padding: 20px;
+}
+
+.todo-filter__sheet-section {
+  margin-bottom: 24px;
+}
+
+.todo-filter__sheet-section:last-child {
+  margin-bottom: 0;
+}
+
+.todo-filter__sheet-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  margin: 0 0 12px 0;
+}
+
+.todo-filter__chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-filter__chip {
+  padding: 8px 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.todo-filter__chip:hover {
+  border-color: #667eea;
+}
+
+.todo-filter__chip--active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+.todo-filter__chip--high.todo-filter__chip--active {
+  background: var(--color-error);
+}
+
+.todo-filter__chip--medium.todo-filter__chip--active {
+  background: var(--color-warning);
+}
+
+.todo-filter__chip--low.todo-filter__chip--active {
+  background: var(--color-success);
+}
+
+.todo-filter__sheet-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e5e5;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+}
+
+.todo-filter__reset-btn {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+}
+
+.todo-filter__apply-btn {
+  flex: 2;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+.todo-filter__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #ff4757;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  margin-left: 4px;
+}
+
 @media (max-width: 640px) {
-  .todo-filter {
-    flex-direction: column;
-    align-items: stretch;
+  .todo-filter--desktop {
+    display: none;
   }
 
-  .todo-filter__group {
-    flex-direction: column;
-    align-items: stretch;
+  .todo-filter__mobile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    margin-bottom: var(--spacing-md);
   }
 
-  .todo-filter__select {
-    width: 100%;
+  .todo-filter__overlay {
+    display: block;
+  }
+
+  .todo-filter__bottom-sheet {
+    display: block;
   }
 }
