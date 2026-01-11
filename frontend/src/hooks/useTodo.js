@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getTodos,
   getTodayTodos,
@@ -11,7 +11,7 @@ import {
 import { assignPriority, sortByPriority } from '../utils/priorityUtils';
 
 export const useTodo = (initialFilter = {}) => {
-  const [todos, setTodos] = useState([]);
+  const [allTodos, setAllTodos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState(initialFilter);
@@ -28,23 +28,45 @@ export const useTodo = (initialFilter = {}) => {
       } else if (filter.date) {
         data = await getTodosByDate(filter.date);
       } else {
-        data = await getTodos(filter);
+        data = await getTodos({});
       }
       
       // 우선순위 할당 및 정렬
       const todosWithPriority = data.map(todo => assignPriority(todo));
       const sortedTodos = sortByPriority(todosWithPriority);
       
-      setTodos(sortedTodos);
+      setAllTodos(sortedTodos);
     } catch (err) {
       setError(err.message || '할 일을 불러오는데 실패했습니다.');
       console.error('Failed to fetch todos:', err);
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter.date]);
 
-  // 초기 로드 및 필터 변경 시 조회
+  // 클라이언트 사이드 필터링 적용
+  const todos = useMemo(() => {
+    let filtered = [...allTodos];
+
+    // 카테고리 필터
+    if (filter.category) {
+      filtered = filtered.filter(todo => todo.category === filter.category);
+    }
+
+    // 우선순위 필터
+    if (filter.priority) {
+      filtered = filtered.filter(todo => todo.priority === filter.priority);
+    }
+
+    // 완료 여부 필터
+    if (filter.completed !== undefined) {
+      filtered = filtered.filter(todo => todo.completed === filter.completed);
+    }
+
+    return filtered;
+  }, [allTodos, filter.category, filter.priority, filter.completed]);
+
+  // 초기 로드 및 날짜 필터 변경 시 조회
   useEffect(() => {
     fetchTodos();
   }, [fetchTodos]);
@@ -103,7 +125,7 @@ export const useTodo = (initialFilter = {}) => {
   const toggleComplete = async (id, completed) => {
     try {
       // 낙관적 업데이트
-      setTodos(prev =>
+      setAllTodos(prev =>
         prev.map(todo =>
           todo.id === id ? { ...todo, completed } : todo
         )

@@ -45,6 +45,11 @@ export const useCalendar = () => {
     setCurrentDate(prev => addMonths(prev, 1));
   }, []);
 
+  // 특정 연/월로 이동
+  const goToMonth = useCallback((year, month) => {
+    setCurrentDate(new Date(year, month, 1));
+  }, []);
+
   // 오늘로 이동
   const goToToday = useCallback(() => {
     const today = new Date();
@@ -83,6 +88,7 @@ export const useCalendar = () => {
     error,
     goToPreviousMonth,
     goToNextMonth,
+    goToMonth,
     goToToday,
     selectDate,
     getEventsForDate,
