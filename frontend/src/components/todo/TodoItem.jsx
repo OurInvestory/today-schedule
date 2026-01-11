@@ -1,20 +1,86 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { getTimeUntilText, isOverdue } from '../../utils/dateUtils';
 import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
 import './TodoItem.css';
 
 const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
-  const handleCheckboxChange = () => {
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const startXRef = useRef(0);
+  const currentXRef = useRef(0);
+
+  const handleCheckboxChange = (e) => {
+    e.stopPropagation();
     onToggle(todo.id, !todo.completed);
   };
 
-  const handleEdit = () => {
+  const handleDoubleClick = () => {
     if (onEdit) onEdit(todo);
   };
 
   const handleDelete = () => {
     if (onDelete) onDelete(todo.id);
+  };
+
+  // 터치/마우스 시작
+  const handleDragStart = (clientX) => {
+    startXRef.current = clientX;
+    currentXRef.current = clientX;
+    setIsDragging(true);
+  };
+
+  // 터치/마우스 이동
+  const handleDragMove = (clientX) => {
+    if (!isDragging) return;
+    currentXRef.current = clientX;
+    const diff = clientX - startXRef.current;
+    // 왼쪽으로만 스와이프 허용
+    if (diff < 0) {
+      setSwipeOffset(Math.max(diff, -100));
+    }
+  };
+
+  // 터치/마우스 종료
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    if (swipeOffset < -60) {
+      // 삭제 실행
+      handleDelete();
+    }
+    setSwipeOffset(0);
+  };
+
+  // 마우스 이벤트
+  const handleMouseDown = (e) => {
+    if (e.target.closest('.todo-item__checkbox') || e.target.closest('.todo-item__actions')) return;
+    handleDragStart(e.clientX);
+  };
+
+  const handleMouseMove = (e) => {
+    handleDragMove(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    handleDragEnd();
+  };
+
+  const handleMouseLeave = () => {
+    if (isDragging) handleDragEnd();
+  };
+
+  // 터치 이벤트
+  const handleTouchStart = (e) => {
+    if (e.target.closest('.todo-item__checkbox') || e.target.closest('.todo-item__actions')) return;
+    handleDragStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    handleDragMove(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
   };
 
   const itemClass = [
@@ -26,7 +92,27 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
     .join(' ');
 
   return (
-    <div className={itemClass}>
+    <div className="todo-item__wrapper">
+      {/* 삭제 배경 */}
+      <div className="todo-item__delete-bg">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+          <path d="M3 6h18M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+        </svg>
+        <span>삭제</span>
+      </div>
+      
+      <div 
+        className={itemClass}
+        style={{ transform: `translateX(${swipeOffset}px)` }}
+        onDoubleClick={handleDoubleClick}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
       {/* Priority indicator */}
       <div 
         className="todo-item__priority-indicator" 
@@ -36,7 +122,7 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
       />
 
       {/* Checkbox */}
-      <label className="todo-item__checkbox">
+      <label className="todo-item__checkbox" onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"
           checked={todo.completed}
@@ -82,31 +168,8 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
           )}
         </div>
       </div>
-
-      {/* Actions */}
-      <div className="todo-item__actions">
-        <button
-          type="button"
-          className="todo-item__action-btn"
-          onClick={handleEdit}
-          aria-label="수정"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
-            <path d="M11.5 2L14 4.5L5 13.5H2.5V11L11.5 2Z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        <button
-          type="button"
-          className="todo-item__action-btn todo-item__action-btn--danger"
-          onClick={handleDelete}
-          aria-label="삭제"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
-            <path d="M3 4H13M5 4V3C5 2.5 5.5 2 6 2H10C10.5 2 11 2.5 11 3V4M12 4V13C12 13.5 11.5 14 11 14H5C4.5 14 4 13.5 4 13V4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </div>
     </div>
+  </div>
   );
 };
 

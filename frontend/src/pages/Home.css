@@ -8,8 +8,8 @@
   margin: 0 auto;
   padding: var(--spacing-lg);
   display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: var(--spacing-lg);
+  grid-template-columns: 380px 1fr;
+  gap: var(--spacing-xl);
   min-height: calc(100vh - 80px);
 }
 

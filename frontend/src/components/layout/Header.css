@@ -18,8 +18,20 @@
   .header__logo {
     display: flex;
     align-items: center;
+    gap: var(--spacing-sm);
     text-decoration: none;
     color: inherit;
+  }
+
+  .header__logo-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+    border-radius: var(--radius-md);
+    color: white;
   }
   
   .header__title {

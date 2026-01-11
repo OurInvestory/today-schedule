@@ -1,20 +1,27 @@
 import { PRIORITIES } from './constants';
 
 /**
- * 우선순위 점수 계산 (마감일, 중요도 기반)
+ * 우선순위 점수 계산 (마감일, 중요도, 시작일 기반)
+ * AI가 오늘 해야 할 일을 결정하는 핵심 로직
  */
 export const calculatePriorityScore = (todo) => {
-  const { dueDate, importance = 5, estimatedTime = 1 } = todo;
+  const { startDate, dueDate, importance = 5, estimatedTime = 1 } = todo;
+  
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   // 마감일까지 남은 시간 (시간 단위)
-  const now = new Date();
-  const due = new Date(dueDate);
+  const due = dueDate ? new Date(dueDate) : new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000); // 마감일 없으면 일주일 후로 가정
   const hoursUntilDue = (due - now) / (1000 * 60 * 60);
+  
+  // 시작일 체크 (시작일이 미래면 점수 낮춤)
+  const start = startDate ? new Date(startDate) : today;
+  const canStartNow = start <= today;
   
   // 긴급도 점수 (0-10)
   let urgencyScore = 0;
   if (hoursUntilDue < 0) {
-    urgencyScore = 10; // 이미 지남
+    urgencyScore = 10; // 이미 지남 - 최우선
   } else if (hoursUntilDue < 2) {
     urgencyScore = 9;
   } else if (hoursUntilDue < 6) {
@@ -35,10 +42,15 @@ export const calculatePriorityScore = (todo) => {
   const importanceScore = importance;
   
   // 예상 소요 시간 가중치 (시간이 오래 걸릴수록 미리 시작해야 함)
-  const timeWeight = Math.min(estimatedTime / 5, 2);
+  // 마감까지 남은 시간 대비 예상 소요 시간 비율 고려
+  const timeRatio = estimatedTime / Math.max(hoursUntilDue, 1);
+  const timeWeight = Math.min(1 + timeRatio, 2);
+  
+  // 시작 가능 여부 가중치 (시작할 수 없으면 점수 크게 낮춤)
+  const startWeight = canStartNow ? 1 : 0.3;
   
   // 최종 점수 (가중 평균)
-  const finalScore = (urgencyScore * 0.6 + importanceScore * 0.4) * timeWeight;
+  const finalScore = (urgencyScore * 0.6 + importanceScore * 0.4) * timeWeight * startWeight;
   
   return Math.round(finalScore * 10) / 10;
 };

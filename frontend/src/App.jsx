@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
-import Navigation from './components/layout/Navigation';
 import Home from './pages/Home';
 import TaskDetail from './pages/TaskDetail';
 import Archive from './pages/Archive';
@@ -20,11 +19,8 @@ function App() {
             element={
               <>
                 <Header hasNotification={true} />
-                <div className="app__layout">
-                  <Navigation />
-                  <div className="app__content">
-                    <Home />
-                  </div>
+                <div className="app__content">
+                  <Home />
                 </div>
               </>
             }
@@ -34,11 +30,8 @@ function App() {
             element={
               <>
                 <Header hasNotification={true} />
-                <div className="app__layout">
-                  <Navigation />
-                  <div className="app__content">
-                    <TaskDetail />
-                  </div>
+                <div className="app__content">
+                  <TaskDetail />
                 </div>
               </>
             }
@@ -48,11 +41,8 @@ function App() {
             element={
               <>
                 <Header hasNotification={true} />
-                <div className="app__layout">
-                  <Navigation />
-                  <div className="app__content">
-                    <Archive />
-                  </div>
+                <div className="app__content">
+                  <Archive />
                 </div>
               </>
             }
