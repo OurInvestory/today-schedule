@@ -5,29 +5,63 @@ import Navigation from './components/layout/Navigation';
 import Home from './pages/Home';
 import TaskDetail from './pages/TaskDetail';
 import Archive from './pages/Archive';
+import Notifications from './pages/Notifications';
+import Settings from './pages/Settings';
 import './App.css';
 
 function App() {
-  const user = null; // TODO: 실제 사용자 정보
-
-  const handleNotificationClick = () => {
-    console.log('Notification clicked');
-  };
-
   return (
     <BrowserRouter>
       <div className="app">
-        <Header user={user} onNotificationClick={handleNotificationClick} />
-        <div className="app__layout">
-          <Navigation />
-          <div className="app__content">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/task/:id" element={<TaskDetail />} />
-              <Route path="/archive" element={<Archive />} />
-            </Routes>
-          </div>
-        </div>
+        <Routes>
+          {/* 헤더가 있는 레이아웃 */}
+          <Route
+            path="/"
+            element={
+              <>
+                <Header hasNotification={true} />
+                <div className="app__layout">
+                  <Navigation />
+                  <div className="app__content">
+                    <Home />
+                  </div>
+                </div>
+              </>
+            }
+          />
+          <Route
+            path="/task/:id"
+            element={
+              <>
+                <Header hasNotification={true} />
+                <div className="app__layout">
+                  <Navigation />
+                  <div className="app__content">
+                    <TaskDetail />
+                  </div>
+                </div>
+              </>
+            }
+          />
+          <Route
+            path="/archive"
+            element={
+              <>
+                <Header hasNotification={true} />
+                <div className="app__layout">
+                  <Navigation />
+                  <div className="app__content">
+                    <Archive />
+                  </div>
+                </div>
+              </>
+            }
+          />
+          
+          {/* 독립 페이지 (헤더/네비게이션 없음) */}
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
       </div>
     </BrowserRouter>
   );
