@@ -12,6 +12,7 @@ class Schedule(Base):
 
     schedule_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), ForeignKey("user.user_id"), nullable=False)
+    type = Column(String(255), nullable=True)   # task (AI로 Sub task가 생성되는 것), evnet (그 외)
     title = Column(String(255), nullable=False)
     category = Column(String(50), nullable=True)    # 수업, 과제, 시험, 공모전, 대외활동, 기타
     start_at = Column(DateTime, nullable=True)
