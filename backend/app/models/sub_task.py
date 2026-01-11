@@ -15,7 +15,7 @@ class SubTask(Base):
     schedule_id = Column(String(36), ForeignKey("schedule.schedule_id"), nullable=False)
     title = Column(String(255), nullable=False)
     date = Column(Date, nullable=False)
-    estimated_time = Column(Integer, nullable=False)    # 분 단위
+    estimated_minute = Column(Integer, nullable=True)    # 분 단위
     is_done = Column(Boolean, default=False, nullable=False)
     update_text = Column(Text, nullable=True)
 
