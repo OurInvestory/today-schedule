@@ -1,0 +1,396 @@
+.settings {
+  min-height: 100vh;
+  background: #f5f5f7;
+}
+
+.settings__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.settings__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.settings__back:hover {
+  background: #f0f0f0;
+}
+
+.settings__header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings__header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--color-icon-bg);
+  border-radius: 12px;
+  color: #fff;
+}
+
+.settings__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333333;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.settings__content {
+  padding: 20px;
+  padding-bottom: 100px;
+}
+
+.settings__section {
+  margin-bottom: 24px;
+}
+
+.settings__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px 4px;
+}
+
+.settings__card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* 프로필 정보 */
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.profile-info__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: var(--color-icon-bg);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.profile-info__details {
+  flex: 1;
+}
+
+.profile-info__name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 4px;
+}
+
+.profile-info__email {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 2px;
+}
+
+.profile-info__dept {
+  font-size: 13px;
+  color: #999;
+  margin: 0;
+}
+
+/* 계정 아이템 */
+.account-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.account-item:last-child {
+  border-bottom: none;
+}
+
+.account-item__info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.account-item__icon--google {
+  background: #4285f4;
+}
+
+.account-item__icon--kakao {
+  background: #fee500;
+}
+
+.account-item__icon--naver {
+  background: #03c75a;
+}
+
+.account-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.account-item__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.account-item__status {
+  font-size: 13px;
+  color: #999;
+}
+
+/* 설정 아이템 */
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.settings-item:last-child {
+  border-bottom: none;
+}
+
+.settings-item--info {
+  padding: 14px 20px;
+}
+
+.settings-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  margin-right: 16px;
+}
+
+.settings-item__label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.settings-item__desc {
+  font-size: 13px;
+  color: #999;
+}
+
+.settings-item__value {
+  font-size: 14px;
+  color: #666;
+}
+
+.settings-item__link {
+  font-size: 14px;
+  color: var(--color-icon-bg-solid);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.settings-item__link:hover {
+  text-decoration: underline;
+}
+
+.settings-item__select {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1a1a1a;
+  cursor: pointer;
+  outline: none;
+}
+
+.settings-item__select:focus {
+  border-color: var(--color-icon-bg-solid);
+}
+
+/* 하위 설정 아이템 (들여쓰기) */
+.settings-item--sub {
+  padding-left: 36px;
+  background: #fafafa;
+}
+
+.settings-item--sub .settings-item__label {
+  font-size: 14px;
+  color: #666;
+}
+
+.settings-item--sub .settings-item__desc {
+  font-size: 12px;
+}
+
+/* 시간 입력 */
+.settings-item__time-input {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1a1a1a;
+  cursor: pointer;
+  outline: none;
+  min-width: 100px;
+}
+
+.settings-item__time-input:focus {
+  border-color: var(--color-icon-bg-solid);
+}
+
+/* 토글 스위치 */
+.toggle-switch {
+  position: relative;
+  width: 52px;
+  height: 32px;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+  padding: 0;
+}
+
+.toggle-switch--active {
+  background: var(--color-icon-bg);
+}
+
+.toggle-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s;
+}
+
+.toggle-switch--active .toggle-switch__thumb {
+  transform: translateX(20px);
+}
+
+/* 액션 버튼들 */
+.settings__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings__action-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #fff;
+  color: #1a1a1a;
+  transition: background 0.2s;
+}
+
+.settings__action-btn:hover {
+  background: #f5f5f5;
+}
+
+.settings__action-btn--danger {
+  color: #ff4757;
+}
+
+.settings__action-btn--danger:hover {
+  background: #fff5f5;
+}
+
+/* 로딩 상태 */
+.settings--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.settings__loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #666;
+}
+
+.settings__loader p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.settings__spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e0e0e0;
+  border-top-color: var(--color-icon-bg-solid);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 반응형 */
+@media (min-width: 768px) {
+  .settings__content {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+}

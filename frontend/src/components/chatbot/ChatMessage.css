@@ -68,3 +68,59 @@
   color: var(--color-gray-500);
   padding: 0 var(--spacing-xs);
 }
+
+/* 인터랙티브 액션 버튼 */
+.chat-message__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-gray-200);
+}
+
+.chat-message__action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chat-message__action-btn--confirm {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.chat-message__action-btn--confirm:hover {
+  background: #c3e6cb;
+}
+
+.chat-message__action-btn--cancel {
+  background: #fdecea;
+  color: #c62828;
+}
+
+.chat-message__action-btn--cancel:hover {
+  background: #f5c6cb;
+}
+
+/* 액션 완료 상태 */
+.chat-message__action-status {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-gray-200);
+  font-size: 12px;
+}
+
+.chat-message__action-status--confirmed {
+  color: #1e7e34;
+}
+
+.chat-message__action-status--cancelled {
+  color: #999;
+}

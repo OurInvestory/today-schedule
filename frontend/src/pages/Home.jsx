@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Calendar from '../components/calendar/Calendar';
 import TodoList from '../components/todo/TodoList';
 import TodoFilter from '../components/todo/TodoFilter';
@@ -15,14 +15,48 @@ import './Home.css';
 const Home = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTodo, setEditingTodo] = useState(null);
   const [newTodo, setNewTodo] = useState({
     title: '',
     description: '',
+    startDate: '',
+    startTime: '',
     dueDate: '',
+    dueTime: '',
     category: 'assignment',
     importance: 5,
     estimatedTime: 1,
   });
+
+  // 시작일/시간과 마감일/시간이 모두 입력되면 예상 시간 자동 계산
+  useEffect(() => {
+    const { startDate, startTime, dueDate, dueTime } = newTodo;
+    if (startDate && startTime && dueDate && dueTime) {
+      const startDateTime = new Date(`${startDate}T${startTime}`);
+      const dueDateTime = new Date(`${dueDate}T${dueTime}`);
+      const diffMs = dueDateTime - startDateTime;
+      if (diffMs > 0) {
+        const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10; // 소수점 1자리
+        setNewTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+      }
+    }
+  }, [newTodo.startDate, newTodo.startTime, newTodo.dueDate, newTodo.dueTime]);
+
+  // 편집 모달에서도 시간 자동 계산
+  useEffect(() => {
+    if (!editingTodo) return;
+    const { startDate, startTime, dueDate, dueTime } = editingTodo;
+    if (startDate && startTime && dueDate && dueTime) {
+      const startDateTime = new Date(`${startDate}T${startTime}`);
+      const dueDateTime = new Date(`${dueDate}T${dueTime}`);
+      const diffMs = dueDateTime - startDateTime;
+      if (diffMs > 0) {
+        const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10;
+        setEditingTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+      }
+    }
+  }, [editingTodo?.startDate, editingTodo?.startTime, editingTodo?.dueDate, editingTodo?.dueTime]);
 
   const { todos, loading, toggleComplete, addTodo, editTodo, removeTodo, updateFilter, filter } =
     useTodo({ date: 'today' });
@@ -34,6 +68,9 @@ const Home = () => {
     messagesEndRef,
     toggleChatbot,
     sendMessage,
+    confirmAction,
+    cancelAction,
+    clearMessages,
   } = useChatbot();
 
   const handleDateSelect = (date) => {
@@ -48,7 +85,10 @@ const Home = () => {
       setNewTodo({
         title: '',
         description: '',
+        startDate: '',
+        startTime: '',
         dueDate: '',
+        dueTime: '',
         category: 'assignment',
         importance: 5,
         estimatedTime: 1,
@@ -58,28 +98,56 @@ const Home = () => {
     }
   };
 
+  const handleOpenEditModal = (todo) => {
+    setEditingTodo({ ...todo });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditTodo = async () => {
+    try {
+      await editTodo(editingTodo.id, editingTodo);
+      setIsEditModalOpen(false);
+      setEditingTodo(null);
+    } catch (error) {
+      console.error('Failed to edit todo:', error);
+    }
+  };
+
   return (
     <div className="home">
       <div className="home__container">
         {/* Left: Calendar */}
         <aside className="home__calendar">
-          <Calendar onDateSelect={handleDateSelect} />
+          <Calendar onDateSelect={handleDateSelect} todos={todos} />
         </aside>
 
         {/* Right: Todo List */}
         <main className="home__main">
           <div className="home__header">
-            <div>
-              <h1 className="home__title">
-                {formatDate(selectedDate, 'M월 D일')} 할 일
-              </h1>
-              <p className="home__subtitle">
-                {todos.filter((t) => !t.completed).length}개의 할 일이 남았습니다
-              </p>
+            <div className="home__header-left">
+              <svg 
+                className="home__header-icon"
+                width="22" 
+                height="22" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <div>
+                <h1 className="home__title">
+                  {formatDate(selectedDate, 'M월 D일')} 할 일
+                </h1>
+                <p className="home__subtitle">
+                  {todos.filter((t) => !t.completed).length}개의 할 일이 남았습니다
+                </p>
+              </div>
             </div>
-            <Button onClick={() => setIsAddModalOpen(true)}>
-              + 할 일 추가
-            </Button>
           </div>
 
           <TodoFilter filter={filter} onFilterChange={updateFilter} />
@@ -89,8 +157,9 @@ const Home = () => {
               todos={todos}
               loading={loading}
               onToggle={toggleComplete}
-              onEdit={editTodo}
+              onEdit={handleOpenEditModal}
               onDelete={removeTodo}
+              onAdd={() => setIsAddModalOpen(true)}
               emptyMessage="할 일이 없습니다. 새로운 할 일을 추가해보세요!"
             />
           </div>
@@ -106,6 +175,9 @@ const Home = () => {
         onSendMessage={sendMessage}
         loading={chatLoading}
         messagesEndRef={messagesEndRef}
+        onConfirmAction={confirmAction}
+        onCancelAction={cancelAction}
+        onClearHistory={clearMessages}
       />
 
       {/* Add Todo Modal */}
@@ -136,13 +208,36 @@ const Home = () => {
             onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
             placeholder="상세 설명 (선택)"
           />
-          <Input
-            label="마감일"
-            type="datetime-local"
-            required
-            value={newTodo.dueDate}
-            onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
-          />
+          <div className="add-todo-form__row">
+            <Input
+              label="시작일"
+              type="date"
+              required
+              value={newTodo.startDate}
+              onChange={(e) => setNewTodo({ ...newTodo, startDate: e.target.value })}
+            />
+            <Input
+              label="시작 시간 (선택)"
+              type="time"
+              value={newTodo.startTime}
+              onChange={(e) => setNewTodo({ ...newTodo, startTime: e.target.value })}
+            />
+          </div>
+          <div className="add-todo-form__row">
+            <Input
+              label="마감일"
+              type="date"
+              required
+              value={newTodo.dueDate}
+              onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
+            />
+            <Input
+              label="마감 시간 (선택)"
+              type="time"
+              value={newTodo.dueTime}
+              onChange={(e) => setNewTodo({ ...newTodo, dueTime: e.target.value })}
+            />
+          </div>
           <div className="add-todo-form__row">
             <Input
               label="중요도 (1-10)"
@@ -166,6 +261,97 @@ const Home = () => {
             />
           </div>
         </div>
+      </Modal>
+
+      {/* Edit Todo Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingTodo(null);
+        }}
+        title="할 일 수정"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => {
+              setIsEditModalOpen(false);
+              setEditingTodo(null);
+            }}>
+              취소
+            </Button>
+            <Button onClick={handleEditTodo}>저장</Button>
+          </>
+        }
+      >
+        {editingTodo && (
+          <div className="add-todo-form">
+            <Input
+              label="제목"
+              required
+              value={editingTodo.title}
+              onChange={(e) => setEditingTodo({ ...editingTodo, title: e.target.value })}
+              placeholder="할 일 제목을 입력하세요"
+            />
+            <Input
+              label="설명"
+              value={editingTodo.description || ''}
+              onChange={(e) => setEditingTodo({ ...editingTodo, description: e.target.value })}
+              placeholder="상세 설명 (선택)"
+            />
+            <div className="add-todo-form__row">
+              <Input
+                label="시작일"
+                type="date"
+                required
+                value={editingTodo.startDate || ''}
+                onChange={(e) => setEditingTodo({ ...editingTodo, startDate: e.target.value })}
+              />
+              <Input
+                label="시작 시간 (선택)"
+                type="time"
+                value={editingTodo.startTime || ''}
+                onChange={(e) => setEditingTodo({ ...editingTodo, startTime: e.target.value })}
+              />
+            </div>
+            <div className="add-todo-form__row">
+              <Input
+                label="마감일"
+                type="date"
+                required
+                value={editingTodo.dueDate || ''}
+                onChange={(e) => setEditingTodo({ ...editingTodo, dueDate: e.target.value })}
+              />
+              <Input
+                label="마감 시간 (선택)"
+                type="time"
+                value={editingTodo.dueTime || ''}
+                onChange={(e) => setEditingTodo({ ...editingTodo, dueTime: e.target.value })}
+              />
+            </div>
+            <div className="add-todo-form__row">
+              <Input
+                label="중요도 (1-10)"
+                type="number"
+                min="1"
+                max="10"
+                value={editingTodo.importance}
+                onChange={(e) =>
+                  setEditingTodo({ ...editingTodo, importance: parseInt(e.target.value) })
+                }
+              />
+              <Input
+                label="예상 시간 (시간)"
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={editingTodo.estimatedTime}
+                onChange={(e) =>
+                  setEditingTodo({ ...editingTodo, estimatedTime: parseFloat(e.target.value) })
+                }
+              />
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

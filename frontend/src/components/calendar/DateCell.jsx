@@ -2,7 +2,7 @@ import React from 'react';
 import { isToday, isSameDay } from '../../utils/dateUtils';
 import './DateCell.css';
 
-const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, onClick }) => {
+const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, hasPending, onClick }) => {
   const cellClass = [
     'date-cell',
     !isCurrentMonth && 'date-cell--other-month',
@@ -35,7 +35,11 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, onClick }) => {
       aria-pressed={isSelected}
     >
       <span className="date-cell__number">{date.getDate()}</span>
-      {hasEvents && <span className="date-cell__dot" />}
+      <div className="date-cell__indicators">
+        {hasPending && <span className="date-cell__dot date-cell__dot--pending" />}
+        {hasCompleted && <span className="date-cell__dot date-cell__dot--completed" />}
+        {hasEvents && !hasPending && !hasCompleted && <span className="date-cell__dot" />}
+      </div>
     </button>
   );
 };

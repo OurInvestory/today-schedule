@@ -1,9 +1,16 @@
 .header {
     position: sticky;
     top: 0;
+    background-color: transparent;
+    border-bottom: 1px solid transparent;
+    z-index: var(--z-index-sticky);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .header--scrolled {
     background-color: var(--color-bg-default);
     border-bottom: 1px solid var(--color-gray-200);
-    z-index: var(--z-index-sticky);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
   
   .header__container {
@@ -18,15 +25,28 @@
   .header__logo {
     display: flex;
     align-items: center;
+    gap: var(--spacing-sm);
     text-decoration: none;
     color: inherit;
+  }
+
+  .header__logo-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+    border-radius: var(--radius-md);
+    color: white;
   }
   
   .header__title {
     font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-bold);
-    color: var(--color-gray-900);
+    font-weight: 700;
+    color: var(--color-text-primary);
     margin: 0;
+    letter-spacing: -0.02em;
   }
   
   .header__actions {
@@ -42,17 +62,41 @@
     width: 40px;
     height: 40px;
     border-radius: var(--radius-full);
-    color: var(--color-gray-600);
+    color: #333333;
     transition: all var(--transition-base);
     position: relative;
   }
   
   .header__notification-btn:hover {
     background-color: var(--color-gray-100);
-    color: var(--color-gray-900);
+    color: #1a1a1a;
   }
-  
-  .header__notification-btn::after {
+
+  .header__icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-full);
+    color: #666666;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    position: relative;
+  }
+
+  .header__icon-btn:hover {
+    background-color: var(--color-gray-100);
+    color: #333333;
+  }
+
+  .header__icon-btn svg {
+    stroke-width: 2;
+  }
+
+  .header__icon-btn--has-notification::after {
     content: '';
     position: absolute;
     top: 8px;
@@ -61,11 +105,6 @@
     height: 8px;
     background-color: var(--color-error);
     border-radius: 50%;
-    display: none;
-  }
-  
-  .header__notification-btn--has-notification::after {
-    display: block;
   }
   
   .header__user {
