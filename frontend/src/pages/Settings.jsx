@@ -247,6 +247,63 @@ const Settings = () => {
                 onChange={() => handleToggle('doNotDisturb')}
               />
             </div>
+
+            <div className="settings-item">
+              <div className="settings-item__text">
+                <span className="settings-item__label">마감 전 알림</span>
+                <span className="settings-item__desc">할 일 마감 전에 알림을 받습니다</span>
+              </div>
+              <ToggleSwitch
+                checked={settings.deadlineAlert}
+                onChange={() => handleToggle('deadlineAlert')}
+              />
+            </div>
+
+            {settings.deadlineAlert && (
+              <div className="settings-item settings-item--sub">
+                <div className="settings-item__text">
+                  <span className="settings-item__label">마감 전 알림 시간</span>
+                  <span className="settings-item__desc">마감 몇 분 전에 알림을 받을지 설정</span>
+                </div>
+                <select
+                  className="settings-item__select"
+                  value={settings.deadlineAlertMinutes || 60}
+                  onChange={(e) => handleSelectChange('deadlineAlertMinutes', Number(e.target.value))}
+                >
+                  <option value={15}>15분 전</option>
+                  <option value={30}>30분 전</option>
+                  <option value={60}>1시간 전</option>
+                  <option value={120}>2시간 전</option>
+                  <option value={1440}>1일 전</option>
+                </select>
+              </div>
+            )}
+
+            <div className="settings-item">
+              <div className="settings-item__text">
+                <span className="settings-item__label">AI 데일리 브리핑</span>
+                <span className="settings-item__desc">매일 아침 AI가 일정을 정리해서 알려줍니다</span>
+              </div>
+              <ToggleSwitch
+                checked={settings.dailySummary}
+                onChange={() => handleToggle('dailySummary')}
+              />
+            </div>
+
+            {settings.dailySummary && (
+              <div className="settings-item settings-item--sub">
+                <div className="settings-item__text">
+                  <span className="settings-item__label">브리핑 시간</span>
+                  <span className="settings-item__desc">매일 이 시간에 일정 요약을 받습니다</span>
+                </div>
+                <input
+                  type="time"
+                  className="settings-item__time-input"
+                  value={settings.dailySummaryTime || '08:00'}
+                  onChange={(e) => handleSelectChange('dailySummaryTime', e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </section>
 

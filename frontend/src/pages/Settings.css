@@ -252,6 +252,39 @@
   border-color: #667eea;
 }
 
+/* 하위 설정 아이템 (들여쓰기) */
+.settings-item--sub {
+  padding-left: 36px;
+  background: #fafafa;
+}
+
+.settings-item--sub .settings-item__label {
+  font-size: 14px;
+  color: #666;
+}
+
+.settings-item--sub .settings-item__desc {
+  font-size: 12px;
+}
+
+/* 시간 입력 */
+.settings-item__time-input {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1a1a1a;
+  cursor: pointer;
+  outline: none;
+  min-width: 100px;
+}
+
+.settings-item__time-input:focus {
+  border-color: #667eea;
+}
+
 /* 토글 스위치 */
 .toggle-switch {
   position: relative;

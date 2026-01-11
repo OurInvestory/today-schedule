@@ -1,6 +1,8 @@
 // 알림 설정 관련 서비스
 
 const STORAGE_KEY = 'notification_settings';
+const NOTIFICATIONS_KEY = 'app_notifications';
+const SCHEDULED_ALERTS_KEY = 'scheduled_deadline_alerts';
 
 // 기본 알림 설정값
 const defaultSettings = {
@@ -11,10 +13,15 @@ const defaultSettings = {
   dailySummary: true,
   dailySummaryTime: '08:00',
   deadlineAlert: true,
+  deadlineAlertMinutes: 60, // 마감 전 알림 시간 (분)
   autoLock: '5',
   analyticsData: false,
   errorReport: true,
 };
+
+// 스케줄러 ID 저장
+let deadlineCheckInterval = null;
+let dailyBriefingTimeout = null;
 
 /**
  * 알림 설정 가져오기
@@ -43,6 +50,12 @@ export const updateNotificationSettings = async (updates) => {
     const current = await getNotificationSettings();
     const updated = { ...current, ...updates };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    
+    // 데일리 브리핑 시간이 변경되면 스케줄러 재설정
+    if (updates.dailySummaryTime !== undefined || updates.dailySummary !== undefined) {
+      scheduleDailyBriefing();
+    }
+    
     return updated;
   } catch (error) {
     console.error('Error updating notification settings:', error);
@@ -64,8 +77,367 @@ export const resetNotificationSettings = async () => {
   }
 };
 
+// ============ 인앱 알림 관리 ============
+
+/**
+ * 저장된 알림 목록 가져오기
+ */
+export const getNotifications = () => {
+  try {
+    const stored = localStorage.getItem(NOTIFICATIONS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error getting notifications:', error);
+    return [];
+  }
+};
+
+/**
+ * 알림 저장하기
+ */
+export const saveNotifications = (notifications) => {
+  try {
+    localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+  } catch (error) {
+    console.error('Error saving notifications:', error);
+  }
+};
+
+/**
+ * 새 알림 추가
+ */
+export const addNotification = (notification) => {
+  const notifications = getNotifications();
+  const newNotification = {
+    id: Date.now(),
+    ...notification,
+    time: formatTimeAgo(new Date()),
+    timestamp: new Date().toISOString(),
+    isRead: false,
+  };
+  notifications.unshift(newNotification);
+  saveNotifications(notifications);
+  return newNotification;
+};
+
+/**
+ * 알림 읽음 처리
+ */
+export const markNotificationAsRead = (id) => {
+  const notifications = getNotifications();
+  const updated = notifications.map(n => 
+    n.id === id ? { ...n, isRead: true } : n
+  );
+  saveNotifications(updated);
+  return updated;
+};
+
+/**
+ * 모든 알림 읽음 처리
+ */
+export const markAllNotificationsAsRead = () => {
+  const notifications = getNotifications();
+  const updated = notifications.map(n => ({ ...n, isRead: true }));
+  saveNotifications(updated);
+  return updated;
+};
+
+/**
+ * 알림 삭제
+ */
+export const deleteNotification = (id) => {
+  const notifications = getNotifications();
+  const updated = notifications.filter(n => n.id !== id);
+  saveNotifications(updated);
+  return updated;
+};
+
+// ============ 브라우저 알림 ============
+
+/**
+ * 브라우저 알림 보내기
+ */
+export const sendBrowserNotification = async (title, options = {}) => {
+  const settings = await getNotificationSettings();
+  
+  if (!settings.pushNotification) {
+    return null;
+  }
+  
+  if (settings.doNotDisturb) {
+    return null;
+  }
+  
+  if (!('Notification' in window)) {
+    console.warn('This browser does not support notifications');
+    return null;
+  }
+  
+  if (Notification.permission !== 'granted') {
+    return null;
+  }
+  
+  const notification = new Notification(title, {
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/badge-72x72.png',
+    ...options,
+  });
+  
+  // 인앱 알림도 함께 추가
+  addNotification({
+    type: options.tag || 'info',
+    title,
+    message: options.body || '',
+  });
+  
+  return notification;
+};
+
+// ============ 마감 전 알림 ============
+
+/**
+ * 할 일 마감 전 알림 스케줄링
+ */
+export const scheduleDeadlineAlerts = async () => {
+  const settings = await getNotificationSettings();
+  
+  if (!settings.deadlineAlert) {
+    return;
+  }
+  
+  // 기존 인터벌 정리
+  if (deadlineCheckInterval) {
+    clearInterval(deadlineCheckInterval);
+  }
+  
+  // 1분마다 마감 체크
+  deadlineCheckInterval = setInterval(() => {
+    checkDeadlines(settings.deadlineAlertMinutes);
+  }, 60000);
+  
+  // 즉시 한 번 체크
+  checkDeadlines(settings.deadlineAlertMinutes);
+};
+
+/**
+ * 마감 시간 체크 및 알림
+ */
+const checkDeadlines = async (alertMinutes = 60) => {
+  try {
+    const todosStr = localStorage.getItem('todos');
+    if (!todosStr) return;
+    
+    const todos = JSON.parse(todosStr);
+    const now = new Date();
+    const alertedKey = SCHEDULED_ALERTS_KEY;
+    const alerted = JSON.parse(localStorage.getItem(alertedKey) || '{}');
+    
+    todos.forEach(todo => {
+      if (todo.completed) return;
+      if (!todo.dueDate) return;
+      
+      // 마감 시간 계산 (시간이 있으면 해당 시간, 없으면 당일 23:59)
+      let dueDateTime;
+      if (todo.endTime) {
+        dueDateTime = new Date(`${todo.dueDate}T${todo.endTime}`);
+      } else {
+        dueDateTime = new Date(`${todo.dueDate}T23:59:59`);
+      }
+      
+      const timeDiff = dueDateTime.getTime() - now.getTime();
+      const minutesUntilDue = timeDiff / (1000 * 60);
+      
+      // 알림 시간 범위 내이고, 아직 알림을 보내지 않은 경우
+      if (minutesUntilDue > 0 && minutesUntilDue <= alertMinutes && !alerted[todo.id]) {
+        sendBrowserNotification(`⏰ 마감 임박: ${todo.title}`, {
+          body: `${Math.round(minutesUntilDue)}분 후에 마감됩니다.`,
+          tag: 'deadline',
+          requireInteraction: true,
+        });
+        
+        // 알림 전송 기록
+        alerted[todo.id] = new Date().toISOString();
+        localStorage.setItem(alertedKey, JSON.stringify(alerted));
+      }
+    });
+    
+    // 오래된 알림 기록 정리 (24시간 이상 지난 것)
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    Object.keys(alerted).forEach(key => {
+      if (new Date(alerted[key]) < oneDayAgo) {
+        delete alerted[key];
+      }
+    });
+    localStorage.setItem(alertedKey, JSON.stringify(alerted));
+    
+  } catch (error) {
+    console.error('Error checking deadlines:', error);
+  }
+};
+
+// ============ AI 데일리 브리핑 ============
+
+/**
+ * AI 데일리 브리핑 스케줄링
+ */
+export const scheduleDailyBriefing = async () => {
+  const settings = await getNotificationSettings();
+  
+  // 기존 타임아웃 정리
+  if (dailyBriefingTimeout) {
+    clearTimeout(dailyBriefingTimeout);
+  }
+  
+  if (!settings.dailySummary) {
+    return;
+  }
+  
+  const scheduleNext = () => {
+    const now = new Date();
+    const [hours, minutes] = settings.dailySummaryTime.split(':').map(Number);
+    
+    let nextBriefing = new Date();
+    nextBriefing.setHours(hours, minutes, 0, 0);
+    
+    // 이미 지난 시간이면 다음 날로 설정
+    if (nextBriefing <= now) {
+      nextBriefing.setDate(nextBriefing.getDate() + 1);
+    }
+    
+    const msUntilBriefing = nextBriefing.getTime() - now.getTime();
+    
+    dailyBriefingTimeout = setTimeout(async () => {
+      await sendDailyBriefing();
+      scheduleNext(); // 다음 브리핑 스케줄
+    }, msUntilBriefing);
+  };
+  
+  scheduleNext();
+};
+
+/**
+ * AI 데일리 브리핑 생성 및 전송
+ */
+export const sendDailyBriefing = async () => {
+  try {
+    const todosStr = localStorage.getItem('todos');
+    if (!todosStr) return;
+    
+    const todos = JSON.parse(todosStr);
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 오늘 할 일 필터링 (startDate <= today <= dueDate)
+    const todayTodos = todos.filter(todo => {
+      if (todo.completed) return false;
+      const start = todo.startDate || todo.dueDate;
+      const end = todo.dueDate;
+      return start <= today && today <= end;
+    });
+    
+    // 긴급한 할 일 (importance >= 7)
+    const urgentTodos = todayTodos.filter(t => t.importance >= 7);
+    
+    // 오늘 마감인 할 일
+    const dueTodayTodos = todayTodos.filter(t => t.dueDate === today);
+    
+    // 브리핑 메시지 생성
+    let briefingMessage = '';
+    
+    if (todayTodos.length === 0) {
+      briefingMessage = '오늘은 예정된 할 일이 없습니다. 여유로운 하루 되세요! 🎉';
+    } else {
+      briefingMessage = `오늘 할 일 ${todayTodos.length}개`;
+      
+      if (urgentTodos.length > 0) {
+        briefingMessage += ` (긴급 ${urgentTodos.length}개)`;
+      }
+      
+      if (dueTodayTodos.length > 0) {
+        briefingMessage += `\n오늘 마감: ${dueTodayTodos.map(t => t.title).join(', ')}`;
+      }
+    }
+    
+    // 브라우저 알림 전송
+    sendBrowserNotification('🌅 AI 데일리 브리핑', {
+      body: briefingMessage,
+      tag: 'briefing',
+      requireInteraction: true,
+    });
+    
+    return {
+      todayTodos,
+      urgentTodos,
+      dueTodayTodos,
+      message: briefingMessage,
+    };
+  } catch (error) {
+    console.error('Error sending daily briefing:', error);
+    return null;
+  }
+};
+
+/**
+ * 수동으로 데일리 브리핑 트리거 (테스트용)
+ */
+export const triggerDailyBriefing = async () => {
+  return await sendDailyBriefing();
+};
+
+// ============ 유틸리티 ============
+
+/**
+ * 상대 시간 포맷팅
+ */
+const formatTimeAgo = (date) => {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return '방금 전';
+  if (diffMins < 60) return `${diffMins}분 전`;
+  if (diffHours < 24) return `${diffHours}시간 전`;
+  return `${diffDays}일 전`;
+};
+
+/**
+ * 알림 서비스 초기화 (앱 시작 시 호출)
+ */
+export const initNotificationService = async () => {
+  await scheduleDeadlineAlerts();
+  await scheduleDailyBriefing();
+};
+
+/**
+ * 알림 서비스 정리 (앱 종료 시 호출)
+ */
+export const cleanupNotificationService = () => {
+  if (deadlineCheckInterval) {
+    clearInterval(deadlineCheckInterval);
+    deadlineCheckInterval = null;
+  }
+  if (dailyBriefingTimeout) {
+    clearTimeout(dailyBriefingTimeout);
+    dailyBriefingTimeout = null;
+  }
+};
+
 export default {
   getNotificationSettings,
   updateNotificationSettings,
   resetNotificationSettings,
+  getNotifications,
+  saveNotifications,
+  addNotification,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  sendBrowserNotification,
+  scheduleDeadlineAlerts,
+  scheduleDailyBriefing,
+  sendDailyBriefing,
+  triggerDailyBriefing,
+  initNotificationService,
+  cleanupNotificationService,
 };

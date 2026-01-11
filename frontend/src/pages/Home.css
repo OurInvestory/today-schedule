@@ -44,24 +44,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  border-radius: 8px;
   color: #fff;
 }
 
+.home__header-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .home__title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333333;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #444444;
   margin: 0;
-  letter-spacing: -0.02em;
 }
 
 .home__subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-gray-600);
+  font-size: 13px;
+  font-weight: 400;
+  color: #888888;
   margin: 0;
 }
 

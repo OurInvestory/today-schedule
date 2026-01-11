@@ -6,6 +6,7 @@ import TaskDetail from './pages/TaskDetail';
 import Archive from './pages/Archive';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
+import { initNotificationService, cleanupNotificationService } from './services/notificationService';
 import './App.css';
 
 // 알림 권한 요청 함수
@@ -28,15 +29,22 @@ const requestNotificationPermission = async () => {
 };
 
 function App() {
-  // 앱 시작 시 알림 권한 요청
+  // 앱 시작 시 알림 권한 요청 및 알림 서비스 초기화
   useEffect(() => {
     requestNotificationPermission().then((granted) => {
       if (granted) {
         console.log('알림 권한이 허용되었습니다.');
+        // 알림 서비스 초기화 (마감 알림, 데일리 브리핑 스케줄러 시작)
+        initNotificationService();
       } else {
         console.log('알림 권한이 거부되었습니다.');
       }
     });
+
+    // 클린업
+    return () => {
+      cleanupNotificationService();
+    };
   }, []);
 
   return (

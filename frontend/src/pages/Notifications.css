@@ -88,6 +88,95 @@
   background: #f0f0ff;
 }
 
+/* 필터 버튼 영역 */
+.notifications__filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.notifications__filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  background: #f5f5f7;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notifications__filter-btn:hover {
+  background: #e8e8ec;
+}
+
+.notifications__filter-btn--active {
+  background: #667eea;
+  color: #fff;
+}
+
+.notifications__filter-btn--active:hover {
+  background: #5569d9;
+}
+
+.notifications__filter-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.notifications__filter-btn--active .notifications__filter-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.notifications__filter-count--unread {
+  background: #ff4757;
+  color: #fff;
+}
+
+.notifications__filter-btn--active .notifications__filter-count--unread {
+  background: rgba(255, 255, 255, 0.9);
+  color: #ff4757;
+}
+
+.notifications__briefing-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #f59f00;
+  background: #fff8e6;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notifications__briefing-btn:hover {
+  background: #ffefcc;
+}
+
+.notifications__briefing-btn svg {
+  flex-shrink: 0;
+}
+
 .notifications__content {
   padding: 20px;
   padding-bottom: 100px;
@@ -172,6 +261,11 @@
 .notification-item__icon--info {
   background: #e6f4ff;
   color: #3498db;
+}
+
+.notification-item__icon--briefing {
+  background: #fff8e6;
+  color: #f59f00;
 }
 
 .notification-item__content {
