@@ -1,0 +1,209 @@
+.schedule-detail {
+  padding: var(--spacing-lg);
+  min-height: 100vh;
+  background-color: var(--color-bg-secondary);
+}
+
+.schedule-detail__container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.schedule-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
+.schedule-detail__title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.schedule-detail__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.schedule-detail__content {
+  background: var(--color-bg-default);
+  border-radius: 15px;
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+/* 편집 폼 */
+.schedule-detail__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.schedule-detail__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.schedule-detail__field label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.schedule-detail__field input,
+.schedule-detail__field textarea {
+  padding: 12px 14px;
+  font-size: var(--font-size-base);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 10px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.schedule-detail__field input:focus,
+.schedule-detail__field textarea:focus {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.schedule-detail__field textarea {
+  resize: none;
+}
+
+.schedule-detail__time-row {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.schedule-detail__time-row .schedule-detail__field {
+  flex: 1;
+}
+
+/* 보기 모드 */
+.schedule-detail__view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.schedule-detail__info-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-lg) 0;
+}
+
+.schedule-detail__info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.schedule-detail__info-row:last-child {
+  border-bottom: none;
+}
+
+.schedule-detail__info-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  min-width: 80px;
+}
+
+.schedule-detail__info-value {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+/* 종일 토글 */
+.schedule-detail__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  margin-bottom: 8px;
+}
+
+.schedule-detail__toggle-label {
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+}
+
+.schedule-detail__toggle {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.schedule-detail__toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.schedule-detail__toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-gray-300);
+  border-radius: 26px;
+  transition: all 0.3s;
+}
+
+.schedule-detail__toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 2px;
+  bottom: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.schedule-detail__toggle input:checked + .schedule-detail__toggle-slider {
+  background: var(--color-primary-500);
+}
+
+.schedule-detail__toggle input:checked + .schedule-detail__toggle-slider::before {
+  transform: translateX(22px);
+}
+
+/* 편집 힌트 */
+.schedule-detail__edit-hint {
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin-top: var(--spacing-md);
+}
+
+/* 푸터 */
+.schedule-detail__footer {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .schedule-detail {
+    padding: var(--spacing-md);
+  }
+
+  .schedule-detail__header {
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .schedule-detail__time-row {
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+}

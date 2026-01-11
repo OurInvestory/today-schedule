@@ -94,7 +94,13 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
   return (
     <div className="todo-item__wrapper">
       {/* 삭제 배경 */}
-      <div className="todo-item__delete-bg">
+      <div 
+        className="todo-item__delete-bg"
+        style={{ 
+          width: swipeOffset < 0 ? Math.abs(swipeOffset) : 0,
+          opacity: swipeOffset < 0 ? 1 : 0 
+        }}
+      >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
           <path d="M3 6h18M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
         </svg>

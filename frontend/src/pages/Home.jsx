@@ -159,7 +159,15 @@ const Home = () => {
               onToggle={toggleComplete}
               onEdit={handleOpenEditModal}
               onDelete={removeTodo}
-              onAdd={() => setIsAddModalOpen(true)}
+              onAdd={() => {
+                // 선택된 날짜를 기본값으로 설정
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                setNewTodo(prev => ({ ...prev, startDate: dateStr, dueDate: dateStr }));
+                setIsAddModalOpen(true);
+              }}
               emptyMessage="할 일이 없습니다. 새로운 할 일을 추가해보세요!"
             />
           </div>
