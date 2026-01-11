@@ -1,6 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.db.database import engine, Base
+from app.models import user, lecture, schedule, sub_task, notification, Base
+from app.db.database import engine
+from app.api import user_router, schedule_router
+
+
+# model 설정
+Base.metadata.create_all(bind=engine)
 
 
 # 앱 인스턴스 새성
@@ -25,6 +31,11 @@ app.add_middleware(
     allow_methods=["*"],              # 모든 HTTP Method 허용
     allow_headers=["*"],              # 모든 HTTP Header 허용
 )
+
+
+# 라우터 등록
+app.include_router(user_router.router)
+app.include_router(schedule_router.router)
 
 
 # 서버 확인 테스트 용도 (추후 삭제 예정)
