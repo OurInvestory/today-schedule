@@ -24,6 +24,7 @@ class AIChatParsed(BaseModel):
     actions: List[Action] = Field(default_factory=list)
     missingFields: List[MissingField] = Field(default_factory=list)
     reasoning: Optional[str] = None
+    preserved_info: Dict[str, Any] = Field(default_factory=dict)
 
 # 4) Request 
 class ChatRequest(BaseModel):

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import user, lecture, schedule, sub_task, notification, ai_pending
+from app.models import user, lecture, schedule, sub_task, notification
 from app.db.database import engine, Base
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
 from app.api import user_router, schedule_router, ai_chat
