@@ -1,18 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import user, lecture, schedule, sub_task, notification, Base
-from app.db.database import engine
-from app.api import user_router, schedule_router
+from app.models import user, lecture, schedule, sub_task, notification, ai_pending
+from app.db.database import engine, Base
+from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
+from app.api import user_router, schedule_router, ai_chat
 
 
 # model 설정
 Base.metadata.create_all(bind=engine)
 
-
 # 앱 인스턴스 새성
 app = FastAPI(
     title = "5늘의 일정",
-    descrption= "watsonx.ai 기반 대학생 맞춤형 AI 학업 스케줄 도우미",
+    description= "watsonx.ai 기반 대학생 맞춤형 AI 학업 스케줄 도우미",
     version="1.0.0"
 )
 
@@ -36,8 +36,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(user_router.router)
 app.include_router(schedule_router.router)
-
-
+app.include_router(ai_chat.router, prefix="/api", tags=["AI"])
 # 서버 확인 테스트 용도 (추후 삭제 예정)
 @app.get("/")
 def server_test():
