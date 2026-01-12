@@ -151,11 +151,11 @@
 }
 
 .todo-filter__chip:hover {
-  border-color: var(--color-icon-bg-solid);
+  border-color: var(--color-primary-500);
 }
 
 .todo-filter__chip--active {
-  background: var(--color-icon-bg);
+  background: var(--color-primary-500);
   border-color: transparent;
   color: #fff;
 }
@@ -199,7 +199,7 @@
   padding: 14px;
   border: none;
   border-radius: 12px;
-  background: var(--color-icon-bg);
+  background: var(--color-primary-500);
   font-size: 16px;
   font-weight: 600;
   color: #fff;

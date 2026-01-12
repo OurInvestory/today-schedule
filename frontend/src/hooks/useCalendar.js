@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCalendarDates, addMonths } from '../utils/dateUtils';
 import { getMonthlyEvents } from '../services/calendarService';
+import { getTodos } from '../services/todoService';
 
 export const useCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState([]);
+  const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -15,25 +17,89 @@ export const useCalendar = () => {
   // 캘린더 날짜 배열 생성
   const dates = getCalendarDates(year, month);
 
-  // 월별 이벤트 조회
+  // 월별 일정(Schedule) 조회
   const fetchMonthlyEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
-      setEvents(data || []);
+      // 일정(Schedule)만 필터링 (type이 'schedule'인 경우)
+      const schedulesOnly = (data || []).filter(item => item.type === 'schedule');
+      
+      // 예시 일정 추가 (백엔드 연동 전 테스트용)
+      const mockSchedule = {
+        id: 'mock-1',
+        title: '팀 미팅',
+        description: '프로젝트 진행 상황 공유',
+        date: new Date().toISOString().split('T')[0], // 오늘 날짜
+        startTime: '14:00',
+        endTime: '15:00',
+        isAllDay: false,
+        type: 'schedule',
+      };
+      
+      const mockSchedule2 = {
+        id: 'mock-2',
+        title: '프로젝트 발표',
+        description: '클라이언트 미팅',
+        date: '2026-01-13',
+        startTime: '10:00',
+        endTime: '11:30',
+        isAllDay: false,
+        type: 'schedule',
+      };
+      
+      setEvents([mockSchedule, mockSchedule2, ...schedulesOnly]);
     } catch (err) {
-      setError(err.message || '이벤트를 불러오는데 실패했습니다.');
-      console.error('Failed to fetch monthly events:', err);
+      // API 에러 시에도 예시 일정 표시 (백엔드 연동 전 테스트용)
+      console.warn('Failed to fetch monthly events, using mock data:', err);
+      
+      const mockSchedule = {
+        id: 'mock-1',
+        title: '팀 미팅',
+        description: '프로젝트 진행 상황 공유',
+        date: new Date().toISOString().split('T')[0], // 오늘 날짜
+        startTime: '14:00',
+        endTime: '15:00',
+        isAllDay: false,
+        type: 'schedule',
+      };
+      
+      const mockSchedule2 = {
+        id: 'mock-2',
+        title: '프로젝트 발표',
+        description: '클라이언트 미팅',
+        date: '2026-01-13',
+        startTime: '10:00',
+        endTime: '11:30',
+        isAllDay: false,
+        type: 'schedule',
+      };
+      
+      setEvents([mockSchedule, mockSchedule2]);
     } finally {
       setLoading(false);
     }
   }, [year, month]);
 
-  // 월 변경 시 이벤트 조회
+  // 할 일(Todo) 조회 - 캘린더에서 할 일 아이콘 표시용
+  const fetchTodos = useCallback(async () => {
+    try {
+      const data = await getTodos({});
+      // 할 일(Todo)만 필터링 (type이 'todo'이거나 type 필드가 없는 경우)
+      const todosOnly = (data || []).filter(item => !item.type || item.type === 'todo');
+      setTodos(todosOnly);
+    } catch (err) {
+      console.error('Failed to fetch todos for calendar:', err);
+      setTodos([]);
+    }
+  }, []);
+
+  // 월 변경 시 데이터 조회
   useEffect(() => {
     fetchMonthlyEvents();
-  }, [fetchMonthlyEvents]);
+    fetchTodos();
+  }, [fetchMonthlyEvents, fetchTodos]);
 
   // 이전 달로 이동
   const goToPreviousMonth = useCallback(() => {
@@ -74,16 +140,58 @@ export const useCalendar = () => {
     });
   }, [events]);
 
-  // 이벤트가 있는 날짜인지 확인
+  // 이벤트(일정)가 있는 날짜인지 확인
   const hasEventsOnDate = useCallback((date) => {
     return getEventsForDate(date).length > 0;
   }, [getEventsForDate]);
+
+  // 특정 날짜에 할 일이 있는지 확인
+  const hasTodosOnDate = useCallback((date) => {
+    return todos.some(todo => {
+      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
+      if (!todoDate) return false;
+      return (
+        todoDate.getFullYear() === date.getFullYear() &&
+        todoDate.getMonth() === date.getMonth() &&
+        todoDate.getDate() === date.getDate()
+      );
+    });
+  }, [todos]);
+
+  // 특정 날짜에 완료된 할 일이 있는지 확인
+  const hasCompletedTodosOnDate = useCallback((date) => {
+    return todos.some(todo => {
+      if (!todo.completed) return false;
+      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
+      if (!todoDate) return false;
+      return (
+        todoDate.getFullYear() === date.getFullYear() &&
+        todoDate.getMonth() === date.getMonth() &&
+        todoDate.getDate() === date.getDate()
+      );
+    });
+  }, [todos]);
+
+  // 특정 날짜에 미완료 할 일이 있는지 확인
+  const hasPendingTodosOnDate = useCallback((date) => {
+    return todos.some(todo => {
+      if (todo.completed) return false;
+      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
+      if (!todoDate) return false;
+      return (
+        todoDate.getFullYear() === date.getFullYear() &&
+        todoDate.getMonth() === date.getMonth() &&
+        todoDate.getDate() === date.getDate()
+      );
+    });
+  }, [todos]);
 
   return {
     currentDate,
     selectedDate,
     dates,
     events,
+    todos,
     loading,
     error,
     goToPreviousMonth,
@@ -93,6 +201,9 @@ export const useCalendar = () => {
     selectDate,
     getEventsForDate,
     hasEventsOnDate,
+    hasTodosOnDate,
+    hasCompletedTodosOnDate,
+    hasPendingTodosOnDate,
     refetch: fetchMonthlyEvents,
   };
 };

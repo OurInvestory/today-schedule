@@ -31,8 +31,12 @@ export const useTodo = (initialFilter = {}) => {
         data = await getTodos({});
       }
       
+      // 할 일(Todo)만 필터링 (type이 'todo'이거나 type 필드가 없는 경우)
+      // 일정(Schedule)은 캘린더에서만 표시됨
+      const todosOnly = data.filter(item => !item.type || item.type === 'todo');
+      
       // 우선순위 할당 및 정렬
-      const todosWithPriority = data.map(todo => assignPriority(todo));
+      const todosWithPriority = todosOnly.map(todo => assignPriority(todo));
       const sortedTodos = sortByPriority(todosWithPriority);
       
       setAllTodos(sortedTodos);

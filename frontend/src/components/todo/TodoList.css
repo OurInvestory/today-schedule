@@ -16,7 +16,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-2xl);
+  padding: var(--spacing-lg) 0;
   color: var(--color-gray-400);
   min-height: 200px;
 }
@@ -30,6 +30,18 @@
   color: var(--color-gray-500);
   text-align: center;
   margin: 0 0 var(--spacing-lg) 0;
+}
+
+/* 할 일 없을 때 + 버튼 */
+.todo-list-empty .todo-list__add-btn {
+  margin-top: var(--spacing-sm);
+  width: 100%;
+  height: 59.2px;
+  box-sizing: border-box;
+}
+
+.todo-list-empty .todo-list__add-btn svg {
+  margin-bottom: 0;
 }
 
 /* 하단 추가 버튼 */
@@ -52,20 +64,4 @@
   border-color: var(--color-primary-500);
   color: var(--color-primary-500);
   background: var(--color-primary-50);
-}
-
-.todo-list__add-btn--empty {
-  gap: var(--spacing-sm);
-  border-style: solid;
-  background: var(--color-icon-bg);
-  border: none;
-  color: #fff;
-  padding: var(--spacing-md) var(--spacing-xl);
-  width: auto;
-}
-
-.todo-list__add-btn--empty:hover {
-  background: var(--color-icon-bg);
-  opacity: 0.9;
-  color: #fff;
 }
