@@ -178,12 +178,20 @@ const Notifications = () => {
           </svg>
         </button>
         <div className="notifications__header-content">
-          <div className="notifications__header-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-          </div>
+          <svg 
+            className="notifications__header-icon"
+            width="22" 
+            height="22" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
           <h1 className="notifications__title">알림</h1>
           {unreadCount > 0 && (
             <span className="notifications__badge">{unreadCount}</span>
@@ -215,22 +223,6 @@ const Notifications = () => {
               {unreadCount}
             </span>
           )}
-        </button>
-        <button
-          className="notifications__briefing-btn"
-          onClick={handleTriggerBriefing}
-          title="AI 데일리 브리핑 받기"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-          </svg>
-          브리핑
         </button>
       </div>
 
