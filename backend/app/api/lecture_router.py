@@ -6,7 +6,7 @@ from datetime import date
 
 from app.db.database import get_db
 from app.models.lecture import Lecture
-from app.schemas.lecture import CreateLectureRequest, UpdateLectureRequest, LectureResponse
+from app.schemas.lecture import SaveLectureRequest, UpdateLectureRequest, LectureResponse
 from app.schemas.common import ResponseDTO
 
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/lectures", tags=["Lecture"])
 # 강의 저장
 @router.post("", response_model=ResponseDTO)
 def create_lectures(
-    obj_in: Union[CreateLectureRequest, List[CreateLectureRequest]], 
+    obj_in: Union[SaveLectureRequest, List[SaveLectureRequest]], 
     db: Session = Depends(get_db)
 ):
     test_user_id = "7822a162-788d-4f36-9366-c956a68393e1"
