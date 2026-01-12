@@ -176,8 +176,7 @@ const Settings = () => {
               </div>
               <div className="profile-info__details">
                 <h3 className="profile-info__name">김학생</h3>
-                <p className="profile-info__email">student@university.ac.kr</p>
-                <p className="profile-info__dept">컴퓨터공학과 · 3학년</p>
+                <button className="profile-info__manage-button" onClick={() => console.log('Manage Info Clicked')}>내 정보 관리</button>
               </div>
             </div>
           </div>

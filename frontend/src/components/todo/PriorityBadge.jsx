@@ -9,7 +9,7 @@ const PriorityBadge = ({ priority, size = 'sm', showIcon = true }) => {
     [PRIORITIES.LOW]: 'priority-low',
   };
 
-  const label = PRIORITY_LABELS[priority] || priority;
+  const label = PRIORITY_LABELS[priority] || PRIORITY_LABELS[PRIORITIES.LOW];
   const icon = PRIORITY_ICONS[priority] || '';
 
   return (
