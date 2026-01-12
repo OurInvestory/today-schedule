@@ -5,7 +5,6 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
-  triggerDailyBriefing,
 } from '../services/notificationService';
 import './Notifications.css';
 
@@ -148,23 +147,6 @@ const Notifications = () => {
   const handleDelete = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
     deleteNotification(id);
-  };
-
-  const handleTriggerBriefing = async () => {
-    const result = await triggerDailyBriefing();
-    if (result) {
-      // 브리핑 결과를 알림 목록에 추가
-      const newNotification = {
-        id: Date.now(),
-        type: 'briefing',
-        title: '🌅 AI 데일리 브리핑',
-        message: result.message,
-        time: '방금 전',
-        timestamp: new Date().toISOString(),
-        isRead: false,
-      };
-      setNotifications(prev => [newNotification, ...prev]);
-    }
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

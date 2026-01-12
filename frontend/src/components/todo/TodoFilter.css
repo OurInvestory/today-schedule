@@ -72,7 +72,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff;
+  background: var(--color-bg-default);
   border-radius: 20px 20px 0 0;
   z-index: 101;
   max-height: 80vh;
@@ -94,16 +94,17 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
-  background: #fff;
+  background: var(--color-bg-default);
 }
 
 .todo-filter__sheet-title {
   font-size: 18px;
   font-weight: 700;
   margin: 0;
+  color: var(--color-text-primary);
 }
 
 .todo-filter__sheet-close {
@@ -111,7 +112,7 @@
   border: none;
   padding: 8px;
   cursor: pointer;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .todo-filter__sheet-content {
@@ -129,7 +130,7 @@
 .todo-filter__sheet-label {
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: var(--color-text-secondary);
   margin: 0 0 12px 0;
 }
 
@@ -141,11 +142,11 @@
 
 .todo-filter__chip {
   padding: 8px 16px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-border);
   border-radius: 20px;
-  background: #fff;
+  background: var(--color-bg-default);
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -176,21 +177,21 @@
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid var(--color-border);
   position: sticky;
   bottom: 0;
-  background: #fff;
+  background: var(--color-bg-default);
 }
 
 .todo-filter__reset-btn {
   flex: 1;
   padding: 14px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-bg-default);
   font-size: 16px;
   font-weight: 600;
-  color: #666;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
@@ -235,12 +236,12 @@
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    background: #fff;
-    border: 1px solid #e5e5e5;
+    background: var(--color-bg-default);
+    border: 1px solid var(--color-border);
     border-radius: 20px;
     font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--color-text-primary);
     cursor: pointer;
     margin-bottom: 0;
   }
