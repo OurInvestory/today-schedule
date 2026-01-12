@@ -131,7 +131,7 @@ const Home = () => {
 
         {/* Right: Todo List */}
         <main className="home__main">
-          <div className="home__header">
+          <div className="home__header" style={{ marginBottom: '16px' }}>
             <div className="home__header-left">
               <svg 
                 className="home__header-icon"
@@ -158,7 +158,7 @@ const Home = () => {
             </div>
           </div>
 
-          <TodoFilter filter={filter} onFilterChange={updateFilter} />
+          <TodoFilter filter={filter} onFilterChange={updateFilter} style={{ marginBottom: '16px' }} />
 
           <div className="home__todos">
             <TodoList

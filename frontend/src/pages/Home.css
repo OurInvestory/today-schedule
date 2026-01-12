@@ -34,6 +34,7 @@
   min-height: 72px;
   background-color: var(--color-bg-default);
   border-radius: 15px;
+  margin-bottom: 16px;
 }
 
 .home__header-left {
@@ -64,6 +65,7 @@
 .home__todos {
   padding: 0;
   background-color: transparent;
+  margin-top: 12px;
 }
 
 .add-todo-form {
@@ -96,10 +98,13 @@
 
   .home__header {
     padding: 12px var(--spacing-md);
+    margin-bottom: 0 !important; /* Ensure margin-bottom is explicitly set to 0 */
+    margin-top: 12px; /* Added margin-top for mobile view */
   }
 
   .home__todos {
     padding: 0;
+    margin-top: 12px;
   }
 
   .add-todo-form__row {
