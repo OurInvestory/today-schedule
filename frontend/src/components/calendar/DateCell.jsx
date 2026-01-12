@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { isToday, isSameDay } from '../../utils/dateUtils';
+import { isToday } from '../../utils/dateUtils';
 import './DateCell.css';
 
 const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, hasPending, onClick, onDoubleClick }) => {

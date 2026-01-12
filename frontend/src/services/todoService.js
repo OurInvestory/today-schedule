@@ -1,20 +1,27 @@
 import api from './api';
 
-// Todo 서비스 - API 기반 (백엔드 연동)
-const STORAGE_KEY = 'todos';
-
 /**
  * Fetch all todos from the backend.
  */
 export const fetchTodos = async () => {
   try {
     const response = await api.get('/api/schedules');
-    return response;
+    // Map priority numbers to priority labels
+    return response.map(todo => ({
+      ...todo,
+      priority: mapPriority(todo.priority_score),
+    }));
   } catch (error) {
     console.error('Failed to fetch todos:', error);
     throw error;
   }
 };
+
+const mapPriority = (score) => {
+  if (score >= 8) return 'high';
+  if (score >= 4) return 'medium';
+  return 'low';
+}
 
 /**
  * Create a new todo.

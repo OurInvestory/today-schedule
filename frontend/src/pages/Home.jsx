@@ -38,10 +38,14 @@ const Home = () => {
       const diffMs = dueDateTime - startDateTime;
       if (diffMs > 0) {
         const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10; // 소수점 1자리
-        setNewTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+        if (newTodo.estimatedTime !== diffHours) {
+          setTimeout(() => {
+            setNewTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+          }, 0);
+        }
       }
     }
-  }, [newTodo.startDate, newTodo.startTime, newTodo.dueDate, newTodo.dueTime]);
+  }, [newTodo]); // Include newTodo as a dependency
 
   // 편집 모달에서도 시간 자동 계산
   useEffect(() => {
@@ -53,10 +57,14 @@ const Home = () => {
       const diffMs = dueDateTime - startDateTime;
       if (diffMs > 0) {
         const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10;
-        setEditingTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+        if (editingTodo.estimatedTime !== diffHours) {
+          setTimeout(() => {
+            setEditingTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+          }, 0);
+        }
       }
     }
-  }, [editingTodo?.startDate, editingTodo?.startTime, editingTodo?.dueDate, editingTodo?.dueTime]);
+  }, [editingTodo]); // Include editingTodo as a dependency
 
   const { todos, loading, toggleComplete, addTodo, editTodo, removeTodo, updateFilter, filter } =
     useTodo({ date: 'today' });
