@@ -21,10 +21,7 @@ from app.schemas.ai_chat import (
 
 load_dotenv()
 
-router = APIRouter(
-    prefix="/ai/chat",
-    tags=["AI Chat"]
-)
+router = APIRouter()
 
 # --- Watsonx 설정 ---
 WATSONX_API_KEY = os.getenv("WATSONX_API_KEY")
@@ -80,7 +77,7 @@ def extract_json_from_text(text: str) -> str:
     except Exception:
         return text.strip()
 
-@router.post("", response_model=APIResponse , response_model_exclude_none=True)
+@router.post("/chat", response_model=APIResponse , response_model_exclude_none=True)
 async def chat_with_ai(req: ChatRequest):
     try:
         model = get_watson_model()
