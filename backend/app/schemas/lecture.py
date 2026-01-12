@@ -3,8 +3,8 @@ from datetime import date, time
 from typing import Optional, List, Any
 
 
-# 강의 생성 요청 스키마
-class CreateLectureRequest(BaseModel):
+# 강의 저장 요청 스키마
+class SaveLectureRequest(BaseModel):
     title: str = Field(..., example="데이터베이스 실습")
     start_time: time = Field(..., example="14:00:00")
     end_time: time = Field(..., example="15:30:00")
