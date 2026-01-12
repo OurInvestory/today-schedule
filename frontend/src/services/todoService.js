@@ -1,71 +1,61 @@
-// Todo 서비스 - 로컬 스토리지 기반 (백엔드 없이 동작)
+import api from './api';
+
+// Todo 서비스 - API 기반 (백엔드 연동)
 const STORAGE_KEY = 'todos';
 
-// 샘플 데이터
-const sampleTodos = [
-  {
-    id: '1',
-    title: '프로그래밍 과제 제출',
-    description: '알고리즘 문제 풀이 과제',
-    startDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2일 전부터
-    dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 내일 마감
-    category: 'assignment',
-    importance: 9,
-    estimatedTime: 3,
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    title: '팀 프로젝트 회의',
-    description: '졸업 프로젝트 진행 상황 공유',
-    startDate: new Date().toISOString().split('T')[0], // 오늘부터
-    dueDate: new Date().toISOString().split('T')[0], // 오늘 마감
-    category: 'team',
-    importance: 7,
-    estimatedTime: 2,
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    title: '도서관 책 반납',
-    description: '대출 기한 만료 전 반납',
-    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 일주일 전부터
-    dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 3일 후 마감
-    category: 'activity',
-    importance: 5,
-    estimatedTime: 1,
-    completed: true,
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// 지연 시뮬레이션 함수
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// 로컬 스토리지에서 todos 가져오기
-const getStoredTodos = () => {
+/**
+ * Fetch all todos from the backend.
+ */
+export const fetchTodos = async () => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    // 처음 실행 시 샘플 데이터 저장
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleTodos));
-    return sampleTodos;
+    const response = await api.get('/api/schedules');
+    return response;
   } catch (error) {
-    console.error('Error reading todos from storage:', error);
-    return sampleTodos;
+    console.error('Failed to fetch todos:', error);
+    throw error;
   }
 };
 
-// 로컬 스토리지에 todos 저장
-const saveTodos = (todos) => {
+/**
+ * Create a new todo.
+ * @param {Object} todoData - The data for the new todo.
+ */
+export const createTodo = async (todoData) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    const response = await api.post('/api/schedules', todoData);
+    return response;
   } catch (error) {
-    console.error('Error saving todos to storage:', error);
+    console.error('Failed to create todo:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update an existing todo.
+ * @param {string} id - The ID of the todo to update.
+ * @param {Object} todoData - The updated data for the todo.
+ */
+export const updateTodo = async (id, todoData) => {
+  try {
+    const response = await api.put(`/api/schedules/${id}`, todoData);
+    return response;
+  } catch (error) {
+    console.error('Failed to update todo:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a todo by ID.
+ * @param {string} id - The ID of the todo to delete.
+ */
+export const deleteTodo = async (id) => {
+  try {
+    const response = await api.delete(`/api/schedules/${id}`);
+    return response;
+  } catch (error) {
+    console.error('Failed to delete todo:', error);
+    throw error;
   }
 };
 
@@ -73,8 +63,7 @@ const saveTodos = (todos) => {
  * Todo 목록 조회
  */
 export const getTodos = async (params = {}) => {
-  await delay(100);
-  let todos = getStoredTodos();
+  let todos = await fetchTodos();
 
   // 필터 적용
   if (params.date) {
@@ -102,8 +91,7 @@ export const getTodos = async (params = {}) => {
  * Todo 상세 조회
  */
 export const getTodoById = async (id) => {
-  await delay(100);
-  const todos = getStoredTodos();
+  const todos = await fetchTodos();
   const todo = todos.find(t => t.id === id);
   if (!todo) {
     throw new Error('Todo not found');
@@ -112,65 +100,10 @@ export const getTodoById = async (id) => {
 };
 
 /**
- * Todo 생성
- */
-export const createTodo = async (todoData) => {
-  await delay(100);
-  const todos = getStoredTodos();
-  
-  const newTodo = {
-    id: Date.now().toString(),
-    ...todoData,
-    dueDate: todoData.dueDate || new Date().toISOString().split('T')[0],
-    completed: false,
-    createdAt: new Date().toISOString(),
-  };
-  
-  todos.push(newTodo);
-  saveTodos(todos);
-  
-  return newTodo;
-};
-
-/**
- * Todo 수정
- */
-export const updateTodo = async (id, todoData) => {
-  await delay(100);
-  const todos = getStoredTodos();
-  const index = todos.findIndex(t => t.id === id);
-  
-  if (index === -1) {
-    throw new Error('Todo not found');
-  }
-  
-  todos[index] = { ...todos[index], ...todoData, updatedAt: new Date().toISOString() };
-  saveTodos(todos);
-  
-  return todos[index];
-};
-
-/**
  * Todo 부분 수정 (PATCH)
  */
 export const patchTodo = async (id, partialData) => {
   return updateTodo(id, partialData);
-};
-
-/**
- * Todo 삭제
- */
-export const deleteTodo = async (id) => {
-  await delay(100);
-  const todos = getStoredTodos();
-  const filteredTodos = todos.filter(t => t.id !== id);
-  
-  if (filteredTodos.length === todos.length) {
-    throw new Error('Todo not found');
-  }
-  
-  saveTodos(filteredTodos);
-  return { success: true };
 };
 
 /**
@@ -188,7 +121,7 @@ export const toggleTodoComplete = async (id, completed) => {
  */
 export const getTodayTodos = async () => {
   const today = new Date().toISOString().split('T')[0];
-  const allTodos = getStoredTodos();
+  const allTodos = await fetchTodos();
   
   return allTodos.filter(todo => {
     // 완료된 할 일도 표시 (완료 상태는 UI에서 구분)
@@ -214,7 +147,7 @@ export const getTodayTodos = async () => {
  * - 미완료 상태인 것
  */
 export const getTodosByDate = async (date) => {
-  const allTodos = getStoredTodos();
+  const allTodos = await fetchTodos();
   
   return allTodos.filter(todo => {
     const startDate = todo.startDate;

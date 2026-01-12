@@ -7,6 +7,8 @@ import './TodoItem.css';
 const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [lastTap, setLastTap] = useState(0);
+  const [longPressTimeout, setLongPressTimeout] = useState(null);
   const startXRef = useRef(0);
   const currentXRef = useRef(0);
 
@@ -15,22 +17,46 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
     onToggle(todo.id, !todo.completed);
   };
 
-  const handleDoubleClick = () => {
+  const handleDoubleTap = () => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      if (onEdit) onEdit(todo);
+    }
+    setLastTap(now);
+  };
+
+  const handleLongPress = () => {
     if (onEdit) onEdit(todo);
   };
 
-  const handleDelete = () => {
-    if (onDelete) onDelete(todo.id);
+  const handleTouchStart = (e) => {
+    if (e.target.closest('.todo-item__checkbox') || e.target.closest('.todo-item__actions')) return;
+    handleDragStart(e.touches[0].clientX);
+
+    // Start long press detection
+    const timeout = setTimeout(() => handleLongPress(), 500);
+    setLongPressTimeout(timeout);
   };
 
-  // 터치/마우스 시작
+  const handleTouchEnd = () => {
+    handleDragEnd();
+
+    // Clear long press timeout
+    if (longPressTimeout) {
+      clearTimeout(longPressTimeout);
+      setLongPressTimeout(null);
+    }
+
+    // Detect double tap
+    handleDoubleTap();
+  };
+
   const handleDragStart = (clientX) => {
     startXRef.current = clientX;
     currentXRef.current = clientX;
     setIsDragging(true);
   };
 
-  // 터치/마우스 이동
   const handleDragMove = (clientX) => {
     if (!isDragging) return;
     currentXRef.current = clientX;
@@ -41,7 +67,6 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
     }
   };
 
-  // 터치/마우스 종료
   const handleDragEnd = () => {
     setIsDragging(false);
     if (swipeOffset < -60) {
@@ -51,36 +76,8 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
     setSwipeOffset(0);
   };
 
-  // 마우스 이벤트
-  const handleMouseDown = (e) => {
-    if (e.target.closest('.todo-item__checkbox') || e.target.closest('.todo-item__actions')) return;
-    handleDragStart(e.clientX);
-  };
-
-  const handleMouseMove = (e) => {
-    handleDragMove(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    handleDragEnd();
-  };
-
-  const handleMouseLeave = () => {
-    if (isDragging) handleDragEnd();
-  };
-
-  // 터치 이벤트
-  const handleTouchStart = (e) => {
-    if (e.target.closest('.todo-item__checkbox') || e.target.closest('.todo-item__actions')) return;
-    handleDragStart(e.touches[0].clientX);
-  };
-
-  const handleTouchMove = (e) => {
-    handleDragMove(e.touches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    handleDragEnd();
+  const handleDelete = () => {
+    if (onDelete) onDelete(todo.id);
   };
 
   const itemClass = [
@@ -110,64 +107,63 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
       <div 
         className={itemClass}
         style={{ transform: `translateX(${swipeOffset}px)` }}
-        onDoubleClick={handleDoubleClick}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
+        onMouseDown={(e) => handleDragStart(e.clientX)}
+        onMouseMove={(e) => handleDragMove(e.clientX)}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={() => isDragging && handleDragEnd()}
         onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
+        onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
         onTouchEnd={handleTouchEnd}
       >
-      {/* Checkbox */}
-      <label className="todo-item__checkbox" onClick={(e) => e.stopPropagation()}>
-        <input
-          type="checkbox"
-          checked={todo.completed}
-          onChange={handleCheckboxChange}
-        />
-        <span className="todo-item__checkmark">
-          {todo.completed && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path
-                d="M2 6L5 9L10 3"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </span>
-      </label>
-
-      {/* Content */}
-      <div className="todo-item__content">
-        <div className="todo-item__header">
-          <h3 className="todo-item__title">{todo.title}</h3>
-          <div className="todo-item__badges">
-            <CategoryBadge category={todo.category} />
-            <PriorityBadge priority={todo.priority} showIcon={false} />
-          </div>
-        </div>
-
-        {todo.description && (
-          <p className="todo-item__description">{todo.description}</p>
-        )}
-
-        <div className="todo-item__footer">
-          <span className="todo-item__time">
-            {getTimeUntilText(todo.dueDate)}
+        {/* Checkbox */}
+        <label className="todo-item__checkbox" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={todo.completed}
+            onChange={handleCheckboxChange}
+          />
+          <span className="todo-item__checkmark">
+            {todo.completed && (
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path
+                  d="M2 6L5 9L10 3"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
           </span>
-          {todo.estimatedTime && (
-            <span className="todo-item__estimated-time">
-              예상 {todo.estimatedTime}시간
-            </span>
+        </label>
+
+        {/* Content */}
+        <div className="todo-item__content">
+          <div className="todo-item__header">
+            <h3 className="todo-item__title">{todo.title}</h3>
+            <div className="todo-item__badges">
+              <CategoryBadge category={todo.category} />
+              <PriorityBadge priority={todo.priority} showIcon={false} />
+            </div>
+          </div>
+
+          {todo.description && (
+            <p className="todo-item__description">{todo.description}</p>
           )}
+
+          <div className="todo-item__footer">
+            <span className="todo-item__time">
+              {getTimeUntilText(todo.dueDate)}
+            </span>
+            {todo.estimatedTime && (
+              <span className="todo-item__estimated-time">
+                예상 {todo.estimatedTime}시간
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
-  </div>
   );
 };
 
