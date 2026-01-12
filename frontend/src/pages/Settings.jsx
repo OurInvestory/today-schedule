@@ -1,10 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNotificationSettings, updateNotificationSettings } from '../services/notificationService';
 import './Settings.css';
 
+// 테마 적용 함수
+const applyTheme = (theme) => {
+  const root = document.documentElement;
+  
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    root.setAttribute('data-theme', theme);
+  }
+  
+  localStorage.setItem('app-theme', theme);
+};
+
+// 초기 테마 로드
+const getInitialTheme = () => {
+  const saved = localStorage.getItem('app-theme');
+  return saved || 'light';
+};
+
 const Settings = () => {
   const navigate = useNavigate();
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [settings, setSettings] = useState({
     pushNotification: true,
     notificationSound: true,
@@ -16,6 +37,8 @@ const Settings = () => {
     autoLock: '5',
     analyticsData: false,
     errorReport: true,
+    language: 'ko',
+    theme: 'light',
   });
   const [loading, setLoading] = useState(true);
 
@@ -27,6 +50,23 @@ const Settings = () => {
 
   useEffect(() => {
     fetchSettings();
+    
+    // 초기 테마 적용
+    const initialTheme = getInitialTheme();
+    setSettings(prev => ({ ...prev, theme: initialTheme }));
+    applyTheme(initialTheme);
+    
+    // 시스템 테마 변경 감지
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = () => {
+      const currentTheme = localStorage.getItem('app-theme');
+      if (currentTheme === 'system') {
+        applyTheme('system');
+      }
+    };
+    
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
   }, []);
 
   const fetchSettings = async () => {
@@ -55,15 +95,25 @@ const Settings = () => {
     }
   };
 
-  const handleSelectChange = async (key, value) => {
+  const handleSelectChange = useCallback(async (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+    
+    // 테마 변경 시 즉시 적용
+    if (key === 'theme') {
+      applyTheme(value);
+    }
+    
+    // 언어 변경 시 localStorage 저장
+    if (key === 'language') {
+      localStorage.setItem('app-language', value);
+    }
     
     try {
       await updateNotificationSettings({ [key]: value });
     } catch (error) {
       console.error('Failed to update setting:', error);
     }
-  };
+  }, []);
 
   const handleAccountToggle = (provider) => {
     setConnectedAccounts(prev => ({
@@ -107,12 +157,10 @@ const Settings = () => {
           </svg>
         </button>
         <div className="settings__header-content">
-          <div className="settings__header-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </div>
+          <svg className="settings__header-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
           <h1 className="settings__title">설정</h1>
         </div>
       </div>
@@ -196,6 +244,48 @@ const Settings = () => {
                 checked={connectedAccounts.naver.connected}
                 onChange={() => handleAccountToggle('naver')}
               />
+            </div>
+          </div>
+        </section>
+
+        {/* 일반 설정 섹션 */}
+        <section className="settings__section">
+          <h2 className="settings__section-title">일반</h2>
+          <div className="settings__card">
+            <div className="settings-item">
+              <div className="settings-item__text">
+                <span className="settings-item__label">언어</span>
+                <span className="settings-item__desc">앱에서 사용할 언어를 선택합니다</span>
+              </div>
+              <select
+                className="settings-item__select"
+                value={settings.language}
+                onChange={(e) => handleSelectChange('language', e.target.value)}
+              >
+                <option value="ko">한국어</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+                <option value="zh">中文</option>
+                <option value="es">Español</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+              </select>
+            </div>
+
+            <div className="settings-item">
+              <div className="settings-item__text">
+                <span className="settings-item__label">화면 테마</span>
+                <span className="settings-item__desc">앱의 테마를 선택합니다</span>
+              </div>
+              <select
+                className="settings-item__select"
+                value={settings.theme}
+                onChange={(e) => handleSelectChange('theme', e.target.value)}
+              >
+                <option value="light">화이트 모드</option>
+                <option value="dark">다크 모드</option>
+                <option value="system">시스템 설정</option>
+              </select>
             </div>
           </div>
         </section>
@@ -367,7 +457,7 @@ const Settings = () => {
             </div>
             <div className="settings-item settings-item--info">
               <span className="settings-item__label">라이선스</span>
-              <button className="settings-item__link">보기</button>
+              <button className="settings-item__link" onClick={() => setShowLicenseModal(true)}>보기</button>
             </div>
           </div>
         </section>
@@ -381,6 +471,83 @@ const Settings = () => {
           </div>
         </section>
       </div>
+
+      {/* 라이선스 모달 */}
+      {showLicenseModal && (
+        <div className="license-modal__overlay" onClick={() => setShowLicenseModal(false)}>
+          <div className="license-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="license-modal__header">
+              <h2 className="license-modal__title">오픈소스 라이선스</h2>
+              <button className="license-modal__close" onClick={() => setShowLicenseModal(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="license-modal__content">
+              <div className="license-modal__section">
+                <h3 className="license-modal__section-title">React</h3>
+                <p className="license-modal__license-type">MIT License</p>
+                <p className="license-modal__text">
+                  Copyright (c) Meta Platforms, Inc. and affiliates.
+                </p>
+              </div>
+              
+              <div className="license-modal__section">
+                <h3 className="license-modal__section-title">React Router</h3>
+                <p className="license-modal__license-type">MIT License</p>
+                <p className="license-modal__text">
+                  Copyright (c) React Training LLC
+                </p>
+              </div>
+              
+              <div className="license-modal__section">
+                <h3 className="license-modal__section-title">Vite</h3>
+                <p className="license-modal__license-type">MIT License</p>
+                <p className="license-modal__text">
+                  Copyright (c) 2019-present, Yuxi (Evan) You and Vite contributors
+                </p>
+              </div>
+
+              <div className="license-modal__section">
+                <h3 className="license-modal__section-title">date-fns</h3>
+                <p className="license-modal__license-type">MIT License</p>
+                <p className="license-modal__text">
+                  Copyright (c) 2021 Sasha Koss and Lesha Koss
+                </p>
+              </div>
+
+              <div className="license-modal__divider" />
+
+              <div className="license-modal__full-license">
+                <h4 className="license-modal__full-title">MIT License 전문</h4>
+                <p className="license-modal__full-text">
+                  Permission is hereby granted, free of charge, to any person obtaining a copy
+                  of this software and associated documentation files (the "Software"), to deal
+                  in the Software without restriction, including without limitation the rights
+                  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                  copies of the Software, and to permit persons to whom the Software is
+                  furnished to do so, subject to the following conditions:
+                </p>
+                <p className="license-modal__full-text">
+                  The above copyright notice and this permission notice shall be included in all
+                  copies or substantial portions of the Software.
+                </p>
+                <p className="license-modal__full-text">
+                  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+                  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+                  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+                  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+                  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+                  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+                  SOFTWARE.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
