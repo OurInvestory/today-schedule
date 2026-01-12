@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.models import user, lecture, schedule, sub_task, notification
 from app.db.database import engine, Base
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
-from app.api import user_router, schedule_router, ai_chat, lecture_router
+from app.api import user_router, schedule_router, ai_chat, lecture_router, sub_task_router
 
 
 # model 설정
@@ -38,6 +38,7 @@ app.include_router(user_router.router)
 app.include_router(schedule_router.router)
 app.include_router(ai_chat.router, prefix="/api", tags=["AI"])
 app.include_router(lecture_router.router)
+app.include_router(sub_task_router.router)
 
 
 # 서버 확인 테스트 용도 (추후 삭제 예정)
