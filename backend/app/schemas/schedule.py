@@ -29,7 +29,6 @@ class ScheduleResponse(BaseModel):
     class Config:
         from_attributes = True
         
-        
 # 일정 수정 요청 스키마
 class UpdateScheduleRequest(BaseModel):
     title: Optional[str] = None

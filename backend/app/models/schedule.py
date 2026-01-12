@@ -20,6 +20,8 @@ class Schedule(Base):
     priority_score = Column(Integer, default=1, nullable=False)     # 0 (낮음), 1 (중간), 2 (높음)
     original_text = Column(Text, nullable=True)
     update_text = Column(Text, nullable=True)
+    estimated_minute = Column(Integer, nullable=True)    # 분 단위
+    ai_reason = Column(Text, nullable=True)     # 우선 순위 근거
 
     # 관계 설정
     user = relationship("User", back_populates="schedules")
