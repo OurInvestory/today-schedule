@@ -2,6 +2,7 @@ import io
 import os
 import json
 import re
+import warnings
 from datetime import datetime
 import easyocr
 
@@ -20,6 +21,8 @@ from app.schemas.ai_chat import (
     ChatResponseData, 
     AIChatParsed
 )
+
+warnings.filterwarnings("ignore", message=".*pin_memory.*")
 
 load_dotenv()
 
@@ -56,23 +59,19 @@ def get_watson_model():
     )
 
 def extract_json_from_text(text: str) -> str:
-    """텍스트에서 첫 번째 JSON 객체만 정확하게 추출합니다."""
+    """텍스트에서 정교하게 JSON만 추출합니다."""
     try:
         text = text.split("User Input:")[0]
-        text = re.sub(r"```json\s*", "", text)
+        
+        text = re.sub(r"```(?:json)?\s*", "", text)
         text = re.sub(r"```", "", text)
         
         start_index = text.find('{')
-        if start_index != -1:
-            brace_count = 0
-            for i, char in enumerate(text[start_index:], start=start_index):
-                if char == '{':
-                    brace_count += 1
-                elif char == '}':
-                    brace_count -= 1
-                    
-                if brace_count == 0:
-                    return text[start_index : i+1]
+        end_index = text.rfind('}')
+        
+        if start_index != -1 and end_index != -1:
+            return text[start_index : end_index + 1]
+        
         return text.strip()
     except Exception:
         return text.strip()
@@ -83,147 +82,83 @@ async def analyze_image_schedule(
     timezone: str = "Asia/Seoul"
 ):
     try:
-        # 1. OCR 처리 (비동기)
         image_bytes = await file.read()
-        result_text_list = await run_in_threadpool(
-            ocr_reader.readtext, 
-            image_bytes, 
-            detail=0
-        )
+        result_text_list = await run_in_threadpool(ocr_reader.readtext, image_bytes, detail=0)
         raw_ocr_text = "\n".join(result_text_list)
 
         if not raw_ocr_text.strip():
             return APIResponse(status=400, message="이미지에서 텍스트를 인식하지 못했습니다.")
 
-        # 2. 모델 준비
         model = get_watson_model()
         current_date_str = datetime.now().strftime("%Y-%m-%d (%A)")
 
-        vision_system_prompt = f"""
-You are an AI assistant that converts raw OCR text into structured schedule JSON.
+        # 프롬프트를 명령 중심으로 대폭 압축하여 루핑 방지
+        vision_system_prompt = f"""Extract schedule data from OCR text into a single JSON object.
+       
+Today: {current_date_str}, Timezone: {timezone}
 
-[Current Environment]
-- Today: {current_date_str}
-- Timezone: {timezone}
+[Rules]
+1. Classification:
+   - If weekdays(월,화...) appear: It's a "Weekly Timetable" -> payload.type="EVENT", category="수업", importance=5, duration=60-120.
+   - If specific dates(YYYY.MM.DD) appear: It's an "Event Poster" -> Extract "Application Deadline"(TASK, importance=9) and "Main Event"(EVENT, importance=8).
+2. Data: Calculate dates relative to Today. Populate importance_score(1-10) and estimated_minute(int).
+3. Exclusion: Ignore administrative info like "심사", "발표", "문의".
+4. The 'type' field at the top level of the JSON MUST ALWAYS be "UNKNOWN".
 
-[Raw OCR Text]
+[OCR Text]
 {raw_ocr_text}
 
-[Task]
-Analyze the text to determine if it is a "Weekly Timetable" or "Event Poster".
-Extract schedule actions accordingly.
-
----
-### CASE A: Weekly Timetable (Lecture Schedule)
-If the text contains repeating weekdays (Mon, Tue, Wed...) and course names:
-1. Create an action for each class.
-2. **Date Calculation**: Calculate the *next upcoming date* for that weekday relative to 'Today'. (e.g., If Today is Friday and the class is Mon, find next Monday's date).
-3. **Payload Rule**: Set `"type": "EVENT"`.
-4. Title: Course Name.
-
----
-### CASE B: Event Poster (Recruitment/Contest)
-Separate the "Application Period" from the "Main Event".
-
-1. **Application Start (접수 시작)** -> **TASK**
-   - Condition: "접수 시작", "Start Date".
-   - **Payload Rule**: Set `"type": "TASK"`.
-   - Title: "[접수 시작] {{Title}}"
-   - `end_at`: Application START date. (Tasks only use end_at)
-
-2. **Application Deadline (접수 마감)** -> **TASK**
-   - Condition: "마감", "Deadline", "End Date".
-   - **Payload Rule**: Set `"type": "TASK"`.
-   - Title: "[접수 마감] {{Title}}"
-   - `end_at`: Application END date.
-
-3. **Main Event (행사/OT)** -> **EVENT**
-   - Condition: "일시", "Event Date".
-   - **Payload Rule**: Set `"type": "EVENT"`.
-   - Title: "[행사] {{Title}}"
-   - `start_at` & `end_at`: Event date.
-
-[Examples]
-**(Example 1: Timetable)**
-Input: "월요일 10:00 자료구조, 수요일 13:00 운영체제" (Today is 2024-05-20 Mon)
-Output:
-{{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "UNKNOWN",
-  "actions": [
-    {{ "op": "CREATE", "payload": {{ "type": "EVENT", "title": "자료구조", "start_at": "2024-05-20T10:00:00+09:00", "end_at": "2024-05-20T12:00:00+09:00" ,"description": "Extracted memo or location"}} }},
-    {{ "op": "CREATE", "payload": {{ "type": "EVENT", "title": "운영체제", "start_at": "2024-05-22T13:00:00+09:00", "end_at": "2024-05-22T15:00:00+09:00" ,"description": "Extracted memo or location"}} }}
-  ]
-}}
-
-**(Example 2: Contest Poster)**
-Input: "제1회 AI 공모전 / 접수: 2024.12.01 ~ 12.31 / 시상식: 2025.01.15"
-Output:
-{{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "UNKNOWN",
-  "actions": [
-    {{ "op": "CREATE", "payload": {{ "type": "TASK", "title": "[접수 시작] AI 공모전", "end_at": "2024-12-01T09:00:00+09:00" }} }},
-    {{ "op": "CREATE", "payload": {{ "type": "TASK", "title": "[접수 마감] AI 공모전", "end_at": "2024-12-31T23:59:00+09:00" }} }},
-    {{ "op": "CREATE", "payload": {{ "type": "EVENT", "title": "[행사] 시상식", "start_at": "2025-01-15T14:00:00+09:00", "end_at": "2025-01-15T16:00:00+09:00" }} }}
-  ]
-}}
-
 [Output Format]
-Output ONLY valid JSON.
-**IMPORTANT**: 
-1. The top-level `type` MUST be **"UNKNOWN"** (to indicate mixed content).
-2. Inside `actions` -> `payload`, you MUST include the specific `"type"` ("TASK" or "EVENT").
-
 {{
   "intent": "SCHEDULE_MUTATION",
-  "type": "UNKNOWN", 
+  "type": "UNKNOWN",
   "actions": [
     {{
       "op": "CREATE",
       "payload": {{
-        "type": "TASK", 
-        "title": "[접수 마감] 공모전 이름",
-        "end_at": "YYYY-MM-DDTHH:MM:SS+09:00",
-        "description": "Details..."
-      }}
-    }},
-    {{
-      "op": "CREATE",
-      "payload": {{
-        "type": "EVENT",
-        "title": "[행사] 시상식",
-        "start_at": "YYYY-MM-DDTHH:MM:SS+09:00",
-        "end_at": "YYYY-MM-DDTHH:MM:SS+09:00",
-        "description": "Location..."
+        "type": "EVENT" or "TASK",
+        "category": "수업"|"과제"|"시험"|"공모전"|"대외활동"|"기타",
+        "title": "...",
+        "start_at": "ISO8601",
+        "end_at": "ISO8601",
+        "importance_score": 1-10,
+        "estimated_minute": 0
       }}
     }}
   ]
 }}
-"""
 
-        # 4. LLM 생성 및 파싱
+JSON Output:"""
+
+        # model.generate_text 호출 시 prompt 전달
         generated_response = model.generate_text(prompt=vision_system_prompt)
-        clean_json_str = extract_json_from_text(generated_response)
-        parsed_data = json.loads(clean_json_str)
         
-        # Pydantic 모델로 변환 (AIChatParsed의 type="UNKNOWN" 허용 필수)
-        ai_parsed_result = AIChatParsed(**parsed_data)
+        # JSON 추출 시 시작 중괄호를 강제로 찾음
+        clean_json_str = extract_json_from_text(generated_response)
+        
+        try:
+            parsed_data = json.loads(clean_json_str)
+            # 노이즈 필터링 (심사 등 제외)
+            exclude_keywords = ["심사", "발표", "선발", "문의"]
+            if "actions" in parsed_data:
+                parsed_data["actions"] = [
+                    a for a in parsed_data["actions"] 
+                    if not any(k in a["payload"].get("title", "") for k in exclude_keywords)
+                ]
+            
+            ai_parsed_result = AIChatParsed(**parsed_data)
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            print(f"Parsing Failed. Response: {generated_response}")
+            return APIResponse(status=500, message="AI가 올바른 형식의 응답을 생성하지 못했습니다. (Looping/Format Error)")
 
-        # 5. 응답 메시지 생성
         action_cnt = len(ai_parsed_result.actions) if ai_parsed_result.actions else 0
         assistant_msg = f"이미지에서 {action_cnt}건의 일정을 발견했습니다. 등록할까요?"
 
-        response_data = ChatResponseData(
+        return APIResponse(status=200, message="Success", data=ChatResponseData(
             parsed_result=ai_parsed_result,
             assistant_message=assistant_msg
-        )
+        ))
 
-        return APIResponse(status=200, message="Success", data=response_data)
-
-    except json.JSONDecodeError:
-        print(f"Failed JSON Parsing: {generated_response}")
-        return APIResponse(status=500, message="AI 분석 결과가 올바른 형식이 아닙니다.")
     except Exception as e:
-        print(f"Error in Vision Router: {str(e)}")
+        print(f"Error: {str(e)}")
         return APIResponse(status=500, message=f"Server Error: {str(e)}")

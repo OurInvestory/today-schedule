@@ -121,11 +121,18 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
    - "UPDATE": When user wants to change time, title, or details. (e.g., "Delay", "Move", "Change", "Reschedule")
    - "DELETE": When user wants to remove. (e.g., "Cancel", "Delete", "Remove")
 
-3. Payload Construction:
-   - "CREATE": Must include 'title' AND ('start_at' OR 'end_at').
-   - "UPDATE": Must include 'title' (to identify the target event) AND the specific fields that need to be changed (e.g., new 'start_at', 'end_at').
-   - "DELETE": Must include 'title' to identify the target. If the time frame is mentioned (e.g., "this week", "tomorrow"), include 'start_at' or 'end_at' to help identify the correct event. Do NOT use 'scheduleId'.
-
+3. Payload Construction (Mandatory for CREATE/UPDATE):
+   - "importance_score" (int, 1-10): 
+      * 10: Final exams, major certification tests.
+      * 7-9: Midterms, major assignments, critical team projects.
+      * 4-6: Quizzes, regular assignments, meetings.
+      * 1-3: Personal tasks, hobbies, routine activities.
+   - "estimated_minute" (int): Estimated total workload (e.g., Exam Study: 600-1200, Homework: 60-180, Meetings: 60).
+   - "category" (string): Must be one of [수업, 과제, 시험, 공모전, 대외활동, 기타].
+   - "CREATE": Must include 'title', 'importance_score', 'estimated_minute', 'category' AND ('start_at' OR 'end_at').
+   - "UPDATE": Must include 'title' (to identify target) AND specific fields to change.
+   - "DELETE": Must include 'title'.
+   
 4. Output Format:
    - "CLARIFY": Save partial info to 'preserved_info'. Fill 'missingFields'.
    - "SCHEDULE_MUTATION": Fill 'actions' list.
@@ -146,7 +153,7 @@ JSON: {{
   "type": "EVENT",
   "actions": [ {{ 
     "op": "CREATE", 
-    "payload": {{ "title": "회의", "start_at": "2024-05-21T14:00:00+09:00" }} 
+    "payload": {{ "title": "회의", "start_at": "2024-05-21T14:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}} 
   }} ]
 }}
 
@@ -184,7 +191,7 @@ JSON: {{
   "type": "TASK",
   "actions": [ {{ 
       "op": "CREATE", 
-      "payload": {{ "title": "자료구조", "end_at": "2024-05-20T14:00:00+09:00" }} 
+      "payload": {{ "title": "자료구조", "end_at": "2024-05-20T14:00:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "과제"}} 
   }} ]
 }}
 
