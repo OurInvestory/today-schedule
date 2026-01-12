@@ -3,17 +3,19 @@ from datetime import datetime
 from typing import Optional, Any
 
 
-# 일정 생성 요청 스키마
-class CreateScheduleRequest(BaseModel):
+# 일정 저장 요청 스키마
+class SaveScheduleRequest(BaseModel):
     title: str = Field(..., example="캡스톤 디자인 최종 발표")
-    type: Optional[str] = Field(example="task")
-    category: Optional[str] = Field(example="과제")
-    start_at: Optional[datetime] = None
-    end_at: datetime
-    priority_score: int = Field(1, ge=0, le=2)
-    original_text: Optional[str] = None
+    type: Optional[str] = Field("task", example="task")
+    category: Optional[str] = Field("과제", example="과제")
+    start_at: Optional[datetime] = Field(None, example="2026-06-20T00:00:00")
+    end_at: datetime = Field(..., example="2026-06-20T23:59:59")
+    priority_score: int = Field(1, ge=0, le=10, example=8)  # 범위 확장 반영
+    original_text: Optional[str] = Field(None, example="6월 20일에 캡스톤 디자인 최종 발표 일정이 있어")
+    estimated_minute: Optional[int] = Field(None, example=120)
+    ai_reason: Optional[str] = Field(None, example="성적에 반영되는 과제")
 
-# 일정 생성 응답 스키마
+# 일정 응답 스키마
 class ScheduleResponse(BaseModel):
     schedule_id: str
     user_id: str
@@ -25,17 +27,22 @@ class ScheduleResponse(BaseModel):
     priority_score: int
     original_text: Optional[str]
     update_text: Optional[str]
+    estimated_minute: Optional[int]
+    ai_reason: Optional[str]
 
     class Config:
+        orm_mode = True
         from_attributes = True
-        
+
 # 일정 수정 요청 스키마
 class UpdateScheduleRequest(BaseModel):
-    title: Optional[str] = None
-    type: Optional[str] = None
-    category: Optional[str] = None
-    start_at: Optional[datetime] = None
-    end_at: Optional[datetime] = None
-    priority_score: Optional[int] = Field(None, ge=0, le=2)
+    title: Optional[str] = Field(None, example="캡스톤 디자인 최종 발표")
+    type: Optional[str] = Field(None, example="task")
+    category: Optional[str] = Field(None, example="과제")
+    start_at: Optional[datetime] = Field(None, example="2026-06-21T00:00:00")
+    end_at: Optional[datetime] = Field(None, example="2026-06-21T23:59:59")
+    priority_score: Optional[int] = Field(None, ge=0, le=10, example=2)
     original_text: Optional[str] = None
-    update_text: Optional[str] = None
+    update_text: Optional[str] = Field(None, example="6월 20일에 있는 캡스톤 일정 내일로 수정해줘")
+    estimated_minute: Optional[int] = None
+    ai_reason: Optional[str] = None
