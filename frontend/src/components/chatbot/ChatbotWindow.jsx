@@ -10,6 +10,7 @@ const suggestedQuestions = [
   { id: 3, text: '우선순위 높은 일정 알려줘', icon: '🔥' },
   { id: 4, text: '새로운 일정 추가해줘', icon: '➕' },
   { id: 5, text: '마감 임박한 할 일은?', icon: '⏰' },
+  { id: 6, text: '시간표 이미지 분석', icon: '🖼️' },
 ];
 
 const ChatbotWindow = ({ 
@@ -25,9 +26,12 @@ const ChatbotWindow = ({
 }) => {
   const fileInputRef = useRef(null);
   const suggestionsRef = useRef(null);
+  const dropZoneRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isFileDragging, setIsFileDragging] = useState(false);
 
   if (!isOpen) return null;
 
@@ -69,16 +73,109 @@ const ChatbotWindow = ({
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // 파일 업로드 처리 (추후 구현)
-      console.log('File selected:', file.name);
-      onSendMessage(`[파일 첨부: ${file.name}]`);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      processFiles(Array.from(files));
     }
     e.target.value = '';
   };
 
+  const processFiles = (files) => {
+    const processedFiles = files.map(file => {
+      const fileData = {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        file: file,
+      };
+      
+      // 이미지 파일인 경우 미리보기 URL 생성
+      if (file.type.startsWith('image/')) {
+        fileData.preview = URL.createObjectURL(file);
+      }
+      
+      return fileData;
+    });
+    
+    setSelectedFiles(prev => [...prev, ...processedFiles]);
+    console.log('Files processed:', processedFiles.map(f => f.name));
+  };
+
+  // 드래그 앤 드롭 핸들러
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFileDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.target === dropZoneRef.current) {
+      setIsFileDragging(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsFileDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      processFiles(files);
+    }
+  };
+
+  const handleSendWithFiles = (text) => {
+    if (selectedFiles.length > 0) {
+      // 파일 객체만 추출
+      const fileObjects = selectedFiles.map(f => f.file);
+      onSendMessage(text, null, fileObjects);
+      
+      // 미리보기 URL 정리
+      selectedFiles.forEach(f => {
+        if (f.preview) {
+          URL.revokeObjectURL(f.preview);
+        }
+      });
+      
+      setSelectedFiles([]);
+    } else {
+      onSendMessage(text);
+    }
+  };
+
+  const handleRemoveFile = (index) => {
+    const file = selectedFiles[index];
+    if (file.preview) {
+      URL.revokeObjectURL(file.preview);
+    }
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 컴포넌트 언마운트 시 미리보기 URL 정리
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(f => {
+        if (f.preview) {
+          URL.revokeObjectURL(f.preview);
+        }
+      });
+    };
+  }, [selectedFiles]);
+
   const handleSuggestedQuestion = (question) => {
+    // "시간표 이미지 분석" 클릭 시 파일 선택 열기
+    if (question === '시간표 이미지 분석') {
+      handleFileUpload();
+      return;
+    }
     onSendMessage(question);
   };
 
@@ -89,7 +186,27 @@ const ChatbotWindow = ({
   };
 
   return (
-    <div className="chatbot-window">
+    <div 
+      className={`chatbot-window ${isFileDragging ? 'chatbot-window--dragging' : ''}`}
+      ref={dropZoneRef}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {isFileDragging && (
+        <div className="chatbot-window__drop-overlay">
+          <div className="chatbot-window__drop-message">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <p>이미지나 파일을 여기에 드롭하세요</p>
+            <small>시간표 이미지를 분석하여 일정을 자동으로 추가할 수 있습니다</small>
+          </div>
+        </div>
+      )}
       <div className="chatbot-window__header">
         <div className="chatbot-window__header-left">
           <button
@@ -165,8 +282,37 @@ const ChatbotWindow = ({
         </div>
       </div>
 
+      {/* 선택된 파일 미리보기 */}
+      {selectedFiles.length > 0 && (
+        <div className="chatbot-window__selected-files">
+          {selectedFiles.map((file, index) => (
+            <div key={index} className="chatbot-window__file-preview">
+              {file.preview ? (
+                <div className="chatbot-window__image-thumb">
+                  <img src={file.preview} alt={file.name} />
+                </div>
+              ) : (
+                <div className="chatbot-window__file-icon">
+                  📄
+                </div>
+              )}
+              <span className="chatbot-window__file-name">
+                {file.name}
+              </span>
+              <button
+                type="button"
+                className="chatbot-window__file-remove"
+                onClick={() => handleRemoveFile(index)}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <ChatInput 
-        onSend={onSendMessage} 
+        onSend={handleSendWithFiles} 
         disabled={loading}
         onFileUpload={handleFileUpload}
       />
@@ -178,6 +324,7 @@ const ChatbotWindow = ({
         onChange={handleFileChange}
         style={{ display: 'none' }}
         accept="image/*,.pdf,.doc,.docx,.txt"
+        multiple
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Calendar from '../components/calendar/Calendar';
 import TodoList from '../components/todo/TodoList';
 import TodoFilter from '../components/todo/TodoFilter';
@@ -10,6 +10,8 @@ import Input from '../components/common/Input';
 import { useTodo } from '../hooks/useTodo';
 import { useChatbot } from '../hooks/useChatbot';
 import { formatDate } from '../utils/dateUtils';
+import { calculatePriority } from '../utils/priorityUtils';
+import { CATEGORY_LABELS } from '../utils/constants';
 import './Home.css';
 
 const Home = () => {
@@ -20,51 +22,12 @@ const Home = () => {
   const [newTodo, setNewTodo] = useState({
     title: '',
     description: '',
-    startDate: '',
-    startTime: '',
-    dueDate: '',
-    dueTime: '',
-    category: 'assignment',
+    date: '',
+    category: 'other',
     importance: 5,
     estimatedTime: 1,
+    estimatedMinute: 60,
   });
-
-  // 시작일/시간과 마감일/시간이 모두 입력되면 예상 시간 자동 계산
-  useEffect(() => {
-    const { startDate, startTime, dueDate, dueTime } = newTodo;
-    if (startDate && startTime && dueDate && dueTime) {
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const dueDateTime = new Date(`${dueDate}T${dueTime}`);
-      const diffMs = dueDateTime - startDateTime;
-      if (diffMs > 0) {
-        const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10; // 소수점 1자리
-        if (newTodo.estimatedTime !== diffHours) {
-          setTimeout(() => {
-            setNewTodo(prev => ({ ...prev, estimatedTime: diffHours }));
-          }, 0);
-        }
-      }
-    }
-  }, [newTodo]); // Include newTodo as a dependency
-
-  // 편집 모달에서도 시간 자동 계산
-  useEffect(() => {
-    if (!editingTodo) return;
-    const { startDate, startTime, dueDate, dueTime } = editingTodo;
-    if (startDate && startTime && dueDate && dueTime) {
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const dueDateTime = new Date(`${dueDate}T${dueTime}`);
-      const diffMs = dueDateTime - startDateTime;
-      if (diffMs > 0) {
-        const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10;
-        if (editingTodo.estimatedTime !== diffHours) {
-          setTimeout(() => {
-            setEditingTodo(prev => ({ ...prev, estimatedTime: diffHours }));
-          }, 0);
-        }
-      }
-    }
-  }, [editingTodo]); // Include editingTodo as a dependency
 
   const { todos, loading, toggleComplete, addTodo, editTodo, removeTodo, updateFilter, filter } =
     useTodo({ date: 'today' });
@@ -88,18 +51,22 @@ const Home = () => {
 
   const handleAddTodo = async () => {
     try {
-      await addTodo(newTodo);
+      // 우선순위 자동 계산
+      const priority = calculatePriority(newTodo.date, newTodo.estimatedMinute);
+      
+      await addTodo({
+        ...newTodo,
+        priority
+      });
       setIsAddModalOpen(false);
       setNewTodo({
         title: '',
         description: '',
-        startDate: '',
-        startTime: '',
-        dueDate: '',
-        dueTime: '',
-        category: 'assignment',
+        date: '',
+        category: 'other',
         importance: 5,
         estimatedTime: 1,
+        estimatedMinute: 60,
       });
     } catch (error) {
       console.error('Failed to add todo:', error);
@@ -173,7 +140,7 @@ const Home = () => {
                 const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
                 const day = String(selectedDate.getDate()).padStart(2, '0');
                 const dateStr = `${year}-${month}-${day}`;
-                setNewTodo(prev => ({ ...prev, startDate: dateStr, dueDate: dateStr }));
+                setNewTodo(prev => ({ ...prev, date: dateStr }));
                 setIsAddModalOpen(true);
               }}
               emptyMessage="할 일이 없습니다. 새로운 할 일을 추가해보세요!"
@@ -224,57 +191,45 @@ const Home = () => {
             onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
             placeholder="상세 설명 (선택)"
           />
+          <Input
+            label="날짜"
+            type="date"
+            required
+            value={newTodo.date}
+            onChange={(e) => setNewTodo({ ...newTodo, date: e.target.value })}
+          />
           <div className="add-todo-form__row">
             <Input
-              label="시작일"
-              type="date"
-              required
-              value={newTodo.startDate}
-              onChange={(e) => setNewTodo({ ...newTodo, startDate: e.target.value })}
-            />
-            <Input
-              label="시작 시간 (선택)"
-              type="time"
-              value={newTodo.startTime}
-              onChange={(e) => setNewTodo({ ...newTodo, startTime: e.target.value })}
-            />
-          </div>
-          <div className="add-todo-form__row">
-            <Input
-              label="마감일"
-              type="date"
-              required
-              value={newTodo.dueDate}
-              onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
-            />
-            <Input
-              label="마감 시간 (선택)"
-              type="time"
-              value={newTodo.dueTime}
-              onChange={(e) => setNewTodo({ ...newTodo, dueTime: e.target.value })}
-            />
-          </div>
-          <div className="add-todo-form__row">
-            <Input
-              label="중요도 (1-10)"
+              label="중요도 (자동 계산)"
               type="number"
-              min="1"
-              max="10"
               value={newTodo.importance}
-              onChange={(e) =>
-                setNewTodo({ ...newTodo, importance: parseInt(e.target.value) })
-              }
+              readOnly
+              disabled
             />
             <Input
-              label="예상 시간 (시간)"
+              label="예상 시간 (분)"
               type="number"
-              min="0.5"
-              step="0.5"
-              value={newTodo.estimatedTime}
+              min="5"
+              step="5"
+              value={newTodo.estimatedMinute}
               onChange={(e) =>
-                setNewTodo({ ...newTodo, estimatedTime: parseFloat(e.target.value) })
+                setNewTodo({ ...newTodo, estimatedMinute: parseInt(e.target.value) })
               }
             />
+          </div>
+          <div className="add-todo-form__group">
+            <label className="add-todo-form__label">카테고리 *</label>
+            <select
+              className="add-todo-form__select"
+              value={newTodo.category}
+              onChange={(e) => setNewTodo({ ...newTodo, category: e.target.value })}
+            >
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </Modal>
@@ -314,57 +269,45 @@ const Home = () => {
               onChange={(e) => setEditingTodo({ ...editingTodo, description: e.target.value })}
               placeholder="상세 설명 (선택)"
             />
+            <Input
+              label="날짜"
+              type="date"
+              required
+              value={editingTodo.dueDate || ''}
+              onChange={(e) => setEditingTodo({ ...editingTodo, dueDate: e.target.value })}
+            />
             <div className="add-todo-form__row">
               <Input
-                label="시작일"
-                type="date"
-                required
-                value={editingTodo.startDate || ''}
-                onChange={(e) => setEditingTodo({ ...editingTodo, startDate: e.target.value })}
-              />
-              <Input
-                label="시작 시간 (선택)"
-                type="time"
-                value={editingTodo.startTime || ''}
-                onChange={(e) => setEditingTodo({ ...editingTodo, startTime: e.target.value })}
-              />
-            </div>
-            <div className="add-todo-form__row">
-              <Input
-                label="마감일"
-                type="date"
-                required
-                value={editingTodo.dueDate || ''}
-                onChange={(e) => setEditingTodo({ ...editingTodo, dueDate: e.target.value })}
-              />
-              <Input
-                label="마감 시간 (선택)"
-                type="time"
-                value={editingTodo.dueTime || ''}
-                onChange={(e) => setEditingTodo({ ...editingTodo, dueTime: e.target.value })}
-              />
-            </div>
-            <div className="add-todo-form__row">
-              <Input
-                label="중요도 (1-10)"
+                label="중요도 (자동 계산)"
                 type="number"
-                min="1"
-                max="10"
-                value={editingTodo.importance}
+                value={Math.floor(Math.min(10, Math.max(1, editingTodo.importance || editingTodo.priorityScore || 5)))}
+                readOnly
+                disabled
+              />
+              <Input
+                label="예상 시간 (분)"
+                type="number"
+                min="5"
+                step="5"
+                value={editingTodo.estimatedMinute || 60}
                 onChange={(e) =>
-                  setEditingTodo({ ...editingTodo, importance: parseInt(e.target.value) })
+                  setEditingTodo({ ...editingTodo, estimatedMinute: parseInt(e.target.value) })
                 }
               />
-              <Input
-                label="예상 시간 (시간)"
-                type="number"
-                min="0.5"
-                step="0.5"
-                value={editingTodo.estimatedTime}
-                onChange={(e) =>
-                  setEditingTodo({ ...editingTodo, estimatedTime: parseFloat(e.target.value) })
-                }
-              />
+            </div>
+            <div className="add-todo-form__group">
+              <label className="add-todo-form__label">카테고리 *</label>
+              <select
+                className="add-todo-form__select"
+                value={editingTodo.category || 'other'}
+                onChange={(e) => setEditingTodo({ ...editingTodo, category: e.target.value })}
+              >
+                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}

@@ -11,9 +11,12 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir "fastapi[standard]"
+
 
 COPY . .
 
 EXPOSE 8000
 
-CMD ["fastapi", "dev", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]
+# Ensure the server runs on 0.0.0.0 and port 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
