@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from fastapi import APIRouter
 import uuid
 from datetime import datetime
@@ -5,8 +7,28 @@ from app.db.database import db_session
 from app.models.user import User
 from app.schemas.common import ResponseDTO
 
+from google_auth_oauthlib.flow import Flow
+
 
 router = APIRouter(prefix="/api/users", tags=["User"])
+
+
+# Google OAuth 설정
+load_dotenv()
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+REDIRECT_URI = "http://localhost:8000/api/schedules/google-calendar"
+CLIENT_CONFIG = {
+    "web": {
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }
+}
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'     # 로컬 테스트용 HTTP 허용
 
 
 # 테스트용 유저 생성
@@ -56,3 +78,33 @@ def create_test_user():
         )
     finally:
         db.close()
+
+
+# 구글 로그인
+@router.get("/google-login")
+def google_login():
+    try:
+        # 구글 인증용 flow 객체
+        flow = Flow.from_client_config(CLIENT_CONFIG, scopes=SCOPES) 
+        flow.redirect_uri = REDIRECT_URI
+        
+        # 사용자 승인 허용 URL
+        authorization_url, _ = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent'
+        )
+        
+        return ResponseDTO(
+            status=200,
+            message="구글 로그인 URL 생성에 성공했습니다.",
+            data={
+                "auth_url": authorization_url
+            }
+        )
+    except Exception as e:
+        return ResponseDTO(
+            status=500, 
+            message=f"구글 로그인 URL 생성에 실패했습니다 : {str(e)}", 
+            data=None
+        )

@@ -11,6 +11,7 @@ class SaveSubTaskRequest(BaseModel):
     estimated_minute: Optional[int] = Field(default=60, example=45)
     priority: Optional[str] = Field(default='medium', example='high')  # high, medium, low
     category: Optional[str] = Field(default='other', example='assignment')  # class, assignment, exam, team, activity, other
+    ai_reason: Optional[str] = Field(None, example="최종 발표의 품질을 높이기 위해 필요한 단계입니다.")
 
 # 할 일 수정 요청 스키마
 class UpdateSubTaskRequest(BaseModel):
@@ -21,6 +22,7 @@ class UpdateSubTaskRequest(BaseModel):
     update_text: Optional[str] = None
     priority: Optional[str] = Field(None, example='high')
     category: Optional[str] = Field(None, example='assignment')
+    ai_reason: Optional[str] = None
 
 # 할 일 응답 스키마
 class SubTaskResponse(BaseModel):

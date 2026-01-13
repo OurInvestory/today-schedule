@@ -1,19 +1,56 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.models import user, lecture, schedule, sub_task, notification
-from app.db.database import engine, Base
+from app.models.user import User
+from app.db.database import engine, Base, db_session
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
 from app.api import user_router, schedule_router, ai_chat, lecture_router, sub_task_router, calendar_router
+from contextlib import asynccontextmanager
+from datetime import datetime
 
 
 # model 설정
 Base.metadata.create_all(bind=engine)
 
+
+# 테스트 유저를 자동 생성하는 Lifespan 설정
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # [Startup] 서버 시작 시 실행
+    db = db_session()
+    try:
+        user_id = "7822a162-788d-4f36-9366-c956a68393e1"   # 테스트용 고정 UUID
+        
+        existing_user = db.query(User).filter(User.user_id == user_id).first()     # 유저 존재 여부 확인
+        
+        if not existing_user:
+            test_user = User(
+                user_id=user_id,
+                email="test@example.com",
+                password="test_password",
+                create_at=datetime.now(),
+                update_at=datetime.now()
+            )
+            db.add(test_user)
+            db.commit()
+            print("테스트 유저 생성에 성공했습니다.")   # TEST CODE
+        else:
+            print("테스트 유저가 이미 존재합니다.")   # TEST CODE
+
+    except Exception as e:
+        db.rollback()
+    finally:
+        db.close()
+    
+    yield
+
+
 # 앱 인스턴스 생성
 app = FastAPI(
     title="5늘의 일정",
     description="watsonx.ai 기반 대학생 맞춤형 AI 학업 스케줄 도우미",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 

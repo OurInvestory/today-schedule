@@ -17,11 +17,10 @@ class Schedule(Base):
     category = Column(String(50), nullable=True)    # class, assignment, exam, team, activity, other
     start_at = Column(DateTime, nullable=True)
     end_at = Column(DateTime, nullable=False)
-    priority_score = Column(Integer, default=1, nullable=False)     # 0 (낮음), 1 (중간), 2 (높음)
+    priority_score = Column(Integer, default=1, nullable=False)     
     original_text = Column(Text, nullable=True)
     update_text = Column(Text, nullable=True)
     estimated_minute = Column(Integer, nullable=True)    # 분 단위
-    ai_reason = Column(Text, nullable=True)     # 우선 순위 근거
 
     # 관계 설정
     user = relationship("User", back_populates="schedules")
