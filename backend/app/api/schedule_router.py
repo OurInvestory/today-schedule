@@ -36,7 +36,6 @@ def save_schedules(
                 original_text=item.original_text,
                 update_text=None,
                 estimated_minute=item.estimated_minute,
-                ai_reason=item.ai_reason 
             )
             db.add(new_schedule)
             saved_schedules.append(new_schedule)

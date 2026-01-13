@@ -21,7 +21,6 @@ class Schedule(Base):
     original_text = Column(Text, nullable=True)
     update_text = Column(Text, nullable=True)
     estimated_minute = Column(Integer, nullable=True)    # 분 단위
-    ai_reason = Column(Text, nullable=True)     # 우선 순위 근거
 
     # 관계 설정
     user = relationship("User", back_populates="schedules")

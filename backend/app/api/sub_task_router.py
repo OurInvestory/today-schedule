@@ -32,7 +32,8 @@ def create_sub_tasks(
                 date=item.date,
                 estimated_minute=item.estimated_minute,
                 is_done=False,
-                update_text=None
+                update_text=None,
+                ai_reason=item.ai_reason
             )
             db.add(new_task)
             saved_items.append(new_task)
