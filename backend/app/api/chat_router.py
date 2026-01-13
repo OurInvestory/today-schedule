@@ -129,6 +129,7 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
       * 1-3: Personal tasks, hobbies, routine activities.
    - "estimated_minute" (int): Estimated total workload (e.g., Exam Study: 600-1200, Homework: 60-180, Meetings: 60).
    - "category" (string): Must be one of [수업, 과제, 시험, 공모전, 대외활동, 기타].
+   - "target": "SCHEDULE" (default) or "NOTIFICATION".
    - "CREATE": Must include 'title', 'importance_score', 'estimated_minute', 'category' AND ('start_at' OR 'end_at').
    - "UPDATE": Must include 'title' (to identify target) AND specific fields to change.
    - "DELETE": Must include 'title'.
@@ -149,6 +150,13 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
      * estimated_minute: 60-180 (reasonable study time).
      * category: Same as parent or '공부'.
      * tip: "Short, practical advice for this step (Korean, Max 20 chars)"
+     
+7. Notification Settings (NEW):
+   - IF user asks to set/change alarm/reminder: Set actions 'target' to "NOTIFICATION".
+   - Payload must include:
+     * schedule_title: Target schedule name.
+     * minutes_before: Minutes before the event (e.g., 10, 30, 60, 1440=1day). 0 if 'at time'.
+     * notification_msg: Custom message (optional).
 
 [Examples]
 ---
@@ -162,10 +170,10 @@ JSON: {{
   "intent": "SCHEDULE_MUTATION",
   "type": "TASK",
   "actions": [
-    {{ "op": "CREATE", "payload": {{ "title": "알고리즘 시험", "end_at": "2024-05-27T10:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
-    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 개념 정리", "end_at": "2024-05-24T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "tip": "핵심 개념 위주로 1회독"}} }},
-    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 기출 풀이", "end_at": "2024-05-25T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "tip": "타이머 켜고 실전처럼 풀기"}} }},
-    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 최종 복습", "end_at": "2024-05-26T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험", "tip": "틀린 문제 위주로 재점검"}} }}
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "알고리즘 시험", "end_at": "2024-05-27T10:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 개념 정리", "end_at": "2024-05-24T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "tip": "핵심 개념 위주로 1회독"}} }},
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 기출 풀이", "end_at": "2024-05-25T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "tip": "타이머 켜고 실전처럼 풀기"}} }},
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 최종 복습", "end_at": "2024-05-26T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험", "tip": "틀린 문제 위주로 재점검"}} }}
   ]
 }}
 
@@ -177,9 +185,24 @@ JSON: {{
   "type": "TASK",
   "actions": [ {{ 
     "op": "UPDATE", 
+    "target": "SCHEDULE",
     "payload": {{ "title": "운영체제 과제", "end_at": "2026-05-21T23:59:00+09:00" }} 
   }} ]
 }}
+
+# Example 3: Notification Setting (NEW)
+User: "자료구조 과제 알림 1시간 전으로 설정해줘"
+Context: Reference Date is 2024-05-20 (Monday)
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "TASK",
+  "actions": [ {{ 
+    "op": "UPDATE", 
+    "target": "NOTIFICATION",
+    "payload": {{ "schedule_title": "자료구조 과제", "minutes_before": 60, "notification_msg": "자료구조 과제 마감 1시간 전입니다!" }} 
+  }} ]
+}}
+
 
 # Example 3: Delete (Cancel) - No Date Calculation needed
 User: "캡스톤 회의 취소해"
@@ -239,8 +262,11 @@ JSON Output:
             action_cnt = len(actions)
             if action_cnt > 0:
                 op_type = actions[0].op
-                
-                if op_type == "DELETE":
+                target_type = getattr(actions[0], 'target', 'SCHEDULE')
+
+                if target_type == "NOTIFICATION":
+                     assistant_msg = "알림 설정을 변경할까요?"
+                elif op_type == "DELETE":
                     assistant_msg = "해당 일정을 취소할까요?"
                 elif op_type == "UPDATE":
                     assistant_msg = "일정을 변경할까요?"
