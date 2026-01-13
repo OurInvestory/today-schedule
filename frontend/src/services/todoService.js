@@ -5,9 +5,15 @@ import api from './api';
  */
 export const fetchTodos = async () => {
   try {
-    const response = await api.get('/api/schedules');
-    // Map priority numbers to priority labels
-    return response.map(todo => ({
+    const today = new Date();
+    const from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
+    const to = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString();
+
+    const response = await api.get('/schedules', {
+      params: { from, to },
+    });
+
+    return (response.data.data || []).map(todo => ({
       ...todo,
       priority: mapPriority(todo.priority_score),
     }));
@@ -29,7 +35,7 @@ const mapPriority = (score) => {
  */
 export const createTodo = async (todoData) => {
   try {
-    const response = await api.post('/api/schedules', {
+    const response = await api.post('/schedules', {
       title: todoData.title,
       description: todoData.description,
       priority_score: todoData.priority, // API 명세서에 맞게 수정
@@ -49,7 +55,7 @@ export const createTodo = async (todoData) => {
  */
 export const updateTodo = async (id, todoData) => {
   try {
-    const response = await api.put(`/api/schedules/${id}`, todoData);
+    const response = await api.put(`/schedules/${id}`, todoData);
     return response;
   } catch (error) {
     console.error('Failed to update todo:', error);
@@ -63,7 +69,7 @@ export const updateTodo = async (id, todoData) => {
  */
 export const deleteTodo = async (id) => {
   try {
-    const response = await api.delete(`/api/schedules/${id}`);
+    const response = await api.delete(`/schedules/${id}`);
     return response;
   } catch (error) {
     console.error('Failed to delete todo:', error);
@@ -134,21 +140,14 @@ export const toggleTodoComplete = async (id, completed) => {
 export const getTodayTodos = async () => {
   const today = new Date().toISOString().split('T')[0];
   const allTodos = await fetchTodos();
-  
+
   return allTodos.filter(todo => {
-    // 완료된 할 일도 표시 (완료 상태는 UI에서 구분)
-    // 마감일이 오늘 이후이거나 오늘인 것만 (지난 것은 제외하지 않고 긴급으로 표시)
-    // 시작일이 있으면 시작일이 오늘 이전이거나 오늘인 것만
     const startDate = todo.startDate;
     const dueDate = todo.dueDate;
-    
-    // 시작일 체크: 시작일이 없거나, 시작일이 오늘 이전/오늘이면 OK
+
     const canStart = !startDate || startDate <= today;
-    
-    // 마감일 체크: 마감일이 없거나, 마감일이 아직 지나지 않았거나 오늘이면 표시
-    // (지난 것도 표시해서 긴급하게 처리하도록)
     const isRelevant = !dueDate || dueDate >= today || !todo.completed;
-    
+
     return canStart && (isRelevant || !todo.completed);
   });
 };
@@ -160,18 +159,18 @@ export const getTodayTodos = async () => {
  */
 export const getTodosByDate = async (date) => {
   const allTodos = await fetchTodos();
-  
+
   return allTodos.filter(todo => {
     const startDate = todo.startDate;
     const dueDate = todo.dueDate;
-    
+
     // 시작일 체크: 시작일이 없거나, 시작일이 해당 날짜 이전/같으면 OK
     const canStart = !startDate || startDate <= date;
-    
+
     // 마감일 체크: 마감일이 없거나, 마감일이 해당 날짜 이후/같으면 OK
     // 마감일이 지났어도 미완료면 표시
     const isRelevant = !dueDate || dueDate >= date || !todo.completed;
-    
+
     return canStart && isRelevant;
   });
 };

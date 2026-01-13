@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from '../utils/constants';
  */
 export const parseNaturalLanguage = async (text) => {
   try {
-    const response = await api.post(API_ENDPOINTS.AI_PARSE, { text });
+    const response = await api.post('/ai/parse', { text });
     return response;
   } catch (error) {
     console.error('Failed to parse natural language:', error);
@@ -19,7 +19,7 @@ export const parseNaturalLanguage = async (text) => {
  */
 export const getPriorityRecommendation = async (todoData) => {
   try {
-    const response = await api.post(API_ENDPOINTS.AI_PRIORITY, todoData);
+    const response = await api.post('/ai/priority', todoData);
     return response;
   } catch (error) {
     console.error('Failed to get priority recommendation:', error);
@@ -45,7 +45,7 @@ export const breakdownTask = async (taskData) => {
  */
 export const sendChatMessage = async (message, conversationId = null) => {
   try {
-    const response = await api.post(API_ENDPOINTS.CHAT, {
+    const response = await api.post('/ai/chat', {
       message,
       conversationId,
     });
@@ -61,7 +61,7 @@ export const sendChatMessage = async (message, conversationId = null) => {
  */
 export const getChatHistory = async (conversationId) => {
   try {
-    const response = await api.get(`${API_ENDPOINTS.CHAT}/${conversationId}`);
+    const response = await api.get(`/ai/chat/${conversationId}`);
     return response;
   } catch (error) {
     console.error('Failed to get chat history:', error);
