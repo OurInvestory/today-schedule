@@ -7,20 +7,22 @@ from typing import Optional, List, Union
 class SaveSubTaskRequest(BaseModel):
     schedule_id: Optional[str] = Field(None, example="3fa85f64-5717-4562-b3fc-2c963f66afa6")
     title: str = Field(..., example="참고 문헌 리스트 정리")
-    date: datetime.date = Field(..., example="2026-06-10") # 필드명과 타입명 구분
+    date: datetime.date = Field(..., example="2026-06-10")
     estimated_minute: Optional[int] = Field(default=60, example=45)
     priority: Optional[str] = Field(default='medium', example='high')  # high, medium, low
     category: Optional[str] = Field(default='other', example='assignment')  # class, assignment, exam, team, activity, other
+    ai_reason: Optional[str] = Field(None, example="최종 발표의 품질을 높이기 위해 필요한 단계입니다.")
 
 # 할 일 수정 요청 스키마
 class UpdateSubTaskRequest(BaseModel):
     title: Optional[str] = Field(None, example="참고 문헌 리스트 정리")
-    date: Optional[datetime.date] = Field(None, example="2026-06-10") # 필드명과 타입명 구분
+    date: Optional[datetime.date] = Field(None, example="2026-06-10")
     estimated_minute: Optional[int] = Field(None, example=45)
     is_done: Optional[bool] = Field(None, example=True)
     update_text: Optional[str] = None
     priority: Optional[str] = Field(None, example='high')
     category: Optional[str] = Field(None, example='assignment')
+    ai_reason: Optional[str] = None
 
 # 할 일 응답 스키마
 class SubTaskResponse(BaseModel):
@@ -32,9 +34,9 @@ class SubTaskResponse(BaseModel):
     estimated_minute: Optional[int] = None
     is_done: bool
     update_text: Optional[str] = None
-    ai_reason: Optional[str] = None
-    category: Optional[str] = None
     priority: Optional[str] = None
+    category: Optional[str] = None
+    ai_reason: Optional[str] = None
 
     class Config:
         orm_mode = True

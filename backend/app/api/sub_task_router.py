@@ -35,7 +35,8 @@ def create_sub_tasks(
                 is_done=False,
                 update_text=None,
                 priority=item.priority if hasattr(item, 'priority') else 'medium',
-                category=item.category if hasattr(item, 'category') else 'other'
+                category=item.category if hasattr(item, 'category') else 'other',
+                ai_reason=item.ai_reason if hasattr(item, 'ai_reason') else None
             )
             db.add(new_task)
             saved_items.append(new_task)

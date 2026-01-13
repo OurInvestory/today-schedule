@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional
 
 
 # 일정 저장 요청 스키마
@@ -10,10 +10,9 @@ class SaveScheduleRequest(BaseModel):
     category: Optional[str] = Field("assignment", example="assignment")
     start_at: Optional[datetime] = Field(None, example="2026-06-20T00:00:00")
     end_at: datetime = Field(..., example="2026-06-20T23:59:59")
-    priority_score: int = Field(1, ge=0, le=10, example=8)  # 범위 확장 반영
+    priority_score: int = Field(1, ge=0, le=10, example=8)
     original_text: Optional[str] = Field(None, example="6월 20일에 캡스톤 디자인 최종 발표 일정이 있어")
     estimated_minute: Optional[int] = Field(None, example=120)
-    ai_reason: Optional[str] = Field(None, example="성적에 반영되는 과제")
 
 # 일정 응답 스키마
 class ScheduleResponse(BaseModel):
@@ -28,7 +27,6 @@ class ScheduleResponse(BaseModel):
     original_text: Optional[str]
     update_text: Optional[str]
     estimated_minute: Optional[int]
-    ai_reason: Optional[str]
 
     class Config:
         orm_mode = True
@@ -45,4 +43,3 @@ class UpdateScheduleRequest(BaseModel):
     original_text: Optional[str] = None
     update_text: Optional[str] = Field(None, example="6월 20일에 있는 캡스톤 일정 내일로 수정해줘")
     estimated_minute: Optional[int] = None
-    ai_reason: Optional[str] = None

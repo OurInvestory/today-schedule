@@ -20,6 +20,7 @@ class SubTask(Base):
     update_text = Column(Text, nullable=True)
     priority = Column(String(20), default='medium', nullable=True)  # high, medium, low
     category = Column(String(50), default='other', nullable=True)   # class, assignment, exam, team, activity, other
+    ai_reason = Column(Text, nullable=True)     # 할 일 세분화 근거
 
     # 관계 설정
     user = relationship("User", back_populates="sub_tasks")
