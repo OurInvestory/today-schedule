@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { isToday } from '../../utils/dateUtils';
 import './DateCell.css';
 
-const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, hasPending, onClick, onDoubleClick }) => {
+const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, hasPending, hasGoogleEvents, onClick, onDoubleClick }) => {
   // 할 일 존재 여부 확인 (완료 또는 미완료)
   const hasTodos = hasCompleted || hasPending;
   const lastTapRef = useRef(0);
@@ -46,7 +46,7 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
   };
 
   // 인디케이터 렌더링 로직
-  // 우선순위: 할 일 존재 여부 > 일정 존재 여부
+  // 우선순위: 할 일 존재 여부 > 일정 존재 여부 > 구글 캘린더 연동
   const renderIndicators = () => {
     // 케이스 1: 할 일이 있는 경우 - 완료 여부에 따라 색상 점 표시
     if (hasTodos) {
@@ -63,7 +63,12 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
       return <span className="date-cell__schedule-icon" />;
     }
     
-    // 케이스 3: 둘 다 없는 경우 - 아무것도 표시하지 않음
+    // 케이스 3: 구글 캘린더 연동 일정만 있는 경우 - 빨간색 원형 아이콘
+    if (hasGoogleEvents) {
+      return <span className="date-cell__google-icon" />;
+    }
+    
+    // 케이스 4: 아무것도 없는 경우 - 아무것도 표시하지 않음
     return null;
   };
 

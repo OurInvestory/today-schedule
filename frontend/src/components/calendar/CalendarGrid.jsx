@@ -4,7 +4,7 @@ import { WEEKDAYS } from '../../utils/constants';
 import { isSameDay } from '../../utils/dateUtils';
 import './CalendarGrid.css';
 
-const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, hasEventsOnDate, hasCompletedOnDate, hasPendingOnDate }) => {
+const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, hasEventsOnDate, hasCompletedOnDate, hasPendingOnDate, hasGoogleEventsOnDate = () => false }) => {
   return (
     <div className="calendar-grid">
       {/* Weekday headers */}
@@ -32,6 +32,7 @@ const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, has
             hasEvents={hasEventsOnDate(dateObj.date)}
             hasCompleted={hasCompletedOnDate ? hasCompletedOnDate(dateObj.date) : false}
             hasPending={hasPendingOnDate ? hasPendingOnDate(dateObj.date) : false}
+            hasGoogleEvents={hasGoogleEventsOnDate(dateObj.date)}
             onClick={onDateClick}
             onDoubleClick={onDateDoubleClick}
           />

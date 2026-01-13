@@ -21,6 +21,7 @@ class Schedule(Base):
     original_text = Column(Text, nullable=True)
     update_text = Column(Text, nullable=True)
     estimated_minute = Column(Integer, nullable=True)    # 분 단위
+    source = Column(String(50), default='manual', nullable=True)  # manual, google
 
     # 관계 설정
     user = relationship("User", back_populates="schedules")

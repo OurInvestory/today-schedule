@@ -28,6 +28,7 @@ const Calendar = ({ onDateSelect }) => {
     hasEventsOnDate,
     hasCompletedTodosOnDate,
     hasPendingTodosOnDate,
+    hasGoogleEventsOnDate,
     getEventsForDate,
     refetch,
   } = useCalendar();
@@ -98,6 +99,7 @@ const Calendar = ({ onDateSelect }) => {
         hasEventsOnDate={hasEventsOnDate}
         hasCompletedOnDate={hasCompletedTodosOnDate}
         hasPendingOnDate={hasPendingTodosOnDate}
+        hasGoogleEventsOnDate={hasGoogleEventsOnDate}
       />
 
       {/* 연월 선택 모달 */}

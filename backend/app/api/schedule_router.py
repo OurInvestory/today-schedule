@@ -60,6 +60,7 @@ def save_schedules(
                 original_text=item.original_text,
                 update_text=None,
                 estimated_minute=item.estimated_minute,
+                source='manual'  # 수동 추가 일정
             )
             db.add(new_schedule)
             saved_schedules.append(new_schedule)
@@ -209,14 +210,15 @@ def sync_google_calendar(
                 new_schedule = Schedule(
                     user_id=test_user_id,
                     title=event.get('summary', '제목 없음'),
-                    type="task",
+                    type="event",
                     category="기타",
                     start_at=start_at,
                     end_at=end_at,
                     priority_score=5,   
                     original_text=None,
                     update_text=None,
-                    estimated_minute=None
+                    estimated_minute=None,
+                    source='google'  # 구글 캘린더 연동 식별
                 )
                 db.add(new_schedule)
                 saved_schedules.append(new_schedule)

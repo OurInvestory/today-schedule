@@ -96,6 +96,22 @@
   opacity: 0.5;
 }
 
+/* 구글 캘린더 아이콘 (빨간색 원형) */
+.date-cell__google-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ea4335; /* Google red */
+}
+
+.date-cell--selected .date-cell__google-icon {
+  background-color: rgba(234, 67, 53, 0.8);
+}
+
+.date-cell--other-month .date-cell__google-icon {
+  opacity: 0.5;
+}
+
 .date-cell--selected .date-cell__dot {
   background-color: white;
 }

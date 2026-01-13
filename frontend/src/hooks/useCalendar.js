@@ -7,6 +7,7 @@ export const useCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState([]);
+  const [googleEvents, setGoogleEvents] = useState([]);
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -56,11 +57,26 @@ export const useCalendar = () => {
     }
   }, []);
 
+  // 구글 캘린더 일정 조회
+  const fetchGoogleEvents = useCallback(async () => {
+    try {
+      const schedules = await getMonthlyEvents(year, month + 1);
+      // 구글 캘린더에서 가져온 일정만 필터링 (source가 'google'인 경우)
+      const googleOnly = schedules.filter(item => item.source === 'google' || item.isGoogleEvent);
+      console.log('구글 캘린더 일정:', googleOnly);
+      setGoogleEvents(googleOnly);
+    } catch (err) {
+      console.error('Failed to fetch Google events:', err);
+      setGoogleEvents([]);
+    }
+  }, [year, month]);
+
   // 월 변경 시 데이터 조회
   useEffect(() => {
     fetchMonthlyEvents();
     fetchTodos();
-  }, [fetchMonthlyEvents, fetchTodos]);
+    fetchGoogleEvents();
+  }, [fetchMonthlyEvents, fetchTodos, fetchGoogleEvents]);
 
   // 이전 달로 이동
   const goToPreviousMonth = useCallback(() => {
@@ -147,11 +163,24 @@ export const useCalendar = () => {
     });
   }, [todos]);
 
+  // 특정 날짜에 구글 캘린더 일정이 있는지 확인
+  const hasGoogleEventsOnDate = useCallback((date) => {
+    return googleEvents.some(event => {
+      const eventDate = new Date(event.date || event.end_at);
+      return (
+        eventDate.getFullYear() === date.getFullYear() &&
+        eventDate.getMonth() === date.getMonth() &&
+        eventDate.getDate() === date.getDate()
+      );
+    });
+  }, [googleEvents]);
+
   // 일정과 할 일 모두 새로고침
   const refetch = useCallback(() => {
     fetchMonthlyEvents();
     fetchTodos();
-  }, [fetchMonthlyEvents, fetchTodos]);
+    fetchGoogleEvents();
+  }, [fetchMonthlyEvents, fetchTodos, fetchGoogleEvents]);
 
   return {
     currentDate,
@@ -171,6 +200,7 @@ export const useCalendar = () => {
     hasTodosOnDate,
     hasCompletedTodosOnDate,
     hasPendingTodosOnDate,
+    hasGoogleEventsOnDate,
     refetch,
   };
 };
