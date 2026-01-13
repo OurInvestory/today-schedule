@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import './ChatbotWindow.css';
@@ -32,6 +32,17 @@ const ChatbotWindow = ({
   const [scrollLeft, setScrollLeft] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isFileDragging, setIsFileDragging] = useState(false);
+
+  // 컴포넌트 언마운트 시 미리보기 URL 정리 (Hook은 조건부 return 전에 호출되어야 함)
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(f => {
+        if (f.preview) {
+          URL.revokeObjectURL(f.preview);
+        }
+      });
+    };
+  }, [selectedFiles]);
 
   if (!isOpen) return null;
 
@@ -158,17 +169,6 @@ const ChatbotWindow = ({
     }
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
-
-  // 컴포넌트 언마운트 시 미리보기 URL 정리
-  useEffect(() => {
-    return () => {
-      selectedFiles.forEach(f => {
-        if (f.preview) {
-          URL.revokeObjectURL(f.preview);
-        }
-      });
-    };
-  }, [selectedFiles]);
 
   const handleSuggestedQuestion = (question) => {
     // "시간표 이미지 분석" 클릭 시 파일 선택 열기

@@ -102,27 +102,38 @@ export const useChatbot = () => {
     try {
       const response = await sendChatMessage(text, null, selectedScheduleId, {}, files);
       
-      const { data } = response;
-      const { parsedResult, assistantMessage } = data;
+      // axios 응답 구조: response.data가 API 응답 본문
+      // API 응답 구조: { status, message, data: { parsedResult, assistantMessage } }
+      const apiResponse = response.data;
+      console.log('API Response:', apiResponse); // 디버깅용
+      
+      // data가 없거나 오류인 경우 처리
+      if (!apiResponse || apiResponse.status !== 200) {
+        throw new Error(apiResponse?.message || '서버 응답 오류');
+      }
+      
+      const responseData = apiResponse.data || {};
+      const parsedResult = responseData.parsed_result || responseData.parsedResult;
+      const assistantMessage = responseData.assistant_message || responseData.assistantMessage;
       
       // 응답 메시지 추가
       const newAssistantMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: assistantMessage || '처리 중입니다...',
+        content: assistantMessage || '요청을 처리했습니다.',
         timestamp: new Date().toISOString(),
-        parsedResult: parsedResult, // AI 파싱 결과
+        parsedResult: parsedResult,
         actions: parsedResult?.actions || [],
-        reasoning: parsedResult?.reasoning, // 추천 이유
-        missingFields: parsedResult?.missingFields || [],
-        imageAnalysis: imageAnalysisResult, // 이미지 분석 결과
+        reasoning: parsedResult?.reasoning,
+        missingFields: parsedResult?.missingFields || parsedResult?.missing_fields || [],
+        imageAnalysis: imageAnalysisResult,
       };
 
       setMessages(prev => [...prev, newAssistantMessage]);
       
       // 대화 ID 저장
-      if (response.conversationId) {
-        setConversationId(response.conversationId);
+      if (apiResponse.conversationId) {
+        setConversationId(apiResponse.conversationId);
       }
     } catch (err) {
       setError(err.message || '메시지 전송에 실패했습니다.');

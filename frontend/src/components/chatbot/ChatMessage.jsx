@@ -164,7 +164,9 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
               <div className="chat-message__missing-fields-title">추가 정보가 필요해요:</div>
               <ul className="chat-message__missing-fields-list">
                 {message.missingFields.map((field, index) => (
-                  <li key={index}>{field}</li>
+                  <li key={index}>
+                    {typeof field === 'string' ? field : (field.question || field.field || '정보 필요')}
+                  </li>
                 ))}
               </ul>
             </div>
