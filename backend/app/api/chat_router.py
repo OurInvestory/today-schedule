@@ -140,21 +140,33 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
 5. Date Calculation:
    - Always calculate relative dates (e.g., "tomorrow", "next Friday") into exact ISO8601 timestamps based on [Current Environment] date.
 
+6. Sub-task Auto-Generation (SMART FEATURE):
+   - IF the intent is "CREATE" AND Category is one of ['시험', '과제', '공모전', '대외활동']:
+   - YOU MUST generate 3 to 5 'Sub-tasks' (Preparation steps) leading up to the deadline.
+   - Sub-task Payload:
+     * title: "[준비] {{Original Title}} - {{Step Description}}"
+     * end_at: D-1, D-2, D-3... days before the main event.
+     * estimated_minute: 60-180 (reasonable study time).
+     * category: Same as parent or '공부'.
+     * tip: "Short, practical advice for this step (Korean, Max 20 chars)"
+
 [Examples]
 ---
 # Note: In these examples, the Reference Date is fixed to 2024-05-20 (Monday).
 # The model must calculate the target date based on the user's input relative to the [Current Environment] date provided in the real prompt.
 
-# Example 1: Create (Event) - Relative Date Calculation
-User: "내일 2시 회의 잡아줘"
-Context: Reference Date is 2024-05-20 (Monday)
+# Example 1: Create w/ Sub-tasks (Exam)
+User: "다음주 월요일 알고리즘 시험 일정 추가해줘"
+Context: Reference Date is 2024-05-20 (Mon). "Next Mon" is 2024-05-27.
 JSON: {{
   "intent": "SCHEDULE_MUTATION",
-  "type": "EVENT",
-  "actions": [ {{ 
-    "op": "CREATE", 
-    "payload": {{ "title": "회의", "start_at": "2024-05-21T14:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}} 
-  }} ]
+  "type": "TASK",
+  "actions": [
+    {{ "op": "CREATE", "payload": {{ "title": "알고리즘 시험", "end_at": "2024-05-27T10:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
+    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 개념 정리", "end_at": "2024-05-24T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "tip": "핵심 개념 위주로 1회독"}} }},
+    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 기출 풀이", "end_at": "2024-05-25T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "tip": "타이머 켜고 실전처럼 풀기"}} }},
+    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 최종 복습", "end_at": "2024-05-26T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험", "tip": "틀린 문제 위주로 재점검"}} }}
+  ]
 }}
 
 # Example 2: Update (Change Time) - Relative Date Calculation
@@ -165,13 +177,13 @@ JSON: {{
   "type": "TASK",
   "actions": [ {{ 
     "op": "UPDATE", 
-    "payload": {{ "title": "운영체제 과제", "end_at": "2024-05-21T23:59:00+09:00" }} 
+    "payload": {{ "title": "운영체제 과제", "end_at": "2026-05-21T23:59:00+09:00" }} 
   }} ]
 }}
 
 # Example 3: Delete (Cancel) - No Date Calculation needed
 User: "캡스톤 회의 취소해"
-Context: Reference Date is 2024-05-20 (Monday)
+Context: Reference Date is 2026-05-20 (Monday)
 JSON: {{
   "intent": "SCHEDULE_MUTATION",
   "type": "EVENT",
@@ -183,7 +195,7 @@ User: "자료구조"
 Context: {{ 
   "intent": "CLARIFY", 
   "missingFields": ["title"], 
-  "preserved_info": {{ "end_at": "2024-05-20T14:00:00+09:00" }}, 
+  "preserved_info": {{ "end_at": "2026-05-20T14:00:00+09:00" }}, 
   "type": "TASK" 
 }}
 JSON: {{
@@ -191,7 +203,7 @@ JSON: {{
   "type": "TASK",
   "actions": [ {{ 
       "op": "CREATE", 
-      "payload": {{ "title": "자료구조", "end_at": "2024-05-20T14:00:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "과제"}} 
+      "payload": {{ "title": "자료구조", "end_at": "2026-05-20T14:00:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "과제"}} 
   }} ]
 }}
 
@@ -212,19 +224,37 @@ JSON Output:
         
         if ai_parsed_result.intent == "CLARIFY":
             if ai_parsed_result.missingFields:
-                assistant_msg = ai_parsed_result.missingFields[0].question
+                # missingFields 구조가 바뀌었을 수 있으므로 안전하게 처리
+                field_info = ai_parsed_result.missingFields[0]
+                # Pydantic 모델 or Dict 처리
+                if isinstance(field_info, dict):
+                    assistant_msg = field_info.get('question', "정보가 부족합니다.")
+                else: 
+                    assistant_msg = getattr(field_info, 'question', "정보가 부족합니다.")
             else:
                 assistant_msg = "정보가 부족합니다. 조금 더 자세히 말씀해 주세요."
                 
         elif ai_parsed_result.intent == "SCHEDULE_MUTATION":
-            action_cnt = len(ai_parsed_result.actions)
-            op_type = ai_parsed_result.actions[0].op
-            if op_type == "DELETE":
-                assistant_msg = "해당 일정을 취소할까요?"
-            elif op_type == "UPDATE":
-                assistant_msg = "일정을 변경할까요?"
+            actions = ai_parsed_result.actions
+            action_cnt = len(actions)
+            if action_cnt > 0:
+                op_type = actions[0].op
+                
+                if op_type == "DELETE":
+                    assistant_msg = "해당 일정을 취소할까요?"
+                elif op_type == "UPDATE":
+                    assistant_msg = "일정을 변경할까요?"
+                else: # CREATE
+                    # 서브태스크(준비 일정) 감지 로직
+                    sub_task_count = sum(1 for a in actions if "[준비]" in a.payload.get('title', ''))
+                    main_task_count = action_cnt - sub_task_count
+                    
+                    if sub_task_count > 0:
+                        assistant_msg = f"준비 과정 {sub_task_count}건을 함께 등록할까요?"
+                    else:
+                        assistant_msg = f"{action_cnt}건의 일정을 등록할까요?"
             else:
-                assistant_msg = f"{action_cnt}건의 일정을 등록할까요?"
+                assistant_msg = "처리할 일정이 없습니다."
 
         response_data = ChatResponseData(
             parsed_result=ai_parsed_result,
