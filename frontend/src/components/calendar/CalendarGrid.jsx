@@ -4,12 +4,11 @@ import { WEEKDAYS } from '../../utils/constants';
 import { isSameDay } from '../../utils/dateUtils';
 import './CalendarGrid.css';
 
-const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, hasEventsOnDate, hasCompletedOnDate, hasPendingOnDate }) => {
+const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, hasEventsOnDate, hasCompletedOnDate, hasPendingOnDate, hasGoogleEventsOnDate = () => false, isFullMode = false, getEventsForDate, getTodosForDate }) => {
   return (
-    <div className="calendar-grid">
+    <div className={`calendar-grid ${isFullMode ? 'calendar-grid--full-mode' : ''}`}>
       {/* Weekday headers */}
-      <div className="calendar-grid__weekdays">
-        {WEEKDAYS.map((day, index) => (
+      <div className="calendar-grid__weekdays">{WEEKDAYS.map((day, index) => (
           <div
             key={index}
             className={`calendar-grid__weekday ${
@@ -32,8 +31,12 @@ const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, has
             hasEvents={hasEventsOnDate(dateObj.date)}
             hasCompleted={hasCompletedOnDate ? hasCompletedOnDate(dateObj.date) : false}
             hasPending={hasPendingOnDate ? hasPendingOnDate(dateObj.date) : false}
+            hasGoogleEvents={hasGoogleEventsOnDate(dateObj.date)}
             onClick={onDateClick}
             onDoubleClick={onDateDoubleClick}
+            isFullMode={isFullMode}
+            events={getEventsForDate ? getEventsForDate(dateObj.date) : []}
+            todos={getTodosForDate ? getTodosForDate(dateObj.date) : []}
           />
         ))}
       </div>

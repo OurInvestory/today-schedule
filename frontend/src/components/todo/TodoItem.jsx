@@ -67,6 +67,11 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
     setLastTap(now);
   };
 
+  // PC 환경에서 더블클릭 핸들러
+  const handleDoubleClick = () => {
+    if (onEdit) onEdit(todo);
+  };
+
   const handleLongPress = () => {
     if (onEdit) onEdit(todo);
   };
@@ -156,6 +161,7 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
         onTouchStart={handleTouchStart}
         onTouchMove={(e) => handleDragMove(e.touches[0].clientX)}
         onTouchEnd={handleTouchEnd}
+        onDoubleClick={handleDoubleClick}
       >
         {/* Checkbox */}
         <label className="todo-item__checkbox" onClick={(e) => e.stopPropagation()}>

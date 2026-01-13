@@ -14,7 +14,7 @@ import { calculatePriority } from '../utils/priorityUtils';
 import { CATEGORY_LABELS } from '../utils/constants';
 import './Home.css';
 
-const Home = () => {
+const Home = ({ isFullCalendarMode = false }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -89,15 +89,27 @@ const Home = () => {
   };
 
   return (
-    <div className="home">
+    <div className={`home ${isFullCalendarMode ? 'home--full-calendar' : ''}`}>
       <div className="home__container">
-        {/* Left: Calendar */}
-        <aside className="home__calendar">
-          <Calendar onDateSelect={handleDateSelect} todos={todos} />
-        </aside>
+        {isFullCalendarMode ? (
+          // 전체 캘린더 모드
+          <div className="home__full-calendar">
+            <Calendar 
+              onDateSelect={handleDateSelect} 
+              todos={todos} 
+              isFullMode={true}
+            />
+          </div>
+        ) : (
+          // 일반 대시보드 모드
+          <>
+            {/* Left: Calendar */}
+            <aside className="home__calendar">
+              <Calendar onDateSelect={handleDateSelect} todos={todos} />
+            </aside>
 
-        {/* Right: Todo List */}
-        <main className="home__main">
+            {/* Right: Todo List */}
+            <main className="home__main">
           <div className="home__header" style={{ marginBottom: '16px' }}>
             <div className="home__header-left">
               <svg 
@@ -146,7 +158,9 @@ const Home = () => {
               emptyMessage="할 일이 없습니다. 새로운 할 일을 추가해보세요!"
             />
           </div>
-        </main>
+            </main>
+          </>
+        )}
       </div>
 
       {/* Chatbot */}

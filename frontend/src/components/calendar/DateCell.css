@@ -96,6 +96,22 @@
   opacity: 0.5;
 }
 
+/* 구글 캘린더 아이콘 (빨간색 원형) */
+.date-cell__google-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ea4335; /* Google red */
+}
+
+.date-cell--selected .date-cell__google-icon {
+  background-color: rgba(234, 67, 53, 0.8);
+}
+
+.date-cell--other-month .date-cell__google-icon {
+  opacity: 0.5;
+}
+
 .date-cell--selected .date-cell__dot {
   background-color: white;
 }
@@ -112,6 +128,183 @@
   opacity: 0.5;
 }
 
+/* 전체 캘린더 모드 */
+.date-cell--full-mode {
+  aspect-ratio: auto;
+  height: 100%;
+  min-height: 0;
+  padding: 6px 4px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.date-cell--full-mode .date-cell__number {
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+  align-self: flex-start;
+  flex-shrink: 0;
+  padding-left: 2px;
+}
+
+/* 이벤트 바 컨테이너 */
+.date-cell__events {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 이벤트 바 - 갤럭시 캘린더 스타일 */
+.date-cell__event-bar {
+  width: 100%;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  color: white;
+  background-color: var(--color-primary-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color var(--transition-base);
+}
+
+.date-cell__event-bar:hover {
+  filter: brightness(1.1);
+}
+
+/* 카테고리별 색상 */
+.event-bar--WORK {
+  background-color: #3b82f6; /* Blue */
+}
+
+.event-bar--PERSONAL {
+  background-color: #10b981; /* Green */
+}
+
+.event-bar--STUDY {
+  background-color: #8b5cf6; /* Purple */
+}
+
+.event-bar--HEALTH {
+  background-color: #f59e0b; /* Amber */
+}
+
+.event-bar--SOCIAL {
+  background-color: #ec4899; /* Pink */
+}
+
+.event-bar--OTHER {
+  background-color: #6b7280; /* Gray */
+}
+
+.event-bar--default {
+  background-color: var(--color-primary-500);
+}
+
+/* 구글 캘린더 이벤트 */
+.event-bar--google {
+  background-color: #ea4335; /* Google red */
+}
+
+.event-bar__google-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.event-bar__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 할 일 아이템 - 텍스트만 */
+.date-cell__todo-item {
+  width: 100%;
+  padding: 2px 6px 2px 2px;
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  padding-left: 10px;
+}
+
+.date-cell__todo-item::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: 3px;
+  background-color: #3b82f6;
+  border-radius: 1px;
+}
+
+.todo-item__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 더보기 버튼 */
+.date-cell__more-btn {
+  width: 100%;
+  padding: 3px 6px;
+  background-color: var(--color-bg-secondary);
+  border: none;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary-600);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-align: center;
+}
+
+.date-cell__more-btn:hover {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+/* 선택된 날짜 전체 모드 */
+.date-cell--selected.date-cell--full-mode {
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+.date-cell--selected.date-cell--full-mode .date-cell__number {
+  color: var(--color-primary-700);
+}
+
+/* 다른 달 전체 모드 */
+.date-cell--other-month.date-cell--full-mode .date-cell__number {
+  opacity: 0.4;
+}
+
+.date-cell--other-month.date-cell--full-mode .date-cell__event-bar {
+  opacity: 0.5;
+}
+
 @media (max-width: 640px) {
   .date-cell__number {
     font-size: var(--font-size-xs);
@@ -124,5 +317,33 @@
 
   .date-cell__indicators {
     gap: 2px;
+  }
+  
+  .date-cell--full-mode {
+    height: 100%;
+    min-height: 0;
+    padding: 3px 2px;
+    gap: 2px;
+  }
+  
+  .date-cell--full-mode .date-cell__number {
+    font-size: 12px;
+    padding-left: 1px;
+  }
+  
+  .date-cell__event-bar {
+    font-size: 10px;
+    padding: 1px 3px;
+  }
+  
+  .date-cell__todo-item {
+    font-size: 10px;
+    padding: 1px 3px 1px 1px;
+    padding-left: 8px;
+  }
+  
+  .date-cell__todo-item::before {
+    width: 2px;
+    left: 1px;
   }
 }

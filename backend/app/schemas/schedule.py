@@ -13,6 +13,7 @@ class SaveScheduleRequest(BaseModel):
     priority_score: int = Field(1, ge=0, le=10, example=8)
     original_text: Optional[str] = Field(None, example="6월 20일에 캡스톤 디자인 최종 발표 일정이 있어")
     estimated_minute: Optional[int] = Field(None, example=120)
+    source: Optional[str] = Field('manual', example='manual')  # manual or google
 
 # 일정 응답 스키마
 class ScheduleResponse(BaseModel):
@@ -27,6 +28,7 @@ class ScheduleResponse(BaseModel):
     original_text: Optional[str]
     update_text: Optional[str]
     estimated_minute: Optional[int]
+    source: Optional[str]
 
     class Config:
         orm_mode = True
