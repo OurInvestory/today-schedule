@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from '../utils/constants';
  */
 export const parseNaturalLanguage = async (text) => {
   try {
-    const response = await api.post('/ai/parse', { text });
+    const response = await api.post('/api/ai/parse', { text });
     return response;
   } catch (error) {
     console.error('Failed to parse natural language:', error);
@@ -19,7 +19,7 @@ export const parseNaturalLanguage = async (text) => {
  */
 export const getPriorityRecommendation = async (todoData) => {
   try {
-    const response = await api.post('/ai/priority', todoData);
+    const response = await api.post('/api/ai/priority', todoData);
     return response;
   } catch (error) {
     console.error('Failed to get priority recommendation:', error);
@@ -32,7 +32,7 @@ export const getPriorityRecommendation = async (todoData) => {
  */
 export const breakdownTask = async (taskData) => {
   try {
-    const response = await api.post('/ai/breakdown', taskData);
+    const response = await api.post('/api/ai/breakdown', taskData);
     return response;
   } catch (error) {
     console.error('Failed to breakdown task:', error);
@@ -45,7 +45,7 @@ export const breakdownTask = async (taskData) => {
  */
 export const sendChatMessage = async (message, conversationId = null) => {
   try {
-    const response = await api.post('/ai/chat', {
+    const response = await api.post('/api/ai/chat', {
       message,
       conversationId,
     });

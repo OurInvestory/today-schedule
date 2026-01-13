@@ -9,12 +9,16 @@ export const fetchTodos = async () => {
     const from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
     const to = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString();
 
-    const response = await api.get('/schedules', {
+    const response = await api.get('/api/schedules', {
       params: { from, to },
     });
 
+    // 백엔드 응답을 프론트엔드 형식으로 변환
     return (response.data.data || []).map(todo => ({
       ...todo,
+      id: todo.schedule_id,              // schedule_id -> id
+      startDate: todo.start_at,           // start_at -> startDate
+      dueDate: todo.end_at,               // end_at -> dueDate
       priority: mapPriority(todo.priority_score),
     }));
   } catch (error) {
@@ -35,19 +39,27 @@ const mapPriority = (score) => {
  */
 export const createTodo = async (todoData) => {
   try {
+    // 프론트엔드 priority를 백엔드 priority_score로 변환 (0-10 범위)
     const priorityMapping = {
-      high: 2,
-      medium: 1,
-      low: 0,
+      high: 8,
+      medium: 5,
+      low: 2,
     };
 
-    const response = await api.post('/schedules', {
+    // 백엔드 Pydantic 스키마에 맞게 데이터 변환
+    const payload = {
       title: todoData.title,
-      description: todoData.description,
-      start_at: todoData.startDate, // Map startDate to start_at
-      end_at: todoData.dueDate,    // Map dueDate to end_at
-      priority_score: priorityMapping[todoData.priority] || 0, // Map priority to priority_score
-    });
+      type: todoData.type || 'task',
+      category: todoData.category || '일반',
+      start_at: todoData.startDate || null,      // startDate -> start_at
+      end_at: todoData.dueDate,                   // dueDate -> end_at (필수)
+      priority_score: priorityMapping[todoData.priority] || 1, // priority -> priority_score
+      original_text: todoData.description || null,
+      estimated_minute: todoData.estimatedMinute || null,
+      ai_reason: todoData.aiReason || null,
+    };
+
+    const response = await api.post('/api/schedules', payload);
     return response;
   } catch (error) {
     console.error('Failed to create todo:', error);
@@ -62,7 +74,27 @@ export const createTodo = async (todoData) => {
  */
 export const updateTodo = async (id, todoData) => {
   try {
-    const response = await api.put(`/schedules/${id}`, todoData);
+    // 프론트엔드 필드를 백엔드 필드로 변환
+    const priorityMapping = {
+      high: 8,
+      medium: 5,
+      low: 2,
+    };
+
+    const payload = {};
+    
+    // 변경된 필드만 포함 (UpdateScheduleRequest 스키마)
+    if (todoData.title !== undefined) payload.title = todoData.title;
+    if (todoData.type !== undefined) payload.type = todoData.type;
+    if (todoData.category !== undefined) payload.category = todoData.category;
+    if (todoData.startDate !== undefined) payload.start_at = todoData.startDate;
+    if (todoData.dueDate !== undefined) payload.end_at = todoData.dueDate;
+    if (todoData.priority !== undefined) payload.priority_score = priorityMapping[todoData.priority];
+    if (todoData.description !== undefined) payload.update_text = todoData.description;
+    if (todoData.estimatedMinute !== undefined) payload.estimated_minute = todoData.estimatedMinute;
+    if (todoData.aiReason !== undefined) payload.ai_reason = todoData.aiReason;
+
+    const response = await api.put(`/api/schedules/${id}`, payload);
     return response;
   } catch (error) {
     console.error('Failed to update todo:', error);
@@ -76,7 +108,7 @@ export const updateTodo = async (id, todoData) => {
  */
 export const deleteTodo = async (id) => {
   try {
-    const response = await api.delete(`/schedules/${id}`);
+    const response = await api.delete(`/api/schedules/${id}`);
     return response;
   } catch (error) {
     console.error('Failed to delete todo:', error);
@@ -92,7 +124,10 @@ export const getTodos = async (params = {}) => {
 
   // 필터 적용
   if (params.date) {
-    todos = todos.filter(todo => todo.dueDate === params.date);
+    todos = todos.filter(todo => {
+      const todoDate = todo.dueDate ? todo.dueDate.split('T')[0] : null;
+      return todoDate === params.date;
+    });
   }
   if (params.category) {
     todos = todos.filter(todo => todo.category === params.category);
@@ -102,10 +137,8 @@ export const getTodos = async (params = {}) => {
   }
   if (params.priority) {
     todos = todos.filter(todo => {
-      if (params.priority === 'high') return todo.importance >= 7;
-      if (params.priority === 'medium') return todo.importance >= 4 && todo.importance < 7;
-      if (params.priority === 'low') return todo.importance < 4;
-      return true;
+      // priority 필드를 기준으로 필터링
+      return todo.priority === params.priority;
     });
   }
 

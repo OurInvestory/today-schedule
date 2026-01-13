@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import CalendarHeader from './CalendarHeader';
 import CalendarGrid from './CalendarGrid';
 import { useCalendar } from '../../hooks/useCalendar';
+import { createCalendarEvent } from '../../services/calendarService';
 import Loading from '../common/Loading';
 import './Calendar.css';
 
@@ -115,6 +116,7 @@ const Calendar = ({ onDateSelect }) => {
           onClose={handleScheduleModalClose}
           onSave={handleScheduleSave}
           onScheduleClick={handleScheduleClick}
+          refetch={refetch}
         />
       )}
     </div>
@@ -234,7 +236,7 @@ const MonthPicker = ({ currentDate, onSelect, onClose }) => {
 };
 
 // 일정 편집 모달 컴포넌트 (갤럭시 캘린더 스타일)
-const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleClick }) => {
+const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleClick, refetch }) => {
   // 로컬 일정 목록 (추가 시 즉시 반영)
   const [localEvents, setLocalEvents] = useState(initialEvents || []);
   
@@ -291,33 +293,40 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
     setShowForm(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     
     const scheduleData = {
-      id: `temp-${Date.now()}`, // 임시 ID
       title: title.trim(),
       description: description.trim(),
-      date: startDate,
       startDate,
       endDate,
       startTime: isAllDay ? null : startTime,
       endTime: isAllDay ? null : endTime,
       isAllDay,
       type: 'schedule',
+      category: '일정',
     };
     
-    console.log('일정 저장:', scheduleData);
-    // TODO: createCalendarEvent 호출
-    
-    // 로컬 목록에 추가하여 즉시 표시
-    setLocalEvents(prev => [...prev, scheduleData]);
-    setShowForm(false);
-    
-    // 폼 초기화
-    setTitle('');
-    setDescription('');
+    try {
+      console.log('일정 저장 중...', scheduleData);
+      const response = await createCalendarEvent(scheduleData);
+      console.log('일정 저장 응답:', response.data);
+      console.log('일정 저장 성공!');
+      
+      // 캠린더 새로고침
+      await refetch();
+      
+      setShowForm(false);
+      
+      // 폼 초기화
+      setTitle('');
+      setDescription('');
+    } catch (error) {
+      console.error('일정 저장 실패:', error);
+      alert('일정 저장에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleCancel = () => {

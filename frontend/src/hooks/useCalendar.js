@@ -24,9 +24,9 @@ export const useCalendar = () => {
       setError(null);
       const schedules = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
 
-      const schedulesOnly = schedules.filter(item => item.type === 'schedule');
-
-      setEvents(schedulesOnly);
+      // 모든 일정 표시 (백엔드 응답 확인을 위해 필터 제거)
+      console.log('가져온 일정 목록:', schedules);
+      setEvents(schedules);
     } catch (error) {
       setError(error);
     } finally {
@@ -138,6 +138,12 @@ export const useCalendar = () => {
     });
   }, [todos]);
 
+  // 일정과 할 일 모두 새로고침
+  const refetch = useCallback(() => {
+    fetchMonthlyEvents();
+    fetchTodos();
+  }, [fetchMonthlyEvents, fetchTodos]);
+
   return {
     currentDate,
     selectedDate,
@@ -156,6 +162,6 @@ export const useCalendar = () => {
     hasTodosOnDate,
     hasCompletedTodosOnDate,
     hasPendingTodosOnDate,
-    refetch: fetchMonthlyEvents,
+    refetch,
   };
 };

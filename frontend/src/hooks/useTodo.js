@@ -136,7 +136,7 @@ export const useTodo = (initialFilter = {}) => {
   // Todo 완료 토글
   const toggleComplete = async (id, completed) => {
     try {
-      // 낙관적 업데이트
+      // 낙관적 업데이트 (id 필드 사용)
       setAllTodos(prev =>
         prev.map(todo =>
           todo.id === id ? { ...todo, completed } : todo
