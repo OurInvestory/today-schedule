@@ -74,10 +74,40 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
             <div className="chat-message__attached-files">
               {message.files.map((file, index) => (
                 <div key={index} className="chat-message__attached-file">
-                  <span>{file.type.startsWith('image/') ? '🖼️' : '📄'}</span>
-                  <span>{file.name}</span>
+                  {file.type.startsWith('image/') ? (
+                    <div className="chat-message__image-preview">
+                      {file.preview ? (
+                        <img src={file.preview} alt={file.name} />
+                      ) : (
+                        <span>🖼️ {file.name}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="chat-message__file-info">
+                      <span>📄</span>
+                      <span>{file.name}</span>
+                    </div>
+                  )}
                 </div>
               ))}
+            </div>
+          )}
+          
+          {/* AI 이미지 분석 결과 */}
+          {!isUser && message.imageAnalysis && (
+            <div className="chat-message__image-analysis">
+              <div className="chat-message__analysis-header">📊 이미지 분석 결과</div>
+              <div className="chat-message__analysis-content">
+                {message.imageAnalysis.schedules && message.imageAnalysis.schedules.length > 0 ? (
+                  <ul className="chat-message__schedule-list">
+                    {message.imageAnalysis.schedules.map((schedule, idx) => (
+                      <li key={idx}>{schedule.title} - {schedule.time}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>{message.imageAnalysis.message}</p>
+                )}
+              </div>
             </div>
           )}
           

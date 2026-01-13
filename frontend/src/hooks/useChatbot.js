@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI } from '../services/aiService';
+import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage } from '../services/aiService';
 
 // 첫 인사 메시지
 const getGreetingMessage = () => {
@@ -57,13 +57,42 @@ export const useChatbot = () => {
   const sendMessage = async (text, selectedScheduleId = null, files = null) => {
     if (!text.trim() && (!files || files.length === 0)) return;
 
+    // 이미지 파일 분석
+    let imageAnalysisResult = null;
+    const imageFiles = files ? Array.from(files).filter(f => f.type.startsWith('image/')) : [];
+    
+    if (imageFiles.length > 0) {
+      try {
+        // 첫 번째 이미지 분석 (시간표 감지)
+        imageAnalysisResult = await analyzeTimetableImage(imageFiles[0]);
+      } catch (error) {
+        console.error('Image analysis failed:', error);
+      }
+    }
+
+    // 파일 정보 생성 (미리보기 URL 포함)
+    const fileInfo = files ? Array.from(files).map(f => {
+      const info = { 
+        name: f.name, 
+        type: f.type, 
+        size: f.size 
+      };
+      
+      // 이미지 파일인 경우 미리보기 URL 추가
+      if (f.type.startsWith('image/')) {
+        info.preview = URL.createObjectURL(f);
+      }
+      
+      return info;
+    }) : null;
+
     // 사용자 메시지 추가
     const userMessage = {
       id: Date.now(),
       role: 'user',
-      content: text,
+      content: text || '이미지를 분석해주세요',
       timestamp: new Date().toISOString(),
-      files: files ? Array.from(files).map(f => ({ name: f.name, type: f.type, size: f.size })) : null,
+      files: fileInfo,
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -86,6 +115,7 @@ export const useChatbot = () => {
         actions: parsedResult?.actions || [],
         reasoning: parsedResult?.reasoning, // 추천 이유
         missingFields: parsedResult?.missingFields || [],
+        imageAnalysis: imageAnalysisResult, // 이미지 분석 결과
       };
 
       setMessages(prev => [...prev, newAssistantMessage]);

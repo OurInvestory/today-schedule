@@ -50,7 +50,7 @@
 .chat-message__attached-files {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -59,9 +59,61 @@
 .chat-message__attached-file {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
-  opacity: 0.9;
+}
+
+.chat-message__image-preview img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.chat-message__file-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+/* AI 이미지 분석 결과 */
+.chat-message__image-analysis {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f0f7ff;
+  border: 1px solid #3182f6;
+  border-radius: 8px;
+}
+
+.chat-message__analysis-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3182f6;
+  margin-bottom: 8px;
+}
+
+.chat-message__analysis-content {
+  font-size: 13px;
+  color: #4e5968;
+  line-height: 1.6;
+}
+
+.chat-message__schedule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chat-message__schedule-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid #e5e8eb;
+}
+
+.chat-message__schedule-list li:last-child {
+  border-bottom: none;
 }
 
 .chat-message--user .chat-message__bubble {

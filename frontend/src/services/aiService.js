@@ -126,3 +126,66 @@ export const createSubTaskFromAI = async (scheduleId, payload) => {
     throw error;
   }
 };
+
+/**
+ * 이미지에서 텍스트 추출 (OCR)
+ */
+export const extractTextFromImage = async (imageFile) => {
+  try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    // 임시로 클라이언트 사이드 OCR 또는 향후 백엔드 API 연동
+    // 현재는 파일명과 기본 정보만 반환
+    return {
+      success: true,
+      text: `이미지 파일: ${imageFile.name}`,
+      fileName: imageFile.name,
+      fileSize: imageFile.size,
+      fileType: imageFile.type,
+    };
+  } catch (error) {
+    console.error('Failed to extract text from image:', error);
+    throw error;
+  }
+};
+
+/**
+ * 시간표 이미지 분석 및 일정 추출
+ */
+export const analyzeTimetableImage = async (imageFile) => {
+  try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    // 향후 백엔드 API 연동 예정
+    // const response = await api.post('/api/ai/analyze-timetable', formData, {
+    //   headers: { 'Content-Type': 'multipart/form-data' }
+    // });
+    
+    // 임시 응답
+    return {
+      success: true,
+      message: '시간표 분석 기능은 곧 제공될 예정입니다.',
+      schedules: [],
+      imagePreview: URL.createObjectURL(imageFile),
+    };
+  } catch (error) {
+    console.error('Failed to analyze timetable:', error);
+    throw error;
+  }
+};
+
+/**
+ * URL에서 콘텐츠 분석
+ */
+export const analyzeURL = async (url) => {
+  try {
+    // 향후 백엔드 API 연동 예정
+    const response = await api.post('/api/ai/analyze-url', { url });
+    return response;
+  } catch (error) {
+    console.error('Failed to analyze URL:', error);
+    throw error;
+  }
+};
