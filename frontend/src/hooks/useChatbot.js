@@ -2,35 +2,117 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage } from '../services/aiService';
 import { scheduleReminder, scheduleReminderForSchedule } from '../services/notificationService';
 
-// 첫 인사 메시지
-const getGreetingMessage = () => {
+// localStorage 키
+const CHAT_STORAGE_KEY = 'chatbot_messages';
+const CHAT_GREETED_KEY = 'chatbot_has_greeted';
+
+// 10가지 랜덤 인사 템플릿
+const greetingTemplates = [
+  '안녕하세요! 👋 오늘 하루도 파이팅이에요! 일정 관리 도와드릴게요.',
+  '반가워요! 🎉 무엇을 도와드릴까요? 일정 추가, 조회, 우선순위 정리 다 할 수 있어요!',
+  '어서 오세요! 🌟 오늘 할 일이 많으신가요? 함께 정리해봐요!',
+  '안녕하세요! 😊 일정 관리 AI 도우미입니다. 편하게 말씀해주세요!',
+  '좋은 하루예요! ✨ 일정이나 할 일 관련해서 도움이 필요하시면 말씀해주세요.',
+  '반갑습니다! 🙌 시간표 이미지 분석, 일정 추가, 알림 예약 모두 가능해요!',
+  '하이요! 💪 오늘의 미션을 함께 정리해볼까요?',
+  '안녕하세요! 📅 일정 걱정은 저에게 맡기세요! 무엇을 도와드릴까요?',
+  '환영합니다! 🚀 효율적인 일정 관리를 위해 제가 도와드릴게요!',
+  '만나서 반가워요! 🌈 할 일 추가, 일정 조회 등 무엇이든 물어보세요!',
+];
+
+// 시간대별 인사 접두어
+const getTimeGreeting = () => {
   const hour = new Date().getHours();
-  let greeting = '안녕하세요!';
-  
-  if (hour >= 5 && hour < 12) {
-    greeting = '좋은 아침이에요! ☀️';
-  } else if (hour >= 12 && hour < 18) {
-    greeting = '좋은 오후예요! 🌤️';
-  } else {
-    greeting = '좋은 저녁이에요! 🌙';
-  }
+  if (hour >= 5 && hour < 12) return '좋은 아침이에요! ☀️';
+  if (hour >= 12 && hour < 18) return '좋은 오후예요! 🌤️';
+  return '좋은 저녁이에요! 🌙';
+};
+
+// 첫 인사 메시지 (랜덤)
+const getGreetingMessage = () => {
+  const timeGreeting = getTimeGreeting();
+  const randomTemplate = greetingTemplates[Math.floor(Math.random() * greetingTemplates.length)];
   
   return {
     id: 'greeting',
     role: 'assistant',
-    content: `${greeting} 저는 일정 관리를 도와드리는 AI 도우미입니다. 오늘 할 일을 확인하거나, 새로운 일정을 추가하거나, 우선순위를 정리하는 것을 도와드릴 수 있어요. 무엇을 도와드릴까요?`,
+    content: `${timeGreeting} ${randomTemplate}`,
     timestamp: new Date().toISOString(),
   };
 };
 
+// 10가지 랜덤 로딩 메시지
+const loadingMessages = [
+  '열심히 처리 중이에요... 🔄',
+  '잠시만요, 확인하고 있어요! ⏳',
+  '일정을 분석하고 있습니다... 📊',
+  '좋은 답변을 준비하고 있어요! 💭',
+  '데이터를 확인하는 중이에요... 🔍',
+  '조금만 기다려주세요! ⚡',
+  '최선의 답변을 찾고 있어요... 🎯',
+  '열심히 일하는 중! 🏃‍♂️',
+  '거의 다 됐어요... ✨',
+  '정보를 정리하고 있습니다! 📝',
+];
+
+// 랜덤 로딩 메시지 가져오기
+export const getRandomLoadingMessage = () => {
+  return loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+};
+
+// localStorage에서 메시지 불러오기
+const loadMessagesFromStorage = () => {
+  try {
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+};
+
+// localStorage에 메시지 저장
+const saveMessagesToStorage = (messages) => {
+  try {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+  } catch (e) {
+    console.error('Failed to save messages to storage:', e);
+  }
+};
+
+// localStorage에서 인사 상태 불러오기
+const loadGreetedFromStorage = () => {
+  try {
+    return localStorage.getItem(CHAT_GREETED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+// localStorage에 인사 상태 저장
+const saveGreetedToStorage = (greeted) => {
+  try {
+    localStorage.setItem(CHAT_GREETED_KEY, String(greeted));
+  } catch (e) {
+    console.error('Failed to save greeted state:', e);
+  }
+};
+
 export const useChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => loadMessagesFromStorage());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [conversationId, setConversationId] = useState(null);
-  const [hasGreeted, setHasGreeted] = useState(false);
+  const [hasGreeted, setHasGreeted] = useState(() => loadGreetedFromStorage());
+  const [lastUserMessage, setLastUserMessage] = useState(null); // 재시도용 마지막 메시지 저장
   const messagesEndRef = useRef(null);
+
+  // 메시지 변경 시 localStorage에 저장
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveMessagesToStorage(messages);
+    }
+  }, [messages]);
 
   // 챗봇 열기/닫기
   const toggleChatbot = useCallback(() => {
@@ -51,12 +133,16 @@ export const useChatbot = () => {
       const greetingMessage = getGreetingMessage();
       setMessages([greetingMessage]);
       setHasGreeted(true);
+      saveGreetedToStorage(true);
     }
   }, [isOpen, hasGreeted, messages.length]);
 
   // 메시지 전송 (파일 업로드 지원)
   const sendMessage = async (text, selectedScheduleId = null, files = null) => {
     if (!text.trim() && (!files || files.length === 0)) return;
+
+    // 재시도를 위한 마지막 메시지 저장
+    setLastUserMessage({ text, selectedScheduleId, files });
 
     // 이미지 파일 분석
     let imageAnalysisResult = null;
@@ -193,7 +279,37 @@ export const useChatbot = () => {
     setConversationId(null);
     setError(null);
     setHasGreeted(false);
+    setLastUserMessage(null);
+    // localStorage 초기화
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+    localStorage.removeItem(CHAT_GREETED_KEY);
   }, []);
+
+  // 마지막 메시지 재시도
+  const retryLastMessage = useCallback(async () => {
+    if (lastUserMessage && !loading) {
+      // 마지막 에러 메시지 제거
+      setMessages(prev => {
+        const newMessages = [...prev];
+        // 마지막 메시지가 에러면 제거
+        if (newMessages.length > 0 && newMessages[newMessages.length - 1].isError) {
+          newMessages.pop();
+        }
+        // 마지막 사용자 메시지도 제거 (다시 보낼 것임)
+        if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === 'user') {
+          newMessages.pop();
+        }
+        return newMessages;
+      });
+      
+      // 재시도
+      await sendMessage(
+        lastUserMessage.text, 
+        lastUserMessage.selectedScheduleId, 
+        lastUserMessage.files
+      );
+    }
+  }, [lastUserMessage, loading]);
 
   // 인터랙티브 액션 확인 (일정/할 일 생성/알림 예약)
   const confirmAction = useCallback(async (messageId, action, parsedResult = null) => {
@@ -351,5 +467,7 @@ export const useChatbot = () => {
     sendQuickAction,
     confirmAction,
     cancelAction,
+    retryLastMessage,
+    lastUserMessage,
   };
 };

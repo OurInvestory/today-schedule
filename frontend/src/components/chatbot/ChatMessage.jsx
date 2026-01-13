@@ -3,7 +3,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { CATEGORY_LABELS } from '../../utils/constants';
 import './ChatMessage.css';
 
-const ChatMessage = ({ message, onConfirm, onCancel }) => {
+const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
   const isUser = message.role === 'user';
   const isError = message.isError;
   const hasActions = message.actions && message.actions.length > 0;
@@ -83,6 +83,19 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
       <div className="chat-message__content">
         <div className="chat-message__bubble">
           {formatMessageContent(message.content)}
+          
+          {/* 에러 메시지일 때 재시도 버튼 표시 */}
+          {isError && onRetry && (
+            <div className="chat-message__error-actions">
+              <button 
+                type="button" 
+                className="chat-message__retry-btn"
+                onClick={onRetry}
+              >
+                🔄 다시 시도
+              </button>
+            </div>
+          )}
           
           {/* 첨부된 파일 표시 (사용자 메시지) */}
           {isUser && message.files && message.files.length > 0 && (

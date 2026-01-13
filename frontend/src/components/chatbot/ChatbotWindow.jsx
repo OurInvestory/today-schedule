@@ -1,16 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
+import { getRandomLoadingMessage } from '../../hooks/useChatbot';
 import './ChatbotWindow.css';
 
-// 추천 질문 목록
+// 추천 질문 목록 (5개)
 const suggestedQuestions = [
-  { id: 1, text: '오늘 할 일 보여줘', icon: '📋' },
-  { id: 2, text: '이번 주 일정 정리해줘', icon: '📅' },
-  { id: 3, text: '우선순위 높은 일정 알려줘', icon: '🔥' },
-  { id: 4, text: '내일 3시에 회의 추가해줘', icon: '➕' },
-  { id: 5, text: '내일 일정 알려줘', icon: '⏰' },
-  { id: 6, text: '시간표 이미지 분석', icon: '🖼️' },
+  { id: 1, text: '내일 3시에 회의, 5시에 미팅 추가해줘', icon: '📅' },
+  { id: 2, text: '오늘 저녁까지 보고서 작성 할 일 추가', icon: '✅' },
+  { id: 3, text: '회의 10분 전에 알림 예약해줘', icon: '🔔' },
+  { id: 4, text: '시간표 사진 분석', icon: '📸' },
+  { id: 5, text: '우선순위 높은 일정 추천해줘', icon: '🎯' },
 ];
 
 const ChatbotWindow = ({ 
@@ -23,6 +23,8 @@ const ChatbotWindow = ({
   onConfirmAction,
   onCancelAction,
   onClearHistory,
+  onRetry,
+  canRetry,
 }) => {
   const fileInputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -32,6 +34,14 @@ const ChatbotWindow = ({
   const [scrollLeft, setScrollLeft] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isFileDragging, setIsFileDragging] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  
+  // 로딩 상태 변경 시 랜덤 메시지 설정
+  useEffect(() => {
+    if (loading) {
+      setLoadingMessage(getRandomLoadingMessage());
+    }
+  }, [loading]);
 
   // 컴포넌트 언마운트 시 미리보기 URL 정리 (Hook은 조건부 return 전에 호출되어야 함)
   useEffect(() => {
@@ -171,8 +181,8 @@ const ChatbotWindow = ({
   };
 
   const handleSuggestedQuestion = (question) => {
-    // "시간표 이미지 분석" 클릭 시 파일 선택 열기
-    if (question === '시간표 이미지 분석') {
+    // "시간표 사진 분석" 클릭 시 파일 선택 열기
+    if (question === '시간표 사진 분석') {
       handleFileUpload();
       return;
     }
@@ -182,6 +192,12 @@ const ChatbotWindow = ({
   const handleEndConversation = () => {
     if (onClearHistory) {
       onClearHistory();
+    }
+  };
+
+  const handleRetry = () => {
+    if (onRetry) {
+      onRetry();
     }
   };
 
@@ -240,19 +256,25 @@ const ChatbotWindow = ({
       </div>
 
       <div className="chatbot-window__messages">
-        {messages.map((message) => (
+        {messages.map((message, index) => (
           <ChatMessage 
             key={message.id} 
             message={message}
             onConfirm={onConfirmAction}
             onCancel={onCancelAction}
+            onRetry={message.isError && index === messages.length - 1 && canRetry ? handleRetry : undefined}
           />
         ))}
         {loading && (
-          <div className="chatbot-window__typing">
-            <span></span>
-            <span></span>
-            <span></span>
+          <div className="chatbot-window__loading">
+            <div className="chatbot-window__loading-message">
+              {loadingMessage}
+            </div>
+            <div className="chatbot-window__typing">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />

@@ -42,6 +42,8 @@ const Home = ({ isFullCalendarMode = false }) => {
     confirmAction,
     cancelAction,
     clearMessages,
+    retryLastMessage,
+    lastUserMessage,
   } = useChatbot();
 
   const handleDateSelect = (date) => {
@@ -175,6 +177,8 @@ const Home = ({ isFullCalendarMode = false }) => {
         onConfirmAction={confirmAction}
         onCancelAction={cancelAction}
         onClearHistory={clearMessages}
+        onRetry={retryLastMessage}
+        canRetry={!!lastUserMessage}
       />
 
       {/* Add Todo Modal */}

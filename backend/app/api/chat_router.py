@@ -231,6 +231,25 @@ DELETE payload requires:
 - title (string): Target schedule name
 
 ####################
+# CLARIFY INTENT   #
+####################
+
+When the user wants to CREATE a schedule but required info is missing, use CLARIFY:
+- If title is missing: Ask "일정 제목이 뭔가요?"
+- If time is missing: Ask "몇 시에 예정된 일정인가요?"
+- If date is missing: Ask "언제 예정된 일정인가요?"
+
+CLARIFY Example:
+Input: "일정 추가해줘"
+{{"intent": "CLARIFY", "missing_fields": [{{"field": "title", "question": "어떤 일정을 추가할까요? 일정 이름을 알려주세요! 📝"}}]}}
+
+Input: "회의 추가해줘"
+{{"intent": "CLARIFY", "missing_fields": [{{"field": "end_at", "question": "회의가 언제인가요? 날짜와 시간을 알려주세요! ⏰"}}]}}
+
+Input: "내일 회의"
+{{"intent": "CLARIFY", "missing_fields": [{{"field": "end_at", "question": "회의가 몇 시에 시작하나요? ⏰"}}]}}
+
+####################
 # JSON EXAMPLES    #
 ####################
 
