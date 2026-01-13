@@ -73,10 +73,14 @@ export const deleteCalendarEvent = async (id) => {
  */
 export const getMonthlyEvents = async (year, month) => {
   try {
-    const response = await api.get('/calendar/monthly', {
-      params: { year, month },
+    const from = new Date(year, month - 1, 1).toISOString();
+    const to = new Date(year, month, 0, 23, 59, 59).toISOString();
+
+    const response = await api.get('/schedules', {
+      params: { from, to },
     });
-    return response;
+
+    return response.data.data || [];
   } catch (error) {
     console.error(`Failed to fetch monthly events for ${year}-${month}:`, error);
     throw error;

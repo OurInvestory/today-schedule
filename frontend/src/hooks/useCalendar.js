@@ -22,61 +22,13 @@ export const useCalendar = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
-      // 일정(Schedule)만 필터링 (type이 'schedule'인 경우)
-      const schedulesOnly = (data || []).filter(item => item.type === 'schedule');
-      
-      // 예시 일정 추가 (백엔드 연동 전 테스트용)
-      const mockSchedule = {
-        id: 'mock-1',
-        title: '팀 미팅',
-        description: '프로젝트 진행 상황 공유',
-        date: new Date().toISOString().split('T')[0], // 오늘 날짜
-        startTime: '14:00',
-        endTime: '15:00',
-        isAllDay: false,
-        type: 'schedule',
-      };
-      
-      const mockSchedule2 = {
-        id: 'mock-2',
-        title: '프로젝트 발표',
-        description: '클라이언트 미팅',
-        date: '2026-01-13',
-        startTime: '10:00',
-        endTime: '11:30',
-        isAllDay: false,
-        type: 'schedule',
-      };
-      
-      setEvents([mockSchedule, mockSchedule2, ...schedulesOnly]);
-    } catch (err) {
-      // API 에러 시에도 예시 일정 표시 (백엔드 연동 전 테스트용)
-      console.warn('Failed to fetch monthly events, using mock data:', err);
-      
-      const mockSchedule = {
-        id: 'mock-1',
-        title: '팀 미팅',
-        description: '프로젝트 진행 상황 공유',
-        date: new Date().toISOString().split('T')[0], // 오늘 날짜
-        startTime: '14:00',
-        endTime: '15:00',
-        isAllDay: false,
-        type: 'schedule',
-      };
-      
-      const mockSchedule2 = {
-        id: 'mock-2',
-        title: '프로젝트 발표',
-        description: '클라이언트 미팅',
-        date: '2026-01-13',
-        startTime: '10:00',
-        endTime: '11:30',
-        isAllDay: false,
-        type: 'schedule',
-      };
-      
-      setEvents([mockSchedule, mockSchedule2]);
+      const schedules = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
+
+      const schedulesOnly = schedules.filter(item => item.type === 'schedule');
+
+      setEvents(schedulesOnly);
+    } catch (error) {
+      setError(error);
     } finally {
       setLoading(false);
     }

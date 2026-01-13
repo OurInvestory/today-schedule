@@ -80,7 +80,15 @@ export const useTodo = (initialFilter = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const newTodo = await createTodo(todoData);
+
+      const newTodo = await createTodo({
+        title: todoData.title,
+        description: todoData.description,
+        startDate: todoData.startDate,
+        dueDate: todoData.dueDate,
+        priority: todoData.priority,
+      });
+
       await fetchTodos(); // 목록 새로고침
       return newTodo;
     } catch (err) {

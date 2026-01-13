@@ -35,11 +35,18 @@ const mapPriority = (score) => {
  */
 export const createTodo = async (todoData) => {
   try {
+    const priorityMapping = {
+      high: 2,
+      medium: 1,
+      low: 0,
+    };
+
     const response = await api.post('/schedules', {
       title: todoData.title,
       description: todoData.description,
-      priority_score: todoData.priority, // API 명세서에 맞게 수정
-      due_date: todoData.dueDate,       // API 명세서에 맞게 수정
+      start_at: todoData.startDate, // Map startDate to start_at
+      end_at: todoData.dueDate,    // Map dueDate to end_at
+      priority_score: priorityMapping[todoData.priority] || 0, // Map priority to priority_score
     });
     return response;
   } catch (error) {
