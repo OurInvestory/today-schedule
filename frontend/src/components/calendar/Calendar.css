@@ -174,8 +174,7 @@
 }
 
 .wheel-picker__item:hover:not(.wheel-picker__item--selected) {
-  color: #4e5968-picker__item--selected) {
-  color: var(--color-text-secondary);
+  color: #4e5968;
 }
 
 @media (max-width: 768px) {

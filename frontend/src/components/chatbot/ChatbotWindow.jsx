@@ -28,6 +28,7 @@ const ChatbotWindow = ({
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   if (!isOpen) return null;
 
@@ -69,13 +70,25 @@ const ChatbotWindow = ({
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // 파일 업로드 처리 (추후 구현)
-      console.log('File selected:', file.name);
-      onSendMessage(`[파일 첨부: ${file.name}]`);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedFiles(Array.from(files));
+      console.log('Files selected:', Array.from(files).map(f => f.name));
     }
     e.target.value = '';
+  };
+
+  const handleSendWithFiles = (text) => {
+    if (selectedFiles.length > 0) {
+      onSendMessage(text, null, selectedFiles);
+      setSelectedFiles([]);
+    } else {
+      onSendMessage(text);
+    }
+  };
+
+  const handleRemoveFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSuggestedQuestion = (question) => {
@@ -165,8 +178,28 @@ const ChatbotWindow = ({
         </div>
       </div>
 
+      {/* 선택된 파일 미리보기 */}
+      {selectedFiles.length > 0 && (
+        <div className="chatbot-window__selected-files">
+          {selectedFiles.map((file, index) => (
+            <div key={index} className="chatbot-window__file-preview">
+              <span className="chatbot-window__file-name">
+                {file.type.startsWith('image/') ? '🖼️' : '📄'} {file.name}
+              </span>
+              <button
+                type="button"
+                className="chatbot-window__file-remove"
+                onClick={() => handleRemoveFile(index)}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <ChatInput 
-        onSend={onSendMessage} 
+        onSend={handleSendWithFiles} 
         disabled={loading}
         onFileUpload={handleFileUpload}
       />
@@ -178,6 +211,7 @@ const ChatbotWindow = ({
         onChange={handleFileChange}
         style={{ display: 'none' }}
         accept="image/*,.pdf,.doc,.docx,.txt"
+        multiple
       />
     </div>
   );
