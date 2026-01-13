@@ -100,29 +100,56 @@ export const useChatbot = () => {
     setError(null);
 
     try {
-      const response = await sendChatMessage(text, null, selectedScheduleId, {}, files);
+      // 이미지 파일이 있으면 이미지 분석 결과를 사용
+      if (imageAnalysisResult && imageAnalysisResult.success) {
+        const newAssistantMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸',
+          timestamp: new Date().toISOString(),
+          parsedResult: imageAnalysisResult.parsedResult,
+          actions: imageAnalysisResult.parsedResult?.actions || [],
+          imageAnalysis: imageAnalysisResult,
+        };
+        setMessages(prev => [...prev, newAssistantMessage]);
+        setLoading(false);
+        return;
+      }
+
+      // 일반 텍스트 메시지 처리
+      const response = await sendChatMessage(text, null, selectedScheduleId, {}, null);
       
-      const { data } = response;
-      const { parsedResult, assistantMessage } = data;
+      // axios 응답 구조: response.data가 API 응답 본문
+      // API 응답 구조: { status, message, data: { parsedResult, assistantMessage } }
+      const apiResponse = response.data;
+      console.log('API Response:', apiResponse); // 디버깅용
+      
+      // data가 없거나 오류인 경우 처리
+      if (!apiResponse || apiResponse.status !== 200) {
+        throw new Error(apiResponse?.message || '서버 응답 오류');
+      }
+      
+      const responseData = apiResponse.data || {};
+      const parsedResult = responseData.parsed_result || responseData.parsedResult;
+      const assistantMessage = responseData.assistant_message || responseData.assistantMessage;
       
       // 응답 메시지 추가
       const newAssistantMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: assistantMessage || '처리 중입니다...',
+        content: assistantMessage || '요청을 처리했습니다.',
         timestamp: new Date().toISOString(),
-        parsedResult: parsedResult, // AI 파싱 결과
+        parsedResult: parsedResult,
         actions: parsedResult?.actions || [],
-        reasoning: parsedResult?.reasoning, // 추천 이유
-        missingFields: parsedResult?.missingFields || [],
-        imageAnalysis: imageAnalysisResult, // 이미지 분석 결과
+        reasoning: parsedResult?.reasoning,
+        missingFields: parsedResult?.missingFields || parsedResult?.missing_fields || [],
       };
 
       setMessages(prev => [...prev, newAssistantMessage]);
       
       // 대화 ID 저장
-      if (response.conversationId) {
-        setConversationId(response.conversationId);
+      if (apiResponse.conversationId) {
+        setConversationId(apiResponse.conversationId);
       }
     } catch (err) {
       setError(err.message || '메시지 전송에 실패했습니다.');
