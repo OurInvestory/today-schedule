@@ -65,7 +65,20 @@ export const getChatHistory = async (conversationId) => {
  */
 export const createScheduleFromAI = async (payload) => {
   try {
-    const response = await api.post('/api/schedule', payload);
+    // AI 응답 필드를 백엔드 스키마에 맞게 변환
+    const schedulePayload = {
+      title: payload.title,
+      type: payload.type || 'task',
+      category: payload.category || '기타',
+      start_at: payload.start_at || payload.start_time || null,
+      end_at: payload.end_at || payload.end_time,
+      priority_score: payload.importance_score || payload.priority_score || 5,
+      original_text: payload.original_text || null,
+      estimated_minute: payload.estimated_minute || 60,
+      source: 'ai'
+    };
+    
+    const response = await api.post('/api/schedules', schedulePayload);
     return response;
   } catch (error) {
     console.error('Failed to create schedule from AI:', error);
@@ -78,7 +91,7 @@ export const createScheduleFromAI = async (payload) => {
  */
 export const createSubTaskFromAI = async (scheduleId, payload) => {
   try {
-    const response = await api.post(`/api/schedule/${scheduleId}/sub-tasks`, payload);
+    const response = await api.post(`/api/schedules/${scheduleId}/sub-tasks`, payload);
     return response;
   } catch (error) {
     console.error('Failed to create sub-task from AI:', error);

@@ -44,6 +44,13 @@
   font-size: var(--font-size-sm);
   line-height: 1.5;
   word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* 마크다운 스타일 볼드 텍스트 */
+.chat-message__bubble strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 /* 첨부된 파일 표시 */

@@ -99,13 +99,14 @@ def format_schedules_for_display(schedules: list) -> str:
         return "등록된 일정이 없어요."
     
     result = []
-    for s in schedules:
-        date_str = s.end_at.strftime("%m/%d(%a)") if s.end_at else ""
+    for idx, s in enumerate(schedules, 1):
+        date_str = s.end_at.strftime("%m/%d") if s.end_at else ""
         time_str = s.end_at.strftime("%H:%M") if s.end_at else ""
         category = s.category or "기타"
-        result.append(f"• [{category}] {s.title} - {date_str} {time_str}")
+        priority = "🔴" if (s.priority_score or 0) >= 8 else "🟡" if (s.priority_score or 0) >= 5 else "🟢"
+        result.append(f"{idx}. {priority} **{s.title}**\n   📁 {category} | 📅 {date_str} {time_str}")
     
-    return "\n".join(result)
+    return "\n\n".join(result)
 
 @router.post("/chat", response_model=APIResponse, response_model_exclude_none=True)
 async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
@@ -139,20 +140,37 @@ INSTRUCTION:
 # INTENT DETECTION #
 ####################
 
-CRITICAL RULE: Check for action keywords FIRST before anything else!
+CRITICAL RULE: Determine intent by analyzing the ENTIRE sentence context!
 
-STEP 1 - Scan for these EXACT Korean words:
-  ★ 추가, 등록 → intent="SCHEDULE_MUTATION", op="CREATE"
+STEP 1 - Check if it's a QUERY first (asking about existing schedules):
+  ★ "일정 알려줘", "할 일 알려줘", "일정 보여줘", "뭐 있어", "뭐야" → intent="SCHEDULE_QUERY"
+  ★ These are INFORMATION REQUESTS, NOT mutations!
+
+STEP 2 - Check for MUTATION keywords (creating/modifying schedules):
+  ★ 추가, 등록, 잡아, 만들어 → intent="SCHEDULE_MUTATION", op="CREATE"
   ★ 미뤄, 옮겨, 바꿔, 변경, 연기 → intent="SCHEDULE_MUTATION", op="UPDATE"  
   ★ 취소, 삭제, 제거 → intent="SCHEDULE_MUTATION", op="DELETE"
-  ★ 알려줘+시간, 알림줘, 리마인드, 알림 예약 → intent="NOTIFICATION_REQUEST"
 
-STEP 2 - Only if NO action words above:
-  ★ 보여줘, 알려줘, 뭐야, 있어 → intent="SCHEDULE_QUERY"
+STEP 3 - Check for NOTIFICATION requests (with specific time):
+  ★ "N시간/분 전에 알림", "알림줘", "리마인드" → intent="NOTIFICATION_REQUEST"
 
 ####################
 # CRITICAL EXAMPLES#
 ####################
+
+★ QUERY examples (NO action keywords, just asking):
+Input: "오늘 일정 알려줘"
+Output: {{"intent":"SCHEDULE_QUERY","preserved_info":{{"query_range":"today"}}}}
+
+Input: "이번 주 할 일 뭐야"
+Output: {{"intent":"SCHEDULE_QUERY","preserved_info":{{"query_range":"this_week"}}}}
+
+Input: "내일 뭐 있어?"
+Output: {{"intent":"SCHEDULE_QUERY","preserved_info":{{"query_range":"tomorrow"}}}}
+
+★ "추가" found → MUST be CREATE:
+Input: "내일 3시 회의 추가해줘"
+Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"CREATE","payload":{{"title":"회의","end_at":"...","importance_score":5,"estimated_minute":60,"category":"기타"}}}}]}}
 
 ★ "미뤄줘" found → MUST be UPDATE:
 Input: "캡스톤 회의 다음주로 미뤄줘"  
@@ -162,15 +180,7 @@ Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"UPDATE","payload":{{"t
 Input: "알고리즘 시험 취소해"
 Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"DELETE","payload":{{"title":"알고리즘 시험"}}}}]}}
 
-★ "추가" found → MUST be CREATE:
-Input: "내일 3시 회의 추가해줘"
-Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"CREATE","payload":{{"title":"회의","end_at":"...","importance_score":5,"estimated_minute":60,"category":"기타"}}}}]}}
-
-★ Only "보여줘" found → QUERY:
-Input: "오늘 할 일 보여줘"
-Output: {{"intent":"SCHEDULE_QUERY","preserved_info":{{"query_range":"today"}}}}
-
-★ "알림줘/알려줘+시간" found → NOTIFICATION_REQUEST:
+★ NOTIFICATION_REQUEST (with specific time + 알림/리마인드):
 Input: "자료구조 시험 1시간 전에 알림줘"
 Output: {{"intent":"NOTIFICATION_REQUEST","preserved_info":{{"target_title":"자료구조 시험","minutes_before":60}}}}
 

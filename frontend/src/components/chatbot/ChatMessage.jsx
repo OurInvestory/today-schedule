@@ -52,6 +52,21 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
     return parts.join(', ');
   };
 
+  // 마크다운 스타일 볼드 텍스트 처리 (**text** -> <strong>text</strong>)
+  const formatMessageContent = (content) => {
+    if (!content) return null;
+    
+    // **text** 패턴을 찾아서 <strong>으로 변환
+    const parts = content.split(/(\*\*[^*]+\*\*)/g);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   return (
     <div className={messageClass}>
       <div className="chat-message__avatar">
@@ -67,7 +82,7 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
       </div>
       <div className="chat-message__content">
         <div className="chat-message__bubble">
-          {message.content}
+          {formatMessageContent(message.content)}
           
           {/* 첨부된 파일 표시 (사용자 메시지) */}
           {isUser && message.files && message.files.length > 0 && (

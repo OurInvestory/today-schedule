@@ -370,6 +370,16 @@
   background: var(--color-bg-default);
   color: var(--color-text-primary);
   transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.settings__action-info {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
 }
 
 .settings__action-btn:hover {
@@ -563,4 +573,60 @@
 
 .license-modal__full-text:last-child {
   margin-bottom: 0;
+}
+
+/* 확인 모달 */
+.license-modal--confirm {
+  max-width: 380px;
+}
+
+.confirm-modal__message {
+  font-size: 15px;
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.confirm-modal__buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-modal__btn {
+  flex: 1;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirm-modal__btn--cancel {
+  background: var(--color-gray-100);
+  color: var(--color-text-secondary);
+}
+
+.confirm-modal__btn--cancel:hover {
+  background: var(--color-gray-200);
+}
+
+.confirm-modal__btn--confirm {
+  background: var(--color-primary-500);
+  color: white;
+}
+
+.confirm-modal__btn--confirm:hover {
+  background: var(--color-primary-600);
+}
+
+.confirm-modal__btn--danger {
+  background: #ff4757;
+  color: white;
+}
+
+.confirm-modal__btn--danger:hover {
+  background: #e8303f;
 }

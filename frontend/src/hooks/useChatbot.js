@@ -238,11 +238,14 @@ export const useChatbot = () => {
       else if (action?.op === 'CREATE') {
         if (action.target === 'SCHEDULE') {
           // 일정 생성
-          result = await createScheduleFromAI(action.payload);
+          const response = await createScheduleFromAI(action.payload);
+          // axios 응답에서 data 추출
+          result = response?.data || response;
           confirmContent = '일정이 성공적으로 추가되었습니다! ✅';
         } else if (action.target === 'SUB_TASK') {
           // 할 일 생성
-          result = await createSubTaskFromAI(action.scheduleId, action.payload);
+          const response = await createSubTaskFromAI(action.scheduleId, action.payload);
+          result = response?.data || response;
           confirmContent = '할 일이 성공적으로 추가되었습니다! ✅';
         }
       } else if (action?.op === 'UPDATE') {

@@ -157,6 +157,33 @@ export const deleteNotification = (id) => {
 // ============ 브라우저 알림 ============
 
 /**
+ * 방해 금지 시간인지 확인
+ */
+const isDoNotDisturbTime = (settings) => {
+  if (!settings.doNotDisturb) return false;
+  
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  const startTime = settings.doNotDisturbStart || '22:00';
+  const endTime = settings.doNotDisturbEnd || '08:00';
+  
+  const [startHour, startMin] = startTime.split(':').map(Number);
+  const [endHour, endMin] = endTime.split(':').map(Number);
+  
+  const startMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
+  
+  // 자정을 넘기는 경우 (예: 22:00 ~ 08:00)
+  if (startMinutes > endMinutes) {
+    return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+  }
+  
+  // 같은 날 내 범위 (예: 13:00 ~ 15:00)
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+};
+
+/**
  * 브라우저 알림 보내기
  */
 export const sendBrowserNotification = async (title, options = {}) => {
@@ -166,7 +193,9 @@ export const sendBrowserNotification = async (title, options = {}) => {
     return null;
   }
   
-  if (settings.doNotDisturb) {
+  // 방해 금지 시간 체크
+  if (isDoNotDisturbTime(settings)) {
+    console.log('Do Not Disturb mode active, notification suppressed');
     return null;
   }
   
