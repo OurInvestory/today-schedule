@@ -29,7 +29,12 @@ const mapPriority = (score) => {
  */
 export const createTodo = async (todoData) => {
   try {
-    const response = await api.post('/api/schedules', todoData);
+    const response = await api.post('/api/schedules', {
+      title: todoData.title,
+      description: todoData.description,
+      priority_score: todoData.priority, // API 명세서에 맞게 수정
+      due_date: todoData.dueDate,       // API 명세서에 맞게 수정
+    });
     return response;
   } catch (error) {
     console.error('Failed to create todo:', error);
