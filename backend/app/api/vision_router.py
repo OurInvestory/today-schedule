@@ -65,8 +65,6 @@ def detect_image_type(ocr_results) -> str:
     poster_keywords = ['모집', '신청', '행사', '마감', '문의', '지원', '기간', '활동', '봉사', '공모', '상담', '접수', '발표']
     poster_score = sum(1 for kw in poster_keywords if kw in text_combined)
     
-    print(f"[DEBUG] Image Type Setup => S-Score: {schedule_score} (Days: {found_days}), P-Score: {poster_score}")
-    
     # 4. 점수 비교 (동점이면 Schedule 우선으로 변경 - 일반적인 텍스트 없는 문서 등은 시간표 분석 흐름이 더 관대함)
     return 'schedule' if schedule_score >= poster_score else 'poster'
 
@@ -189,7 +187,7 @@ def extract_json_from_text(text: str) -> dict:
 def create_model_inference(model_id: str):
     """지정된 모델 ID로 LLM 인스턴스 생성"""
     params = {
-        GenParams.MAX_NEW_TOKENS: 4000,
+        GenParams.MAX_NEW_TOKENS: 2000,
         GenParams.TEMPERATURE: 0,
     }
     return ModelInference(
@@ -355,7 +353,6 @@ async def analyze_image_schedule(
         
         # 2. 이미지 타입 감지
         image_type = detect_image_type(ocr_result)
-        print(f"Detected Image Type: {image_type}")
         
         # 3. 타입별 처리 로직 완전 분리
         if image_type == 'schedule':

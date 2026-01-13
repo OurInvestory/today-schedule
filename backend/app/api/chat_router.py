@@ -148,6 +148,7 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
      * end_at: D-1, D-2, D-3... days before the main event.
      * estimated_minute: 60-180 (reasonable study time).
      * category: Same as parent or '공부'.
+     * tip: "Short, practical advice for this step (Korean, Max 20 chars)"
 
 [Examples]
 ---
@@ -161,10 +162,10 @@ JSON: {{
   "intent": "SCHEDULE_MUTATION",
   "type": "TASK",
   "actions": [
-    {{ "op": "CREATE", "payload": {{ "title": "알고리즘 시험", "end_at": "2026-05-27T10:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
-    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 개념 정리", "end_at": "2026-05-24T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험"}} }},
-    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 기출 풀이", "end_at": "2026-05-25T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험"}} }},
-    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 최종 복습", "end_at": "2026-05-26T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험"}} }}
+    {{ "op": "CREATE", "payload": {{ "title": "알고리즘 시험", "end_at": "2024-05-27T10:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
+    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 개념 정리", "end_at": "2024-05-24T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "tip": "핵심 개념 위주로 1회독"}} }},
+    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 기출 풀이", "end_at": "2024-05-25T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "tip": "타이머 켜고 실전처럼 풀기"}} }},
+    {{ "op": "CREATE", "payload": {{ "title": "[준비] 알고리즘 시험 - 최종 복습", "end_at": "2024-05-26T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험", "tip": "틀린 문제 위주로 재점검"}} }}
   ]
 }}
 
