@@ -118,6 +118,58 @@ export const deleteCalendarEvent = async (id) => {
 };
 
 /**
+ * 일정 상세 조회
+ */
+export const getScheduleById = async (scheduleId) => {
+  try {
+    // 백엔드에 개별 조회 API가 없다면 전체 일정에서 필터링
+    const today = new Date();
+    const from = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString();
+    const to = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString();
+    
+    const response = await api.get('/api/schedules', {
+      params: { from, to },
+    });
+
+    const schedules = response.data.data || [];
+    const schedule = schedules.find(s => s.schedule_id === scheduleId);
+    
+    if (!schedule) {
+      throw new Error('일정을 찾을 수 없습니다.');
+    }
+
+    // 백엔드 응답을 프론트엔드 형식으로 변환
+    const extractTime = (datetime) => {
+      if (!datetime || typeof datetime !== 'string' || !datetime.includes('T')) return null;
+      return datetime.split('T')[1]?.substring(0, 5) || null;
+    };
+
+    const extractDate = (datetime) => {
+      if (!datetime || typeof datetime !== 'string') return null;
+      return datetime.split('T')[0] || null;
+    };
+
+    return {
+      id: schedule.schedule_id,
+      title: schedule.title,
+      description: schedule.original_text || schedule.update_text || '',
+      date: extractDate(schedule.end_at) || extractDate(schedule.start_at),
+      startDate: extractDate(schedule.start_at),
+      endDate: extractDate(schedule.end_at),
+      startTime: extractTime(schedule.start_at),
+      endTime: extractTime(schedule.end_at),
+      isAllDay: !extractTime(schedule.start_at) && !extractTime(schedule.end_at),
+      type: schedule.type || 'schedule',
+      category: schedule.category,
+      priority_score: schedule.priority_score,
+    };
+  } catch (error) {
+    console.error(`Failed to fetch schedule ${scheduleId}:`, error);
+    throw error;
+  }
+};
+
+/**
  * 월별 이벤트 조회
  */
 export const getMonthlyEvents = async (year, month) => {

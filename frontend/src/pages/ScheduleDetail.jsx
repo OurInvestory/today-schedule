@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { getScheduleById, updateCalendarEvent, deleteCalendarEvent } from '../services/calendarService';
 import Button from '../components/common/Button';
 import './ScheduleDetail.css';
 
@@ -7,32 +8,36 @@ const ScheduleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     date: '',
+    startDate: '',
+    endDate: '',
     startTime: '',
     endTime: '',
     isAllDay: false,
   });
 
-  // TODO: Fetch schedule detail by ID
+  // 일정 상세 정보 불러오기
   useEffect(() => {
     const fetchSchedule = async () => {
-      // 임시 데이터 (실제로는 calendarService에서 가져옴)
-      const mockSchedule = {
-        id,
-        title: '팀 미팅',
-        description: '프로젝트 진행 상황 공유',
-        date: '2026-01-12',
-        startTime: '14:00',
-        endTime: '15:00',
-        isAllDay: false,
-        type: 'schedule',
-      };
-      setSchedule(mockSchedule);
-      setFormData(mockSchedule);
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getScheduleById(id);
+        console.log('조회된 일정:', data);
+        setSchedule(data);
+        setFormData(data);
+      } catch (err) {
+        console.error('일정 조회 실패:', err);
+        setError(err.message || '일정을 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
     };
     
     fetchSchedule();
@@ -43,20 +48,53 @@ const ScheduleDetail = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    // TODO: updateCalendarEvent 호출
-    console.log('일정 저장:', formData);
-    setSchedule(formData);
-    setIsEditing(false);
-  };
-
-  const handleDelete = () => {
-    if (window.confirm('이 일정을 삭제하시겠습니까?')) {
-      // TODO: deleteCalendarEvent 호출
-      console.log('일정 삭제:', id);
-      navigate(-1);
+  const handleSave = async () => {
+    try {
+      console.log('일정 저장:', formData);
+      await updateCalendarEvent(id, formData);
+      setSchedule(formData);
+      setIsEditing(false);
+      alert('일정이 수정되었습니다.');
+    } catch (err) {
+      console.error('일정 수정 실패:', err);
+      alert('일정 수정에 실패했습니다.');
     }
   };
+
+  const handleDelete = async () => {
+    if (window.confirm('이 일정을 삭제하시겠습니까?')) {
+      try {
+        console.log('일정 삭제:', id);
+        await deleteCalendarEvent(id);
+        alert('일정이 삭제되었습니다.');
+        navigate(-1);
+      } catch (err) {
+        console.error('일정 삭제 실패:', err);
+        alert('일정 삭제에 실패했습니다.');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="schedule-detail">
+        <div className="schedule-detail__container">
+          <p>로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="schedule-detail">
+        <div className="schedule-detail__container">
+          <p>{error}</p>
+          <Button onClick={() => navigate(-1)}>돌아가기</Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!schedule) {
     return (
@@ -104,11 +142,21 @@ const ScheduleDetail = () => {
               </div>
 
               <div className="schedule-detail__field">
-                <label>날짜</label>
+                <label>시작 날짜</label>
                 <input
                   type="date"
-                  name="date"
-                  value={formData.date}
+                  name="startDate"
+                  value={formData.startDate || formData.date}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="schedule-detail__field">
+                <label>종료 날짜</label>
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate || formData.date}
                   onChange={handleInputChange}
                 />
               </div>

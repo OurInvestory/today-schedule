@@ -237,8 +237,61 @@ const MonthPicker = ({ currentDate, onSelect, onClose }) => {
 
 // 일정 편집 모달 컴포넌트 (갤럭시 캘린더 스타일)
 const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleClick, refetch }) => {
+  // 일정별 색상 팔레트
+  const eventColors = [
+    '#3b82f6', // 파랑
+    '#10b981', // 초록
+    '#f59e0b', // 주황
+    '#ef4444', // 빨강
+    '#8b5cf6', // 보라
+    '#ec4899', // 핑크
+    '#06b6d4', // 시안
+    '#f97316', // 오렌지
+  ];
+
+  // 일정 ID를 기반으로 색상 선택
+  const getEventColor = (eventId, index) => {
+    if (!eventId) return eventColors[index % eventColors.length];
+    // ID를 숫자로 변환하여 색상 선택
+    const hash = eventId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return eventColors[hash % eventColors.length];
+  };
+
+  // start_at/end_at에서 시간 추출 함수
+  const extractTimeFromDatetime = (datetime) => {
+    if (!datetime) return null;
+    // datetime이 ISO 형식(2026-01-13T14:30:00)인 경우
+    if (typeof datetime === 'string' && datetime.includes('T')) {
+      const timePart = datetime.split('T')[1];
+      if (timePart) {
+        // HH:MM:SS 에서 HH:MM만 추출
+        return timePart.substring(0, 5);
+      }
+    }
+    return null;
+  };
+
+  // initialEvents를 파싱하여 startTime/endTime 추가
+  const parseEvents = (events) => {
+    return (events || []).map(event => {
+      const startTime = extractTimeFromDatetime(event.start_at || event.startDate);
+      const endTime = extractTimeFromDatetime(event.end_at || event.endDate);
+      
+      // 종일 일정 판단: 시간이 없거나, 00:00-23:59 또는 00:00-00:00인 경우
+      const isAllDay = !startTime && !endTime || 
+                       (startTime === '00:00' && (endTime === '23:59' || endTime === '00:00'));
+      
+      return {
+        ...event,
+        startTime: event.startTime || startTime,
+        endTime: event.endTime || endTime,
+        isAllDay,
+      };
+    });
+  };
+
   // 로컬 일정 목록 (추가 시 즉시 반영)
-  const [localEvents, setLocalEvents] = useState(initialEvents || []);
+  const [localEvents, setLocalEvents] = useState(parseEvents(initialEvents));
   
   // 현재 시간 기준 자동 세팅 함수
   const getDefaultTimes = () => {
@@ -271,6 +324,11 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
   const [isAllDay, setIsAllDay] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
+  // initialEvents가 변경되면 localEvents 업데이트
+  useEffect(() => {
+    setLocalEvents(parseEvents(initialEvents));
+  }, [initialEvents]);
+
   const formatDisplayDate = (d) => {
     const dateObj = typeof d === 'string' ? new Date(d) : d;
     const year = dateObj.getFullYear();
@@ -297,6 +355,12 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
     e.preventDefault();
     if (!title.trim()) return;
     
+    // 종일이 아닌 경우 시작/종료 시간 필수 검증
+    if (!isAllDay && (!startTime || !endTime)) {
+      alert('시작 시간과 종료 시간을 모두 입력해주세요.');
+      return;
+    }
+    
     const scheduleData = {
       title: title.trim(),
       description: description.trim(),
@@ -315,8 +379,29 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
       console.log('일정 저장 응답:', response.data);
       console.log('일정 저장 성공!');
       
-      // 캠린더 새로고침
+      // 캘린더 새로고침
       await refetch();
+      
+      // 저장된 일정을 localEvents에 추가하여 즉시 반영
+      if (response.data && response.data.data) {
+        const savedEvent = Array.isArray(response.data.data) 
+          ? response.data.data[0] 
+          : response.data.data;
+        
+        // 백엔드 응답을 프론트엔드 형식으로 변환
+        const newEvent = {
+          id: savedEvent.schedule_id || savedEvent.id,
+          title: savedEvent.title,
+          startDate: savedEvent.start_at || savedEvent.startDate,
+          endDate: savedEvent.end_at || savedEvent.endDate,
+          startTime: scheduleData.startTime,
+          endTime: scheduleData.endTime,
+          isAllDay: scheduleData.isAllDay,
+          description: savedEvent.original_text || scheduleData.description,
+        };
+        
+        setLocalEvents(prev => [...prev, newEvent]);
+      }
       
       setShowForm(false);
       
@@ -382,18 +467,41 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
                       // 시간순 정렬
                       return (a.startTime || '').localeCompare(b.startTime || '');
                     })
-                    .map((event) => (
+                    .map((event, index) => (
                     <li 
                       key={event.id} 
                       className="schedule-modal__event-item"
                       onClick={() => onScheduleClick(event.id)}
                     >
-                      <div className="schedule-modal__event-indicator" />
+                      <div 
+                        className="schedule-modal__event-indicator" 
+                        style={{ backgroundColor: getEventColor(event.id, index) }}
+                      />
                       <div className="schedule-modal__event-content">
                         <span className="schedule-modal__event-title">{event.title}</span>
-                        <span className="schedule-modal__event-time">
-                          {event.isAllDay ? '종일' : `${event.startTime} - ${event.endTime}`}
-                        </span>
+                        {!event.isAllDay && (
+                          <span className="schedule-modal__event-time">
+                            {(() => {
+                              // 시작시간과 종료시간 모두 있는 경우
+                              if (event.startTime && event.endTime) {
+                                return `${event.startTime} - ${event.endTime}`;
+                              }
+                              
+                              // 시작시간만 있는 경우
+                              if (event.startTime) {
+                                return event.startTime;
+                              }
+                              
+                              // 종료시간만 있는 경우
+                              if (event.endTime) {
+                                return event.endTime;
+                              }
+                              
+                              // 시간 정보가 없는 경우 (표시하지 않음)
+                              return '';
+                            })()}
+                          </span>
+                        )}
                       </div>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="9 18 15 12 9 6" />

@@ -24,9 +24,18 @@ export const useCalendar = () => {
       setError(null);
       const schedules = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
 
-      // 모든 일정 표시 (백엔드 응답 확인을 위해 필터 제거)
-      console.log('가져온 일정 목록:', schedules);
-      setEvents(schedules);
+      // schedule 타입이고 시간이 있는 일정만 필터링
+      const schedulesOnly = schedules.filter(item => {
+        // type이 'schedule'이거나 type이 없는 경우 (기본값)
+        const isSchedule = !item.type || item.type === 'schedule';
+        // start_at 또는 startDate에 시간이 포함되어 있는지 확인
+        const hasTime = (item.start_at && item.start_at.includes('T')) || 
+                       (item.startDate && typeof item.startDate === 'string' && item.startDate.includes('T'));
+        return isSchedule && hasTime;
+      });
+
+      console.log('가져온 일정 목록:', schedulesOnly);
+      setEvents(schedulesOnly);
     } catch (error) {
       setError(error);
     } finally {
