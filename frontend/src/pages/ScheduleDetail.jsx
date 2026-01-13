@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getScheduleById, updateCalendarEvent, deleteCalendarEvent } from '../services/calendarService';
 import { getSubTasksBySchedule, createSubTask, updateSubTask, deleteSubTask } from '../services/subTaskService';
+import { calculatePriority } from '../utils/priorityUtils';
+import { CATEGORY_LABELS } from '../utils/constants';
 import Button from '../components/common/Button';
+import Modal from '../components/common/Modal';
+import Input from '../components/common/Input';
 import './ScheduleDetail.css';
 
 const ScheduleDetail = () => {
@@ -28,13 +32,17 @@ const ScheduleDetail = () => {
 
   // 할 일 목록 관련 상태
   const [subTasks, setSubTasks] = useState([]);
-  const [newSubTaskTitle, setNewSubTaskTitle] = useState('');
-  const [newSubTaskDate, setNewSubTaskDate] = useState('');
-  const [newSubTaskEstimatedMinute, setNewSubTaskEstimatedMinute] = useState(60);
   const [isAddingSubTask, setIsAddingSubTask] = useState(false);
+  const [newSubTask, setNewSubTask] = useState({
+    title: '',
+    description: '',
+    date: '',
+    category: 'other',
+    estimatedMinute: 60,
+    priority: 'medium'
+  });
   const [editingTaskId, setEditingTaskId] = useState(null);
-  const [editingTaskTitle, setEditingTaskTitle] = useState('');
-  const [editingTaskCategory, setEditingTaskCategory] = useState('');
+  const [editingTask, setEditingTask] = useState(null);
   
   // 스와이프 및 더블탭을 위한 상태
   const [swipeStates, setSwipeStates] = useState({});
@@ -79,23 +87,40 @@ const ScheduleDetail = () => {
 
   // 할 일 추가
   const handleAddSubTask = async () => {
-    if (!newSubTaskTitle.trim()) return;
-    if (!newSubTaskDate) {
+    if (!newSubTask.title.trim()) {
+      alert('제목을 입력해주세요.');
+      return;
+    }
+    if (!newSubTask.date) {
       alert('날짜를 선택해주세요.');
       return;
     }
     
     try {
+      // schedule의 category를 사용 (없으면 사용자 선택값)
+      const category = schedule?.category || newSubTask.category;
+      
+      // 우선순위 자동 계산
+      const priority = calculatePriority(newSubTask.date, newSubTask.estimatedMinute);
+      
       await createSubTask({
         scheduleId: id,
-        title: newSubTaskTitle.trim(),
-        date: newSubTaskDate,
-        estimatedMinute: newSubTaskEstimatedMinute || 60,
+        title: newSubTask.title.trim(),
+        description: newSubTask.description,
+        date: newSubTask.date,
+        estimatedMinute: newSubTask.estimatedMinute || 60,
+        category: category,
+        priority: newSubTask.priority || 'medium'
       });
       
-      setNewSubTaskTitle('');
-      setNewSubTaskDate('');
-      setNewSubTaskEstimatedMinute(60);
+      setNewSubTask({
+        title: '',
+        description: '',
+        date: '',
+        category: 'other',
+        estimatedMinute: 60,
+        priority: 'medium'
+      });
       setIsAddingSubTask(false);
       await fetchSubTasks();
     } catch (err) {
@@ -107,23 +132,24 @@ const ScheduleDetail = () => {
   // 할 일 편집 시작
   const handleEditSubTask = (task) => {
     setEditingTaskId(task.id);
-    setEditingTaskTitle(task.title);
-    setEditingTaskCategory(task.category || '학업');
+    setEditingTask({
+      title: task.title,
+      category: task.category || 'other'
+    });
   };
 
   // 할 일 편집 저장
   const handleSaveSubTask = async (taskId) => {
-    if (!editingTaskTitle.trim()) return;
+    if (!editingTask?.title.trim()) return;
     
     try {
       await updateSubTask(taskId, {
-        title: editingTaskTitle.trim(),
-        category: editingTaskCategory,
+        title: editingTask.title.trim(),
+        category: editingTask.category,
       });
       
       setEditingTaskId(null);
-      setEditingTaskTitle('');
-      setEditingTaskCategory('');
+      setEditingTask(null);
       await fetchSubTasks();
     } catch (err) {
       console.error('할 일 수정 실패:', err);
@@ -134,8 +160,7 @@ const ScheduleDetail = () => {
   // 할 일 편집 취소
   const handleCancelEditSubTask = () => {
     setEditingTaskId(null);
-    setEditingTaskTitle('');
-    setEditingTaskCategory('');
+    setEditingTask(null);
   };
 
   // 더블탭 감지 (편집 모드 진입)
@@ -490,56 +515,23 @@ const ScheduleDetail = () => {
           <div className="schedule-detail__subtasks">
             <div className="schedule-detail__subtasks-header">
               <h3>할 일 목록</h3>
-              {!isAddingSubTask && (
-                <button 
-                  className="schedule-detail__add-subtask-btn"
-                  onClick={() => setIsAddingSubTask(true)}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                </button>
-              )}
+              <button 
+                className="schedule-detail__add-subtask-btn"
+                onClick={() => {
+                  setIsAddingSubTask(true);
+                  setNewSubTask({
+                    ...newSubTask,
+                    date: schedule.date || '',
+                    category: schedule.category || 'other'
+                  });
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
             </div>
-
-            {isAddingSubTask && (
-              <div className="schedule-detail__subtask-input">
-                <input
-                  type="text"
-                  placeholder="할 일 제목"
-                  value={newSubTaskTitle}
-                  onChange={(e) => setNewSubTaskTitle(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddSubTask()}
-                  autoFocus
-                />
-                <input
-                  type="date"
-                  placeholder="날짜"
-                  value={newSubTaskDate}
-                  onChange={(e) => setNewSubTaskDate(e.target.value)}
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="예상 시간 (분)"
-                  value={newSubTaskEstimatedMinute}
-                  onChange={(e) => setNewSubTaskEstimatedMinute(parseInt(e.target.value) || 60)}
-                  min="5"
-                  step="5"
-                />
-                <div className="schedule-detail__subtask-actions">
-                  <button onClick={handleAddSubTask}>추가</button>
-                  <button onClick={() => {
-                    setIsAddingSubTask(false);
-                    setNewSubTaskTitle('');
-                    setNewSubTaskDate('');
-                    setNewSubTaskEstimatedMinute(60);
-                  }}>취소</button>
-                </div>
-              </div>
-            )}
-
             {subTasks.length === 0 ? (
               <p className="schedule-detail__subtasks-empty">등록된 할 일이 없습니다.</p>
             ) : (
@@ -550,21 +542,22 @@ const ScheduleDetail = () => {
                       <div className="schedule-detail__subtask-edit-mode">
                         <input
                           type="text"
-                          value={editingTaskTitle}
-                          onChange={(e) => setEditingTaskTitle(e.target.value)}
+                          value={editingTask?.title || ''}
+                          onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
                           className="schedule-detail__subtask-edit-input"
                           onKeyPress={(e) => e.key === 'Enter' && handleSaveSubTask(task.id)}
                           autoFocus
                         />
                         <select
-                          value={editingTaskCategory}
-                          onChange={(e) => setEditingTaskCategory(e.target.value)}
+                          value={editingTask?.category || 'other'}
+                          onChange={(e) => setEditingTask({ ...editingTask, category: e.target.value })}
                           className="schedule-detail__subtask-edit-select"
                         >
-                          <option value="학업">학업</option>
-                          <option value="업무">업무</option>
-                          <option value="개인">개인</option>
-                          <option value="기타">기타</option>
+                          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
                         </select>
                         <div className="schedule-detail__subtask-edit-actions">
                           <button onClick={() => handleSaveSubTask(task.id)}>저장</button>
@@ -634,6 +627,76 @@ const ScheduleDetail = () => {
           </Button>
         </div>
       </div>
+
+      {/* 할 일 추가 Modal */}
+      <Modal
+        isOpen={isAddingSubTask}
+        onClose={() => setIsAddingSubTask(false)}
+        title="할 일 추가"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsAddingSubTask(false)}>
+              취소
+            </Button>
+            <Button onClick={handleAddSubTask}>추가</Button>
+          </>
+        }
+      >
+        <div className="add-todo-form">
+          <Input
+            label="제목"
+            required
+            value={newSubTask.title}
+            onChange={(e) => setNewSubTask({ ...newSubTask, title: e.target.value })}
+            placeholder="할 일 제목을 입력하세요"
+          />
+          <Input
+            label="설명"
+            value={newSubTask.description}
+            onChange={(e) => setNewSubTask({ ...newSubTask, description: e.target.value })}
+            placeholder="상세 설명 (선택)"
+          />
+          <Input
+            label="날짜"
+            type="date"
+            required
+            value={newSubTask.date}
+            onChange={(e) => setNewSubTask({ ...newSubTask, date: e.target.value })}
+          />
+          <div className="add-todo-form__row">
+            <Input
+              label="예상 시간 (분)"
+              type="number"
+              min="5"
+              step="5"
+              value={newSubTask.estimatedMinute}
+              onChange={(e) =>
+                setNewSubTask({ ...newSubTask, estimatedMinute: parseInt(e.target.value) })
+              }
+            />
+          </div>
+          <div className="add-todo-form__group">
+            <label className="add-todo-form__label">카테고리 *</label>
+            <select
+              className="add-todo-form__select"
+              value={newSubTask.category}
+              onChange={(e) => setNewSubTask({ ...newSubTask, category: e.target.value })}
+              disabled={!!schedule?.category}
+            >
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            {schedule?.category && (
+              <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                일정의 카테고리가 자동으로 적용됩니다
+              </p>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

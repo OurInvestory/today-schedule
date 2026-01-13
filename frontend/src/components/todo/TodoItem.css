@@ -148,14 +148,33 @@
 }
 
 .todo-item__ai-reason {
-  font-size: var(--font-size-sm);
-  color: var(--color-primary-600);
-  margin: 4px 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #4B5563;
+  margin-top: 8px;
+  padding: 10px 14px;
   line-height: 1.5;
-  font-style: italic;
-  background: var(--color-primary-50);
-  padding: 4px 8px;
-  border-radius: 4px;
+  background: #F9FAFB;
+  border-radius: 0 0 12px 12px;
+  border: 1px solid #E5E7EB;
+}
+
+.ai-reason-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: #6366F1;
+}
+
+.ai-reason-text {
+  flex: 1;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .todo-item__footer {

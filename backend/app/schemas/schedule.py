@@ -7,7 +7,7 @@ from typing import Optional, Any
 class SaveScheduleRequest(BaseModel):
     title: str = Field(..., example="캡스톤 디자인 최종 발표")
     type: Optional[str] = Field("task", example="task")
-    category: Optional[str] = Field("과제", example="과제")
+    category: Optional[str] = Field("assignment", example="assignment")
     start_at: Optional[datetime] = Field(None, example="2026-06-20T00:00:00")
     end_at: datetime = Field(..., example="2026-06-20T23:59:59")
     priority_score: int = Field(1, ge=0, le=10, example=8)  # 범위 확장 반영
@@ -38,7 +38,7 @@ class ScheduleResponse(BaseModel):
 class UpdateScheduleRequest(BaseModel):
     title: Optional[str] = Field(None, example="캡스톤 디자인 최종 발표")
     type: Optional[str] = Field(None, example="task")
-    category: Optional[str] = Field(None, example="과제")
+    category: Optional[str] = Field(None, example="assignment")
     start_at: Optional[datetime] = Field(None, example="2026-06-21T00:00:00")
     end_at: Optional[datetime] = Field(None, example="2026-06-21T23:59:59")
     priority_score: Optional[int] = Field(None, ge=0, le=10, example=2)

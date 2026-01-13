@@ -10,6 +10,8 @@ export const createSubTask = async (subTaskData) => {
       title: subTaskData.title,
       date: subTaskData.date, // YYYY-MM-DD 형식
       estimated_minute: subTaskData.estimatedMinute || null,
+      priority: subTaskData.priority || 'medium',
+      category: subTaskData.category || 'other',
     };
 
     console.log('서브태스크 생성 요청:', payload);
@@ -64,6 +66,7 @@ export const updateSubTask = async (id, subTaskData) => {
     if (subTaskData.estimatedMinute !== undefined) payload.estimated_minute = subTaskData.estimatedMinute;
     if (subTaskData.completed !== undefined) payload.is_completed = subTaskData.completed;
     if (subTaskData.category !== undefined) payload.category = subTaskData.category;
+    if (subTaskData.priority !== undefined) payload.priority = subTaskData.priority;
 
     console.log('서브태스크 수정 요청:', { id, payload });
     const response = await api.put(`/api/sub-tasks/${id}`, payload);

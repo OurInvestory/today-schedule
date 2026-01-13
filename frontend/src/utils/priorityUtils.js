@@ -1,6 +1,48 @@
 import { PRIORITIES } from './constants';
 
 /**
+ * 우선순위 자동 계산 (high, medium, low)
+ */
+export const calculatePriority = (dueDate, estimatedMinute = 60) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  
+  const daysUntil = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+  const estimatedHours = Math.floor(estimatedMinute / 60);
+  
+  // 마감일이 지났거나 당일
+  if (daysUntil <= 0) {
+    return 'high';
+  }
+  
+  // 내일까지이고 소요 시간이 2시간 이상
+  if (daysUntil === 1 && estimatedHours >= 2) {
+    return 'high';
+  }
+  
+  // 3일 이내이고 소요 시간이 3시간 이상
+  if (daysUntil <= 3 && estimatedHours >= 3) {
+    return 'high';
+  }
+  
+  // 7일 이내이고 소요 시간이 5시간 이상
+  if (daysUntil <= 7 && estimatedHours >= 5) {
+    return 'medium';
+  }
+  
+  // 7일 이내
+  if (daysUntil <= 7) {
+    return 'medium';
+  }
+  
+  // 그 외
+  return 'low';
+};
+
+/**
  * 우선순위 점수 계산 (마감일, 중요도, 시작일 기반)
  * AI가 오늘 해야 할 일을 결정하는 핵심 로직
  */

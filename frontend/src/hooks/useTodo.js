@@ -152,7 +152,7 @@ export const useTodo = (initialFilter = {}) => {
         targetTodo 
       });
       
-      const response = await toggleTodoComplete(id, completed, targetTodo);
+      await toggleTodoComplete(id, completed, targetTodo);
       console.log('Toggle 성공, 목록 새로고침 실행');
       
       // API 호출 후 목록 새로고침

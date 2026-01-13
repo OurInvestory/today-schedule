@@ -1,8 +1,47 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { getTimeUntilText, isOverdue } from '../../utils/dateUtils';
 import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
 import './TodoItem.css';
+
+// AI 이유 자동 생성 함수
+const generateAIReason = (todo) => {
+  if (todo.aiReason) return todo.aiReason;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = new Date(todo.dueDate);
+  dueDate.setHours(0, 0, 0, 0);
+  const daysUntil = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+  const estimatedHours = todo.estimatedMinute ? Math.floor(todo.estimatedMinute / 60) : 0;
+  
+  // 마감일 기반 이유
+  if (daysUntil < 0) {
+    return '이미 마감일이 지났습니다. 서둘러 처리하세요!';
+  } else if (daysUntil === 0) {
+    return '오늘이 마감일입니다. 우선적으로 처리하세요!';
+  } else if (daysUntil === 1) {
+    if (estimatedHours >= 2) {
+      return '내일 마감이고 소요 시간이 길어요. 지금 시작하세요!';
+    }
+    return '내일까지 완료해야 합니다. 서둡러 준비하세요!';
+  } else if (daysUntil <= 3) {
+    if (estimatedHours >= 3) {
+      return `${daysUntil}일 후 마감이지만 소요 시간이 길어요. 미리 시작하는 게 좋아요.`;
+    }
+    return `${daysUntil}일 후 마감입니다. 여유를 가지고 처리하세요.`;
+  } else if (daysUntil <= 7) {
+    if (estimatedHours >= 5) {
+      return `${daysUntil}일 후 마감. 소요 시간을 고려해 계획을 세우세요.`;
+    }
+    return `${daysUntil}일의 여유가 있어요. 계획적으로 진행하세요.`;
+  } else {
+    if (estimatedHours >= 10) {
+      return `장기 프로젝트네요. 단계별로 나눠서 진행하는 것을 추천해요.`;
+    }
+    return `${daysUntil}일 후 마감. 충분한 시간을 활용하세요.`;
+  }
+};
 
 const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -11,6 +50,9 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
   const [longPressTimeout, setLongPressTimeout] = useState(null);
   const startXRef = useRef(0);
   const currentXRef = useRef(0);
+
+  // AI 이유 자동 생성
+  const aiReason = useMemo(() => generateAIReason(todo), [todo]);
 
   const handleCheckboxChange = (e) => {
     e.stopPropagation();
@@ -150,10 +192,6 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
           {todo.description && (
             <p className="todo-item__description">{todo.description}</p>
           )}
-          
-          {todo.aiReason && (
-            <p className="todo-item__ai-reason">💡 {todo.aiReason}</p>
-          )}
 
           <div className="todo-item__footer">
             <span className="todo-item__time">
@@ -169,6 +207,17 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
           </div>
         </div>
       </div>
+      
+      {aiReason && (
+        <div className="todo-item__ai-reason">
+          <div className="ai-reason-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+            </svg>
+          </div>
+          <span className="ai-reason-text">{aiReason}</span>
+        </div>
+      )}
     </div>
   );
 };

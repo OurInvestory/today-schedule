@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import CalendarHeader from './CalendarHeader';
 import CalendarGrid from './CalendarGrid';
 import { useCalendar } from '../../hooks/useCalendar';
 import { createCalendarEvent } from '../../services/calendarService';
+import { CATEGORY_LABELS } from '../../utils/constants';
 import Loading from '../common/Loading';
 import './Calendar.css';
 
@@ -272,7 +273,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
   };
 
   // initialEvents를 파싱하여 startTime/endTime 추가
-  const parseEvents = (events) => {
+  const parseEvents = useCallback((events) => {
     return (events || []).map(event => {
       const startTime = extractTimeFromDatetime(event.start_at || event.startDate);
       const endTime = extractTimeFromDatetime(event.end_at || event.endDate);
@@ -288,10 +289,10 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
         isAllDay,
       };
     });
-  };
+  }, []);
 
   // 로컬 일정 목록 (추가 시 즉시 반영)
-  const [localEvents, setLocalEvents] = useState(parseEvents(initialEvents));
+  const [localEvents, setLocalEvents] = useState(() => parseEvents(initialEvents));
   
   // 현재 시간 기준 자동 세팅 함수
   const getDefaultTimes = () => {
@@ -330,7 +331,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
   // initialEvents가 변경되면 localEvents 업데이트
   useEffect(() => {
     setLocalEvents(parseEvents(initialEvents));
-  }, [initialEvents]);
+  }, [initialEvents, parseEvents]);
 
   const formatDisplayDate = (d) => {
     const dateObj = typeof d === 'string' ? new Date(d) : d;
@@ -482,7 +483,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
                     <li 
                       key={event.id} 
                       className="schedule-modal__event-item"
-                      onClick={() => onScheduleClick(event.id)}
+                      onClick={() => onScheduleClick && onScheduleClick(event.id)}
                     >
                       <div 
                         className="schedule-modal__event-indicator" 
@@ -545,13 +546,18 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
             {/* 카테고리 */}
             <div className="schedule-modal__field">
               <label className="schedule-modal__label">카테고리</label>
-              <input
-                type="text"
-                className="schedule-modal__input"
-                placeholder="예: 과제, 회의, 개인"
+              <select
+                className="schedule-modal__select schedule-modal__select--category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-              />
+              >
+                <option value="">선택 안함</option>
+                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* 우선순위 */}

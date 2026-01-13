@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Calendar from '../components/calendar/Calendar';
 import TodoList from '../components/todo/TodoList';
 import TodoFilter from '../components/todo/TodoFilter';
@@ -10,6 +10,8 @@ import Input from '../components/common/Input';
 import { useTodo } from '../hooks/useTodo';
 import { useChatbot } from '../hooks/useChatbot';
 import { formatDate } from '../utils/dateUtils';
+import { calculatePriority } from '../utils/priorityUtils';
+import { CATEGORY_LABELS } from '../utils/constants';
 import './Home.css';
 
 const Home = () => {
@@ -49,7 +51,13 @@ const Home = () => {
 
   const handleAddTodo = async () => {
     try {
-      await addTodo(newTodo);
+      // 우선순위 자동 계산
+      const priority = calculatePriority(newTodo.date, newTodo.estimatedMinute);
+      
+      await addTodo({
+        ...newTodo,
+        priority
+      });
       setIsAddModalOpen(false);
       setNewTodo({
         title: '',
@@ -132,7 +140,7 @@ const Home = () => {
                 const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
                 const day = String(selectedDate.getDate()).padStart(2, '0');
                 const dateStr = `${year}-${month}-${day}`;
-                setNewTodo(prev => ({ ...prev, startDate: dateStr, dueDate: dateStr }));
+                setNewTodo(prev => ({ ...prev, date: dateStr }));
                 setIsAddModalOpen(true);
               }}
               emptyMessage="할 일이 없습니다. 새로운 할 일을 추가해보세요!"
@@ -209,13 +217,20 @@ const Home = () => {
               }
             />
           </div>
-          <Input
-            label="카테고리 (자동 분류)"
-            value="기타"
-            readOnly
-            disabled
-            placeholder="스케줄 없는 할일은 기타로 분류"
-          />
+          <div className="add-todo-form__group">
+            <label className="add-todo-form__label">카테고리 *</label>
+            <select
+              className="add-todo-form__select"
+              value={newTodo.category}
+              onChange={(e) => setNewTodo({ ...newTodo, category: e.target.value })}
+            >
+              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </Modal>
 
@@ -280,13 +295,20 @@ const Home = () => {
                 }
               />
             </div>
-            <Input
-              label="카테고리 (자동 분류)"
-              value={editingTodo.category || 'other'}
-              readOnly
-              disabled
-              placeholder="스케줄 기반 자동 분류"
-            />
+            <div className="add-todo-form__group">
+              <label className="add-todo-form__label">카테고리 *</label>
+              <select
+                className="add-todo-form__select"
+                value={editingTodo.category || 'other'}
+                onChange={(e) => setEditingTodo({ ...editingTodo, category: e.target.value })}
+              >
+                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </Modal>

@@ -68,7 +68,7 @@ const DesktopFilter = ({ filter, handleCategoryChange, handlePriorityChange, han
 );
 
 // 모바일용 하단 시트 필터
-const MobileFilter = ({ filter, activeCount, handleCategoryChange, handlePriorityChange, handleCompletedChange, onFilterChange, isBottomSheetOpen, setIsBottomSheetOpen }) => (
+const MobileFilter = ({ filter, handleCategoryChange, handlePriorityChange, handleCompletedChange, onFilterChange, isBottomSheetOpen, setIsBottomSheetOpen }) => (
   <>
     <button 
       className="todo-filter__mobile-trigger"

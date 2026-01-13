@@ -100,12 +100,6 @@ export const fetchTodos = async () => {
   }
 };
 
-const mapPriority = (score) => {
-  if (score >= 8) return 'high';
-  if (score >= 4) return 'medium';
-  return 'low';
-}
-
 /**
  * Create a new todo.
  * @param {Object} todoData - The data for the new todo.
@@ -113,13 +107,19 @@ const mapPriority = (score) => {
 export const createTodo = async (todoData) => {
   try {
     // 독립적인 할 일은 sub-tasks API 사용
-    // 백엔드 POST API 스펙: schedule_id, title, date, estimated_minute만 전송
+    // 백엔드 POST API 스펙: schedule_id, title, date, estimated_minute, priority, category 전송
     const payload = {
-      schedule_id: todoData.scheduleId || null, // 독립적인 할 일
       title: todoData.title,
-      date: todoData.dueDate, // dueDate -> date
-      estimated_minute: todoData.estimatedMinute || null,
+      date: todoData.dueDate || todoData.date, // dueDate 또는 date 필드 사용
+      estimated_minute: todoData.estimatedMinute || 60,
+      priority: todoData.priority || 'medium',
+      category: todoData.category || 'other',
     };
+    
+    // schedule_id가 있을 때만 포함
+    if (todoData.scheduleId) {
+      payload.schedule_id = todoData.scheduleId;
+    }
 
     console.log('할 일 생성 요청:', payload);
     const response = await api.post('/api/sub-tasks', payload);
@@ -140,12 +140,13 @@ export const updateTodo = async (id, todoData) => {
   try {
     const payload = {};
     
-    // 백엔드 PUT API 스펙: title, date, estimated_minute, is_done만 수정 가능
+    // 백엔드 PUT API 스펙: title, date, estimated_minute, is_done, priority, category 수정 가능
     if (todoData.title !== undefined) payload.title = todoData.title;
     if (todoData.dueDate !== undefined) payload.date = todoData.dueDate;
     if (todoData.completed !== undefined) payload.is_done = todoData.completed;
     if (todoData.estimatedMinute !== undefined) payload.estimated_minute = todoData.estimatedMinute;
-    // category, schedule_id는 수정 불가 (읽기 전용)
+    if (todoData.priority !== undefined) payload.priority = todoData.priority;
+    if (todoData.category !== undefined) payload.category = todoData.category;
 
     console.log('Todo 수정 요청:', { id, payload });
     const response = await api.put(`/api/sub-tasks/${id}`, payload);
