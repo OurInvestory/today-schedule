@@ -13,7 +13,6 @@
   flex-direction: column;
   z-index: var(--z-index-modal);
   animation: slideUp var(--transition-base);
-  position: relative;
 }
 
 /* 드래그 상태 */

@@ -4,7 +4,7 @@ from app.models import user, lecture, schedule, sub_task, notification
 from app.models.user import User
 from app.db.database import engine, Base, db_session
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
-from app.api import user_router, schedule_router, ai_chat, lecture_router, sub_task_router, calendar_router
+from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -67,7 +67,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(user_router.router)
 app.include_router(schedule_router.router)
-app.include_router(ai_chat.router, prefix="/api", tags=["AI"])
+app.include_router(chat_router.router, prefix="/api", tags=["AI"])
 app.include_router(lecture_router.router)
 app.include_router(sub_task_router.router)
 app.include_router(calendar_router.router)
