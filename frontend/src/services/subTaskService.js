@@ -43,6 +43,8 @@ export const getSubTasks = async (from, to) => {
       id: task.sub_task_id || task.id,
       scheduleId: task.schedule_id,
       estimatedMinute: task.estimated_minute,
+      completed: task.is_completed || false,
+      category: task.category,
     }));
   } catch (error) {
     console.error('Failed to fetch sub-tasks:', error);
@@ -60,9 +62,12 @@ export const updateSubTask = async (id, subTaskData) => {
     if (subTaskData.title !== undefined) payload.title = subTaskData.title;
     if (subTaskData.date !== undefined) payload.date = subTaskData.date;
     if (subTaskData.estimatedMinute !== undefined) payload.estimated_minute = subTaskData.estimatedMinute;
-    if (subTaskData.completed !== undefined) payload.completed = subTaskData.completed;
+    if (subTaskData.completed !== undefined) payload.is_completed = subTaskData.completed;
+    if (subTaskData.category !== undefined) payload.category = subTaskData.category;
 
+    console.log('서브태스크 수정 요청:', { id, payload });
     const response = await api.put(`/api/sub-tasks/${id}`, payload);
+    console.log('서브태스크 수정 응답:', response.data);
     
     if (response.data && response.data.status !== 200) {
       throw new Error(response.data.message || '서브태스크 수정에 실패했습니다.');
@@ -71,6 +76,7 @@ export const updateSubTask = async (id, subTaskData) => {
     return response;
   } catch (error) {
     console.error('Failed to update sub-task:', error);
+    console.error('Error details:', error.response?.data);
     throw error;
   }
 };

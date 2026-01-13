@@ -150,19 +150,31 @@ export const getRelativeDateText = (date) => {
 
 /**
  * 마감일까지 남은 시간 텍스트
+ * - scheduleId가 없는 할일: 그 날 23:59 기준으로 시간 표시
+ * - scheduleId가 있는 할일: 스케줄의 마감 시간 기준으로 표시
  */
-export const getTimeUntilText = (dueDate) => {
+export const getTimeUntilText = (dueDate, scheduleId, schedule) => {
   const now = new Date();
-  const due = new Date(dueDate);
-  const diffMs = due - now;
+  let targetDate;
+  
+  if (scheduleId && schedule && schedule.end_at) {
+    // 스케줄 ID가 있으면 스케줄의 마감 시간 기준
+    targetDate = new Date(schedule.end_at);
+  } else {
+    // 스케줄 ID가 없으면 그 날 23:59 기준
+    targetDate = new Date(dueDate);
+    targetDate.setHours(23, 59, 59, 999);
+  }
+  
+  const diffMs = targetDate - now;
   
   if (diffMs < 0) return '마감됨';
   
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
   
-  if (diffHours < 1) {
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes < 60) {
     return `${diffMinutes}분 남음`;
   }
   
@@ -170,7 +182,7 @@ export const getTimeUntilText = (dueDate) => {
   if (diffDays === 1) return '내일까지';
   if (diffDays <= 7) return `${diffDays}일 남음`;
   
-  return formatDate(dueDate, 'M월 D일까지');
+  return formatDate(targetDate, 'M월 D일까지');
 };
 
 /**

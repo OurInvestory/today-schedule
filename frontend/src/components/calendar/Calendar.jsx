@@ -323,6 +323,9 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
   const [endTime, setEndTime] = useState('10:00');
   const [isAllDay, setIsAllDay] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [category, setCategory] = useState('');
+  const [priorityScore, setPriorityScore] = useState(5);
+  const [estimatedMinute, setEstimatedMinute] = useState('');
 
   // initialEvents가 변경되면 localEvents 업데이트
   useEffect(() => {
@@ -348,6 +351,9 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
     setEndDate(formatDateString(date));
     setTitle('');
     setDescription('');
+    setCategory('');
+    setPriorityScore(5);
+    setEstimatedMinute('');
     setShowForm(true);
   };
 
@@ -370,7 +376,9 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
       endTime: isAllDay ? null : endTime,
       isAllDay,
       type: 'schedule',
-      category: '일정',
+      category: category.trim(),
+      priority_score: parseInt(priorityScore) || 5,
+      estimated_minute: estimatedMinute ? parseInt(estimatedMinute) : null,
     };
     
     try {
@@ -408,6 +416,9 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
       // 폼 초기화
       setTitle('');
       setDescription('');
+      setCategory('');
+      setPriorityScore(5);
+      setEstimatedMinute('');
     } catch (error) {
       console.error('일정 저장 실패:', error);
       alert('일정 저장에 실패했습니다. 다시 시도해주세요.');
@@ -528,6 +539,44 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 autoFocus
+              />
+            </div>
+
+            {/* 카테고리 */}
+            <div className="schedule-modal__field">
+              <label className="schedule-modal__label">카테고리</label>
+              <input
+                type="text"
+                className="schedule-modal__input"
+                placeholder="예: 과제, 회의, 개인"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+            </div>
+
+            {/* 우선순위 */}
+            <div className="schedule-modal__field">
+              <label className="schedule-modal__label">우선순위 (1-10)</label>
+              <input
+                type="number"
+                className="schedule-modal__input"
+                value={priorityScore}
+                onChange={(e) => setPriorityScore(e.target.value)}
+                min="1"
+                max="10"
+              />
+            </div>
+
+            {/* 예상 소요 시간 */}
+            <div className="schedule-modal__field">
+              <label className="schedule-modal__label">예상 소요 시간 (분)</label>
+              <input
+                type="number"
+                className="schedule-modal__input"
+                placeholder="예: 120 (2시간)"
+                value={estimatedMinute}
+                onChange={(e) => setEstimatedMinute(e.target.value)}
+                min="0"
               />
             </div>
 

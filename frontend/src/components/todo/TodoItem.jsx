@@ -150,14 +150,20 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
           {todo.description && (
             <p className="todo-item__description">{todo.description}</p>
           )}
+          
+          {todo.aiReason && (
+            <p className="todo-item__ai-reason">💡 {todo.aiReason}</p>
+          )}
 
           <div className="todo-item__footer">
             <span className="todo-item__time">
-              {getTimeUntilText(todo.dueDate)}
+              {getTimeUntilText(todo.dueDate, todo.scheduleId, todo.schedule)}
             </span>
-            {todo.estimatedTime && (
+            {todo.estimatedMinute && (
               <span className="todo-item__estimated-time">
-                예상 {todo.estimatedTime}시간
+                예상 {todo.estimatedMinute >= 60 
+                  ? `${Math.floor(todo.estimatedMinute / 60)}시간${todo.estimatedMinute % 60 > 0 ? ` ${todo.estimatedMinute % 60}분` : ''}`
+                  : `${todo.estimatedMinute}분`}
               </span>
             )}
           </div>

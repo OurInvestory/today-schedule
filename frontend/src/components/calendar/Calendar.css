@@ -262,16 +262,19 @@
   width: 36px;
   height: 36px;
   border: none;
-  background: var(--color-primary-500);
+  background: transparent;
   border-radius: 50%;
   cursor: pointer;
-  color: #fff;
+  color: var(--color-primary-500);
   transition: all 0.2s;
 }
 
 .schedule-modal__add-btn:hover {
-  background: var(--color-primary-600);
-  transform: scale(1.05);
+  transform: scale(1.1);
+}
+
+.schedule-modal__add-btn svg {
+  stroke: var(--color-primary-500);
 }
 
 .schedule-modal__save {
@@ -400,7 +403,16 @@
   margin-bottom: 16px;
 }
 
-.schedule-modal__input {
+.schedule-modal__label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.schedule-modal__input,
+.schedule-modal__select {
   width: 100%;
   padding: 14px 16px;
   font-size: 16px;
@@ -412,13 +424,23 @@
   background: transparent;
 }
 
+.schedule-modal__select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 30px;
+}
+
 .schedule-modal__input--title {
   font-size: 18px;
   font-weight: 500;
   border-bottom-width: 2px;
 }
 
-.schedule-modal__input:focus {
+.schedule-modal__input:focus,
+.schedule-modal__select:focus {
   border-bottom-color: var(--color-primary-500);
 }
 

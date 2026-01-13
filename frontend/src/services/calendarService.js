@@ -161,7 +161,7 @@ export const getScheduleById = async (scheduleId) => {
       isAllDay: !extractTime(schedule.start_at) && !extractTime(schedule.end_at),
       type: schedule.type || 'schedule',
       category: schedule.category,
-      priority_score: schedule.priority_score,
+      priority_score: schedule.priority_score || 0,
     };
   } catch (error) {
     console.error(`Failed to fetch schedule ${scheduleId}:`, error);

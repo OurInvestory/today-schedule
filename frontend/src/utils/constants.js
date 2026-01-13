@@ -5,6 +5,7 @@ export const CATEGORIES = {
   EXAM: 'exam',
   TEAM: 'team',
   ACTIVITY: 'activity',
+  OTHER: 'other',
 };
 
 export const CATEGORY_LABELS = {
@@ -13,6 +14,7 @@ export const CATEGORY_LABELS = {
   [CATEGORIES.EXAM]: '시험',
   [CATEGORIES.TEAM]: '팀플',
   [CATEGORIES.ACTIVITY]: '대외활동',
+  [CATEGORIES.OTHER]: '기타',
 };
 
 export const CATEGORY_COLORS = {
@@ -21,6 +23,7 @@ export const CATEGORY_COLORS = {
   [CATEGORIES.EXAM]: '#FEE2E2',
   [CATEGORIES.TEAM]: '#E9D5FF',
   [CATEGORIES.ACTIVITY]: '#D1FAE5',
+  [CATEGORIES.OTHER]: '#F3F4F6',
 };
 
 // 우선순위 정의
