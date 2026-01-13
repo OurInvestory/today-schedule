@@ -5,6 +5,14 @@
   position: relative;
 }
 
+.calendar--full-mode {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  max-width: 100vw;
+}
+
 .calendar--loading {
   min-height: 400px;
   display: flex;

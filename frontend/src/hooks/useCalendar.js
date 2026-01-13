@@ -117,6 +117,19 @@ export const useCalendar = () => {
     });
   }, [events]);
 
+  // 특정 날짜의 할 일 가져오기
+  const getTodosForDate = useCallback((date) => {
+    return todos.filter(todo => {
+      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
+      if (!todoDate) return false;
+      return (
+        todoDate.getFullYear() === date.getFullYear() &&
+        todoDate.getMonth() === date.getMonth() &&
+        todoDate.getDate() === date.getDate()
+      );
+    });
+  }, [todos]);
+
   // 이벤트(일정)가 있는 날짜인지 확인
   const hasEventsOnDate = useCallback((date) => {
     return getEventsForDate(date).length > 0;
@@ -196,6 +209,7 @@ export const useCalendar = () => {
     goToToday,
     selectDate,
     getEventsForDate,
+    getTodosForDate,
     hasEventsOnDate,
     hasTodosOnDate,
     hasCompletedTodosOnDate,

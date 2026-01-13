@@ -9,7 +9,7 @@ import { CATEGORY_LABELS } from '../../utils/constants';
 import Loading from '../common/Loading';
 import './Calendar.css';
 
-const Calendar = ({ onDateSelect }) => {
+const Calendar = ({ onDateSelect, isFullMode = false }) => {
   const navigate = useNavigate();
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -30,6 +30,7 @@ const Calendar = ({ onDateSelect }) => {
     hasPendingTodosOnDate,
     hasGoogleEventsOnDate,
     getEventsForDate,
+    getTodosForDate,
     refetch,
   } = useCalendar();
 
@@ -83,7 +84,7 @@ const Calendar = ({ onDateSelect }) => {
   }
 
   return (
-    <div className="calendar">
+    <div className={`calendar ${isFullMode ? 'calendar--full-mode' : ''}`}>
       <CalendarHeader
         currentDate={currentDate}
         onPrevMonth={goToPreviousMonth}
@@ -100,6 +101,9 @@ const Calendar = ({ onDateSelect }) => {
         hasCompletedOnDate={hasCompletedTodosOnDate}
         hasPendingOnDate={hasPendingTodosOnDate}
         hasGoogleEventsOnDate={hasGoogleEventsOnDate}
+        isFullMode={isFullMode}
+        getEventsForDate={getEventsForDate}
+        getTodosForDate={getTodosForDate}
       />
 
       {/* 연월 선택 모달 */}
