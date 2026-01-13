@@ -9,24 +9,18 @@ from app.api import user_router, schedule_router, ai_chat, lecture_router, sub_t
 # model 설정
 Base.metadata.create_all(bind=engine)
 
-# 앱 인스턴스 새성
+# 앱 인스턴스 생성
 app = FastAPI(
-    title = "5늘의 일정",
-    description= "watsonx.ai 기반 대학생 맞춤형 AI 학업 스케줄 도우미",
+    title="5늘의 일정",
+    description="watsonx.ai 기반 대학생 맞춤형 AI 학업 스케줄 도우미",
     version="1.0.0"
 )
 
 
 # CORS 설정
-origins = [
-    "http://localhost:3000",    # React 기본 포트
-    "http://127.0.0.1:3000",
-    "http://localhost:5173"    # Vite/Vue 기본 포트
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # 허용할 도메인 리스트
+    allow_origins=["*"],  # Allow all origins temporarily
     allow_credentials=True,           # 쿠키 포함 여부
     allow_methods=["*"],              # 모든 HTTP Method 허용
     allow_headers=["*"],              # 모든 HTTP Header 허용
@@ -46,3 +40,9 @@ app.include_router(calendar_router.router)
 @app.get("/")
 def server_test():
     return {"message": "서버 확인 테스트 용도입니다."}
+
+
+# Ensure the server runs on 0.0.0.0 for external access
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

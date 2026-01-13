@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://five-schedule-backend:8000';
+// Temporarily hardcoded baseURL for debugging
+const API_BASE_URL = 'http://localhost:8000/api';
 
 // Axios 인스턴스 생성
 const api = axios.create({
