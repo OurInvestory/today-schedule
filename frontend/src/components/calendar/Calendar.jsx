@@ -7,7 +7,7 @@ import { useCalendar } from '../../hooks/useCalendar';
 import Loading from '../common/Loading';
 import './Calendar.css';
 
-const Calendar = ({ onDateSelect, todos = [] }) => {
+const Calendar = ({ onDateSelect }) => {
   const navigate = useNavigate();
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -17,7 +17,6 @@ const Calendar = ({ onDateSelect, todos = [] }) => {
     currentDate,
     selectedDate,
     dates,
-    events,
     loading,
     goToPreviousMonth,
     goToNextMonth,
@@ -60,6 +59,11 @@ const Calendar = ({ onDateSelect, todos = [] }) => {
     setIsScheduleModalOpen(false);
     setSelectedScheduleDate(null);
     refetch(); // 캘린더 데이터 새로고침
+
+    // Debugging: Log events after refetch
+    setTimeout(() => {
+      console.log('Updated events after refetch:', getEventsForDate(selectedScheduleDate));
+    }, 1000); // Allow time for refetch to complete
   };
 
   const handleMonthSelect = (year, month) => {
@@ -230,7 +234,7 @@ const MonthPicker = ({ currentDate, onSelect, onClose }) => {
 };
 
 // 일정 편집 모달 컴포넌트 (갤럭시 캘린더 스타일)
-const ScheduleEditModal = ({ date, events: initialEvents, onClose, onSave, onScheduleClick }) => {
+const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleClick }) => {
   // 로컬 일정 목록 (추가 시 즉시 반영)
   const [localEvents, setLocalEvents] = useState(initialEvents || []);
   
