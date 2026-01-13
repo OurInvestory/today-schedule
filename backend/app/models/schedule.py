@@ -17,7 +17,7 @@ class Schedule(Base):
     category = Column(String(50), nullable=True)    # 수업, 과제, 시험, 공모전, 대외활동, 기타
     start_at = Column(DateTime, nullable=True)
     end_at = Column(DateTime, nullable=False)
-    priority_score = Column(Integer, default=1, nullable=False)     # 0 (낮음), 1 (중간), 2 (높음)
+    priority_score = Column(Integer, default=1, nullable=False)     
     original_text = Column(Text, nullable=True)
     update_text = Column(Text, nullable=True)
     estimated_minute = Column(Integer, nullable=True)    # 분 단위
