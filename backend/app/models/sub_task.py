@@ -18,6 +18,7 @@ class SubTask(Base):
     estimated_minute = Column(Integer, nullable=True)    # 분 단위
     is_done = Column(Boolean, default=False, nullable=False)
     update_text = Column(Text, nullable=True)
+    ai_reason = Column(Text, nullable=True)     # 할 일 세분화 근거
 
     # 관계 설정
     user = relationship("User", back_populates="sub_tasks")

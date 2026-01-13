@@ -1,6 +1,6 @@
 .calendar-grid {
   padding: var(--spacing-md);
-  background: #fff;
+  background: var(--color-bg-default);
 }
 
 .calendar-grid__weekdays {
@@ -23,7 +23,7 @@
 }
 
 .calendar-grid__weekday--sunday {
-  color: #e74c3c;
+  color: var(--color-error);
 }
 
 .calendar-grid__weekday--saturday {

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Home from './pages/Home';
 import TaskDetail from './pages/TaskDetail';
+import ScheduleDetail from './pages/ScheduleDetail';
 import Archive from './pages/Archive';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
@@ -70,6 +71,17 @@ function App() {
                 <Header hasNotification={true} />
                 <div className="app__content">
                   <TaskDetail />
+                </div>
+              </>
+            }
+          />
+          <Route
+            path="/schedule/:id"
+            element={
+              <>
+                <Header hasNotification={true} />
+                <div className="app__content">
+                  <ScheduleDetail />
                 </div>
               </>
             }

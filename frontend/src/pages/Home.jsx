@@ -38,10 +38,14 @@ const Home = () => {
       const diffMs = dueDateTime - startDateTime;
       if (diffMs > 0) {
         const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10; // 소수점 1자리
-        setNewTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+        if (newTodo.estimatedTime !== diffHours) {
+          setTimeout(() => {
+            setNewTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+          }, 0);
+        }
       }
     }
-  }, [newTodo.startDate, newTodo.startTime, newTodo.dueDate, newTodo.dueTime]);
+  }, [newTodo]); // Include newTodo as a dependency
 
   // 편집 모달에서도 시간 자동 계산
   useEffect(() => {
@@ -53,10 +57,14 @@ const Home = () => {
       const diffMs = dueDateTime - startDateTime;
       if (diffMs > 0) {
         const diffHours = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10;
-        setEditingTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+        if (editingTodo.estimatedTime !== diffHours) {
+          setTimeout(() => {
+            setEditingTodo(prev => ({ ...prev, estimatedTime: diffHours }));
+          }, 0);
+        }
       }
     }
-  }, [editingTodo?.startDate, editingTodo?.startTime, editingTodo?.dueDate, editingTodo?.dueTime]);
+  }, [editingTodo]); // Include editingTodo as a dependency
 
   const { todos, loading, toggleComplete, addTodo, editTodo, removeTodo, updateFilter, filter } =
     useTodo({ date: 'today' });
@@ -123,7 +131,7 @@ const Home = () => {
 
         {/* Right: Todo List */}
         <main className="home__main">
-          <div className="home__header">
+          <div className="home__header" style={{ marginBottom: '16px' }}>
             <div className="home__header-left">
               <svg 
                 className="home__header-icon"
@@ -150,7 +158,7 @@ const Home = () => {
             </div>
           </div>
 
-          <TodoFilter filter={filter} onFilterChange={updateFilter} />
+          <TodoFilter filter={filter} onFilterChange={updateFilter} style={{ marginBottom: '16px' }} />
 
           <div className="home__todos">
             <TodoList
@@ -159,7 +167,15 @@ const Home = () => {
               onToggle={toggleComplete}
               onEdit={handleOpenEditModal}
               onDelete={removeTodo}
-              onAdd={() => setIsAddModalOpen(true)}
+              onAdd={() => {
+                // 선택된 날짜를 기본값으로 설정
+                const year = selectedDate.getFullYear();
+                const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(selectedDate.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                setNewTodo(prev => ({ ...prev, startDate: dateStr, dueDate: dateStr }));
+                setIsAddModalOpen(true);
+              }}
               emptyMessage="할 일이 없습니다. 새로운 할 일을 추가해보세요!"
             />
           </div>

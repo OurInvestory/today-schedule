@@ -66,8 +66,8 @@
 }
 
 .date-cell__dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: var(--color-primary-500);
 }
@@ -78,6 +78,22 @@
 
 .date-cell__dot--completed {
   background-color: var(--color-success);
+}
+
+/* 일정 아이콘 (파란색 원형) */
+.date-cell__schedule-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-primary-500);
+}
+
+.date-cell--selected .date-cell__schedule-icon {
+  background-color: white;
+}
+
+.date-cell--other-month .date-cell__schedule-icon {
+  opacity: 0.5;
 }
 
 .date-cell--selected .date-cell__dot {

@@ -62,14 +62,14 @@
     width: 40px;
     height: 40px;
     border-radius: var(--radius-full);
-    color: #333333;
+    color: var(--color-text-primary);
     transition: all var(--transition-base);
     position: relative;
   }
   
   .header__notification-btn:hover {
     background-color: var(--color-gray-100);
-    color: #1a1a1a;
+    color: var(--color-text-primary);
   }
 
   .header__icon-btn {
@@ -81,7 +81,7 @@
     border: none;
     background: transparent;
     border-radius: var(--radius-full);
-    color: #666666;
+    color: var(--color-text-secondary);
     cursor: pointer;
     transition: all var(--transition-base);
     position: relative;
@@ -89,7 +89,7 @@
 
   .header__icon-btn:hover {
     background-color: var(--color-gray-100);
-    color: #333333;
+    color: var(--color-text-primary);
   }
 
   .header__icon-btn svg {

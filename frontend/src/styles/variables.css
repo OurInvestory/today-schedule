@@ -51,6 +51,10 @@
   --color-bg-default: #FFFFFF;
   --color-bg-secondary: #F2F4F6;
   --color-bg-tertiary: #E8EBED;
+  
+  /* Border Colors */
+  --color-border: #e5e5e5;
+  --color-border-light: #f0f0f0;
 
   /* Typography */
   --font-family-primary: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, Roboto, "Noto Sans KR", "Segoe UI", "Malgun Gothic", "Apple Color Emoji", sans-serif;
@@ -108,4 +112,48 @@
   --z-index-modal: 1050;
   --z-index-popover: 1060;
   --z-index-tooltip: 1070;
+}
+
+/* 다크 테마 */
+[data-theme="dark"] {
+  /* Colors - Primary (다크모드에서도 파란색 유지, 밝기 조정) */
+  --color-primary-50: #1a2744;
+  --color-primary-100: #1e3a5f;
+  --color-primary-200: #2a4a7a;
+  --color-primary-300: #3d6db3;
+  --color-primary-400: #5a8fd6;
+  --color-primary-500: #4A9EFF;
+  --color-primary-600: #7AB8FF;
+  --color-primary-700: #ADD6FF;
+
+  /* Colors - Grayscale (다크모드) */
+  --color-gray-50: #1a1a1a;
+  --color-gray-100: #2a2a2a;
+  --color-gray-200: #3a3a3a;
+  --color-gray-300: #4a4a4a;
+  --color-gray-400: #6a6a6a;
+  --color-gray-500: #8a8a8a;
+  --color-gray-600: #aaaaaa;
+  --color-gray-700: #cccccc;
+  --color-gray-800: #e0e0e0;
+  --color-gray-900: #f5f5f5;
+
+  /* Background - Dark Theme */
+  --color-bg-default: #1a1a1a;
+  --color-bg-secondary: #121212;
+  --color-bg-tertiary: #2a2a2a;
+  
+  /* Border Colors - Dark Theme */
+  --color-border: #3a3a3a;
+  --color-border-light: #2a2a2a;
+
+  /* Text Colors - Dark Theme */
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #aaaaaa;
+  --color-text-tertiary: #888888;
+
+  /* Icon Background - Dark Theme */
+  --color-icon-bg: linear-gradient(135deg, #4A9EFF 0%, #7AB8FF 100%);
+  --color-icon-bg-soft: linear-gradient(135deg, #1e3a5f 0%, #2a4a7a 100%);
+  --color-icon-bg-solid: #4A9EFF;
 }

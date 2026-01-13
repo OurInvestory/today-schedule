@@ -1,6 +1,6 @@
 .notifications {
   min-height: 100vh;
-  background: #f5f5f7;
+  background: var(--color-bg-secondary);
 }
 
 .notifications__header {
@@ -8,8 +8,9 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e5e5e5;
+  min-height: 72px;
+  background: var(--color-bg-default);
+  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -19,17 +20,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: transparent;
   border-radius: 50%;
   cursor: pointer;
   transition: background 0.2s;
+  color: var(--color-text-primary);
 }
 
 .notifications__back:hover {
-  background: #f0f0f0;
+  background: var(--color-gray-100);
 }
 
 .notifications__header-content {
@@ -40,20 +42,14 @@
 }
 
 .notifications__header-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: var(--color-icon-bg);
-  border-radius: 12px;
-  color: #fff;
+  color: var(--color-primary-500);
+  flex-shrink: 0;
 }
 
 .notifications__title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #333333;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
   margin: 0;
   letter-spacing: -0.02em;
 }
@@ -62,20 +58,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   background: #ff4757;
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  border-radius: 11px;
+  border-radius: 9px;
 }
 
 .notifications__mark-all {
   font-size: 14px;
   font-weight: 500;
-  color: var(--color-icon-bg-solid);
+  color: var(--color-primary-500);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -85,7 +81,7 @@
 }
 
 .notifications__mark-all:hover {
-  background: #f0f0ff;
+  background: var(--color-primary-50);
 }
 
 /* 필터 버튼 영역 */
@@ -93,20 +89,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e5e5e5;
+  padding: 10px 20px;
+  background: var(--color-bg-default);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .notifications__filter-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  font-size: 14px;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: 13px;
   font-weight: 500;
-  color: #666;
-  background: #f5f5f7;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
   border: none;
   border-radius: 20px;
   cursor: pointer;
@@ -114,16 +110,16 @@
 }
 
 .notifications__filter-btn:hover {
-  background: #e8e8ec;
+  background: var(--color-gray-200);
 }
 
 .notifications__filter-btn--active {
-  background: var(--color-icon-bg-solid);
+  background: var(--color-primary-500);
   color: #fff;
 }
 
 .notifications__filter-btn--active:hover {
-  background: #5569d9;
+  background: var(--color-primary-600);
 }
 
 .notifications__filter-count {
@@ -153,32 +149,8 @@
   color: #ff4757;
 }
 
-.notifications__briefing-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #f59f00;
-  background: #fff8e6;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.notifications__briefing-btn:hover {
-  background: #ffefcc;
-}
-
-.notifications__briefing-btn svg {
-  flex-shrink: 0;
-}
-
 .notifications__content {
-  padding: 20px;
+  padding: 16px;
   padding-bottom: 100px;
 }
 
@@ -188,7 +160,7 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .notifications__empty svg {
@@ -204,43 +176,48 @@
 .notifications__list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* 알림 아이템 */
 .notification-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: #fff;
-  border-radius: 16px;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--color-bg-default);
+  border-radius: 12px;
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .notification-item:hover {
-  background: #fafafa;
+  background: var(--color-gray-50);
 }
 
 .notification-item--unread {
-  background: #f8f7ff;
-  border-left: 3px solid var(--color-icon-bg-solid);
+  background: var(--color-primary-50);
+  border-left: 3px solid var(--color-primary-500);
 }
 
 .notification-item--unread:hover {
-  background: #f0efff;
+  background: var(--color-primary-100);
 }
 
 .notification-item__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   flex-shrink: 0;
+}
+
+.notification-item__icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .notification-item__icon--deadline {
@@ -274,45 +251,52 @@
 }
 
 .notification-item__title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 4px;
+  color: var(--color-text-primary);
+  margin: 0 0 2px;
 }
 
 .notification-item__message {
-  font-size: 14px;
-  color: #666;
-  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0 0 4px;
   line-height: 1.4;
 }
 
 .notification-item__time {
-  font-size: 12px;
-  color: #999;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
 }
 
 .notification-item__delete {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
   border-radius: 50%;
   cursor: pointer;
-  color: #999;
+  color: var(--color-text-tertiary);
   transition: background 0.2s, color 0.2s;
   flex-shrink: 0;
 }
 
 .notification-item__delete:hover {
-  background: #fff5f5;
+  background: var(--color-primary-50);
   color: #ff4757;
 }
 
 /* 반응형 */
+@media (max-width: 640px) {
+  .notifications__header {
+    padding: 12px 16px;
+    min-height: 56px;
+  }
+}
+
 @media (min-width: 768px) {
   .notifications__content {
     max-width: 600px;

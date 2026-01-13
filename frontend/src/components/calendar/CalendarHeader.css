@@ -4,7 +4,7 @@
   justify-content: space-between;
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--color-gray-200);
-  background: #fff;
+  background: var(--color-bg-default);
 }
 
 .calendar-header__nav {
@@ -19,7 +19,7 @@
   gap: 6px;
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: #333333;
+  color: var(--color-text-primary);
   margin: 0;
   min-width: 120px;
   text-align: center;
