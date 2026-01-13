@@ -8,8 +8,8 @@ const suggestedQuestions = [
   { id: 1, text: '오늘 할 일 보여줘', icon: '📋' },
   { id: 2, text: '이번 주 일정 정리해줘', icon: '📅' },
   { id: 3, text: '우선순위 높은 일정 알려줘', icon: '🔥' },
-  { id: 4, text: '새로운 일정 추가해줘', icon: '➕' },
-  { id: 5, text: '마감 임박한 할 일은?', icon: '⏰' },
+  { id: 4, text: '내일 3시에 회의 추가해줘', icon: '➕' },
+  { id: 5, text: '내일 일정 알려줘', icon: '⏰' },
   { id: 6, text: '시간표 이미지 분석', icon: '🖼️' },
 ];
 

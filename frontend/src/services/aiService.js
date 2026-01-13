@@ -87,18 +87,25 @@ export const createSubTaskFromAI = async (scheduleId, payload) => {
 };
 
 /**
- * 시간표 이미지 분석 및 일정 추출
+ * 시간표/포스터 이미지 분석 및 일정 추출
  */
 export const analyzeTimetableImage = async (imageFile) => {
   try {
     const formData = new FormData();
-    formData.append('image', imageFile);
+    formData.append('file', imageFile);
+    formData.append('timezone', Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Seoul');
     
-    // 향후 백엔드 API 연동 예정
+    const response = await api.post('/api/analyze', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 60000, // 이미지 분석은 시간이 걸릴 수 있음
+    });
+    
     return {
       success: true,
-      message: '시간표 분석 기능은 곧 제공될 예정입니다.',
-      schedules: [],
+      message: response.data?.data?.assistantMessage || '이미지 분석 완료',
+      parsedResult: response.data?.data?.parsedResult,
       imagePreview: URL.createObjectURL(imageFile),
     };
   } catch (error) {

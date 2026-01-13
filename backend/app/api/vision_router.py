@@ -4,8 +4,7 @@ import re
 import warnings
 from datetime import datetime, timedelta
 from collections import defaultdict
-import easyocr
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from dotenv import load_dotenv
 
@@ -20,8 +19,15 @@ load_dotenv()
 
 router = APIRouter()
 
-# --- [초기화] ---
-ocr_reader = easyocr.Reader(['ko', 'en'], gpu=False)
+# --- [초기화] OCR Reader (Optional) ---
+try:
+    import easyocr
+    ocr_reader = easyocr.Reader(['ko', 'en'], gpu=False)
+    OCR_AVAILABLE = True
+except ImportError:
+    ocr_reader = None
+    OCR_AVAILABLE = False
+    print("Warning: easyocr not installed. Image analysis will be limited.")
 
 # 모델 ID
 WATSONX_MODEL_ID_TEXT = os.getenv("WATSONX_MODEL_ID")  # schedule용: 70b-instruct
@@ -345,6 +351,13 @@ async def analyze_image_schedule(
     file: UploadFile = File(...),
     timezone: str = "Asia/Seoul"
 ):
+    # OCR 모듈 체크
+    if not OCR_AVAILABLE:
+        return APIResponse(
+            status=503, 
+            message="이미지 분석 기능을 사용할 수 없습니다. OCR 모듈이 설치되지 않았습니다."
+        )
+    
     try:
         image_bytes = await file.read()
         

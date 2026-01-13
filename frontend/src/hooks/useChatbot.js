@@ -100,7 +100,24 @@ export const useChatbot = () => {
     setError(null);
 
     try {
-      const response = await sendChatMessage(text, null, selectedScheduleId, {}, files);
+      // 이미지 파일이 있으면 이미지 분석 결과를 사용
+      if (imageAnalysisResult && imageAnalysisResult.success) {
+        const newAssistantMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸',
+          timestamp: new Date().toISOString(),
+          parsedResult: imageAnalysisResult.parsedResult,
+          actions: imageAnalysisResult.parsedResult?.actions || [],
+          imageAnalysis: imageAnalysisResult,
+        };
+        setMessages(prev => [...prev, newAssistantMessage]);
+        setLoading(false);
+        return;
+      }
+
+      // 일반 텍스트 메시지 처리
+      const response = await sendChatMessage(text, null, selectedScheduleId, {}, null);
       
       // axios 응답 구조: response.data가 API 응답 본문
       // API 응답 구조: { status, message, data: { parsedResult, assistantMessage } }
@@ -126,7 +143,6 @@ export const useChatbot = () => {
         actions: parsedResult?.actions || [],
         reasoning: parsedResult?.reasoning,
         missingFields: parsedResult?.missingFields || parsedResult?.missing_fields || [],
-        imageAnalysis: imageAnalysisResult,
       };
 
       setMessages(prev => [...prev, newAssistantMessage]);
