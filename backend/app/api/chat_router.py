@@ -145,6 +145,7 @@ STEP 1 - Scan for these EXACT Korean words:
   ★ 추가, 등록 → intent="SCHEDULE_MUTATION", op="CREATE"
   ★ 미뤄, 옮겨, 바꿔, 변경, 연기 → intent="SCHEDULE_MUTATION", op="UPDATE"  
   ★ 취소, 삭제, 제거 → intent="SCHEDULE_MUTATION", op="DELETE"
+  ★ 알려줘+시간, 알림줘, 리마인드, 알림 예약 → intent="NOTIFICATION_REQUEST"
 
 STEP 2 - Only if NO action words above:
   ★ 보여줘, 알려줘, 뭐야, 있어 → intent="SCHEDULE_QUERY"
@@ -168,6 +169,13 @@ Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"CREATE","payload":{{"t
 ★ Only "보여줘" found → QUERY:
 Input: "오늘 할 일 보여줘"
 Output: {{"intent":"SCHEDULE_QUERY","preserved_info":{{"query_range":"today"}}}}
+
+★ "알림줘/알려줘+시간" found → NOTIFICATION_REQUEST:
+Input: "자료구조 시험 1시간 전에 알림줘"
+Output: {{"intent":"NOTIFICATION_REQUEST","preserved_info":{{"target_title":"자료구조 시험","minutes_before":60}}}}
+
+Input: "내일 오전 9시에 회의 리마인드 해줘"
+Output: {{"intent":"NOTIFICATION_REQUEST","preserved_info":{{"target_title":"회의","reminder_time":"2024-05-21T09:00:00+09:00"}}}}
 
 ####################
 # KEYWORD TABLE    #
@@ -320,6 +328,25 @@ User Input: {req.text}
                         assistant_msg = f"'{first_title}' 일정을 등록할까요? 📝"
             else:
                 assistant_msg = "처리할 일정이 없어요."
+        
+        elif ai_parsed_result.intent == "NOTIFICATION_REQUEST":
+            # 알림 예약 처리
+            preserved = ai_parsed_result.preserved_info
+            target_title = preserved.get('target_title', '일정')
+            minutes_before = preserved.get('minutes_before')
+            reminder_time = preserved.get('reminder_time')
+            
+            if minutes_before:
+                assistant_msg = f"'{target_title}' {minutes_before}분 전에 알림을 예약할까요? 🔔"
+            elif reminder_time:
+                try:
+                    rt = datetime.fromisoformat(reminder_time.replace('Z', '+00:00'))
+                    time_str = rt.strftime('%m월 %d일 %H:%M')
+                    assistant_msg = f"'{target_title}' 알림을 {time_str}에 예약할까요? 🔔"
+                except:
+                    assistant_msg = f"'{target_title}' 알림을 예약할까요? 🔔"
+            else:
+                assistant_msg = f"'{target_title}' 알림을 예약할까요? 🔔"
 
         response_data = ChatResponseData(
             parsed_result=ai_parsed_result,

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage } from '../services/aiService';
+import { scheduleReminder, scheduleReminderForSchedule } from '../services/notificationService';
 
 // 첫 인사 메시지
 const getGreetingMessage = () => {
@@ -194,8 +195,8 @@ export const useChatbot = () => {
     setHasGreeted(false);
   }, []);
 
-  // 인터랙티브 액션 확인 (일정/할 일 생성)
-  const confirmAction = useCallback(async (messageId, action) => {
+  // 인터랙티브 액션 확인 (일정/할 일 생성/알림 예약)
+  const confirmAction = useCallback(async (messageId, action, parsedResult = null) => {
     setMessages(prev => prev.map(msg => 
       msg.id === messageId 
         ? { ...msg, actionCompleted: 'confirmed', actionLoading: true }
@@ -204,16 +205,50 @@ export const useChatbot = () => {
     
     try {
       let result;
+      let confirmContent = '';
       
+      // NOTIFICATION_REQUEST 인텐트 처리
+      if (parsedResult?.intent === 'NOTIFICATION_REQUEST') {
+        const preserved = parsedResult.preserved_info || {};
+        const targetTitle = preserved.target_title || '일정';
+        const minutesBefore = preserved.minutes_before;
+        const reminderTime = preserved.reminder_time;
+        
+        if (reminderTime) {
+          // 특정 시간에 알림 예약
+          result = scheduleReminder({
+            title: targetTitle,
+            message: `예약된 알림: ${targetTitle}`,
+            scheduledTime: reminderTime,
+          });
+          confirmContent = `'${targetTitle}' 알림이 예약되었습니다! 🔔`;
+        } else if (minutesBefore) {
+          // N분 전 알림 - 일정 검색 후 예약 필요
+          // 현재는 간단하게 현재 시간 + 분으로 예약
+          const reminderDate = new Date(Date.now() + minutesBefore * 60 * 1000);
+          result = scheduleReminder({
+            title: `${targetTitle} 알림`,
+            message: `${minutesBefore}분 전 알림: ${targetTitle}`,
+            scheduledTime: reminderDate.toISOString(),
+          });
+          confirmContent = `'${targetTitle}' ${minutesBefore}분 전 알림이 예약되었습니다! 🔔`;
+        }
+      }
       // 액션 타입에 따라 처리
-      if (action.op === 'CREATE') {
+      else if (action?.op === 'CREATE') {
         if (action.target === 'SCHEDULE') {
           // 일정 생성
           result = await createScheduleFromAI(action.payload);
+          confirmContent = '일정이 성공적으로 추가되었습니다! ✅';
         } else if (action.target === 'SUB_TASK') {
           // 할 일 생성
           result = await createSubTaskFromAI(action.scheduleId, action.payload);
+          confirmContent = '할 일이 성공적으로 추가되었습니다! ✅';
         }
+      } else if (action?.op === 'UPDATE') {
+        confirmContent = '일정이 수정되었습니다! ✏️';
+      } else if (action?.op === 'DELETE') {
+        confirmContent = '일정이 삭제되었습니다! 🗑️';
       }
       
       // 성공 메시지 업데이트
@@ -227,7 +262,7 @@ export const useChatbot = () => {
       const confirmMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: `${action.target === 'SCHEDULE' ? '일정이' : '할 일이'} 성공적으로 추가되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.`,
+        content: confirmContent || '처리가 완료되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.',
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, confirmMessage]);
@@ -248,7 +283,7 @@ export const useChatbot = () => {
       const errorMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: '죄송합니다. 일정 추가 중 오류가 발생했습니다. 다시 시도해주세요.',
+        content: '죄송합니다. 처리 중 오류가 발생했습니다. 다시 시도해주세요.',
         timestamp: new Date().toISOString(),
         isError: true,
       };

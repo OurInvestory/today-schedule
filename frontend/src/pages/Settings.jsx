@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNotificationSettings, updateNotificationSettings } from '../services/notificationService';
+import { getGoogleAuthStatus, initiateGoogleAuth, disconnectGoogleCalendar } from '../services/calendarService';
 import './Settings.css';
 
 // 테마 적용 함수
@@ -43,13 +44,20 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
 
   const [connectedAccounts, setConnectedAccounts] = useState({
-    google: { connected: true, email: 'student@gmail.com' },
+    google: { connected: false, email: null },
     kakao: { connected: false },
     naver: { connected: false },
   });
 
   useEffect(() => {
     fetchSettings();
+    
+    // Google 인증 상태 로드
+    const googleAuth = getGoogleAuthStatus();
+    setConnectedAccounts(prev => ({
+      ...prev,
+      google: { connected: googleAuth.connected, email: googleAuth.email },
+    }));
     
     // 초기 테마 적용
     const initialTheme = getInitialTheme();
@@ -115,14 +123,38 @@ const Settings = () => {
     }
   }, []);
 
-  const handleAccountToggle = (provider) => {
-    setConnectedAccounts(prev => ({
-      ...prev,
-      [provider]: {
-        ...prev[provider],
-        connected: !prev[provider].connected,
-      },
-    }));
+  const handleAccountToggle = async (provider) => {
+    if (provider === 'google') {
+      if (connectedAccounts.google.connected) {
+        // 연결 해제
+        const result = disconnectGoogleCalendar();
+        setConnectedAccounts(prev => ({
+          ...prev,
+          google: { connected: false, email: null },
+        }));
+      } else {
+        // 연결 시도
+        try {
+          const authStatus = await initiateGoogleAuth();
+          setConnectedAccounts(prev => ({
+            ...prev,
+            google: { connected: authStatus.connected, email: authStatus.email },
+          }));
+        } catch (error) {
+          console.error('Google auth failed:', error);
+          alert('Google 계정 연결에 실패했습니다.');
+        }
+      }
+    } else {
+      // 다른 제공자는 현재 미구현
+      setConnectedAccounts(prev => ({
+        ...prev,
+        [provider]: {
+          ...prev[provider],
+          connected: !prev[provider].connected,
+        },
+      }));
+    }
   };
 
   const ToggleSwitch = ({ checked, onChange }) => (

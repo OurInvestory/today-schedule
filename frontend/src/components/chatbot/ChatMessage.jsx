@@ -119,6 +119,43 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
             </div>
           )}
           
+          {/* 알림 예약 요청 표시 */}
+          {!isUser && message.parsedResult?.intent === 'NOTIFICATION_REQUEST' && !message.actionCompleted && (
+            <div className="chat-message__parsed-actions">
+              <div className="chat-message__action-card">
+                <div className="chat-message__action-header">
+                  <span className="chat-message__action-type">🔔 알림 예약</span>
+                </div>
+                <div className="chat-message__action-details">
+                  {message.parsedResult.preserved_info?.target_title && 
+                    `대상: ${message.parsedResult.preserved_info.target_title}`}
+                  {message.parsedResult.preserved_info?.minutes_before && 
+                    `, ${message.parsedResult.preserved_info.minutes_before}분 전`}
+                  {message.parsedResult.preserved_info?.reminder_time && 
+                    `, 예약 시간: ${new Date(message.parsedResult.preserved_info.reminder_time).toLocaleString('ko-KR')}`}
+                </div>
+                <div className="chat-message__action-buttons">
+                  <button 
+                    type="button" 
+                    className="chat-message__action-btn chat-message__action-btn--confirm"
+                    onClick={() => onConfirm && onConfirm(message.id, null, message.parsedResult)}
+                    disabled={message.actionLoading}
+                  >
+                    {message.actionLoading ? '처리중...' : '✓ 예약'}
+                  </button>
+                  <button 
+                    type="button" 
+                    className="chat-message__action-btn chat-message__action-btn--cancel"
+                    onClick={handleCancel}
+                    disabled={message.actionLoading}
+                  >
+                    ✕ 취소
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* 파싱된 액션 표시 */}
           {!isUser && hasActions && !message.actionCompleted && (
             <div className="chat-message__parsed-actions">
