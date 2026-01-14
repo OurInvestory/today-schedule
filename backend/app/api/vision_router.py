@@ -90,11 +90,9 @@ def is_header_or_noise(text):
     if re.match(r'^[\W_]+$', text): return True
     if text in ['shl', '기', '비고', '시간', '미기재', '상담', '교시', '과목명']: return True 
 
-    # 강의실 번호는 유지 (D309, I311 등) - 제거하지 않음
-    # if re.match(r'^[A-Z]\d{3,4}$', text): return True
+    if re.match(r'^[A-Z]\d{3,4}$', text): return True
     
-    # 건물+강의실 조합도 유지 (예: 상허관301)
-    # if re.search(r'[가-힣]+[\d]{3,4}$', text): return True
+    if re.search(r'[가-힣]+[\d]{3,4}$', text): return True
     
     building_keywords = ['상허관', '산학', '공학관', '인문관', '과학관', '예술관']
     if any(bk in text for bk in building_keywords): return True
@@ -233,9 +231,8 @@ def parse_llm_response(generated_response: str) -> AIChatParsed:
 
 def process_schedule_mode(ocr_result) -> AIChatParsed:
     """ [모드 1] 시간표 처리 로직 (Grid Analysis + Text Model) """
-    # 1. 격자 분석 (좌표 기반) + 전체 텍스트 덤프 (보완용)
+    # 1. 격자 분석 (좌표 기반)
     structured_text = geometric_grid_analysis(ocr_result)
-    raw_text = simple_text_dump(ocr_result)  # 추가: 누락된 정보 보완용
     
     # 2. 날짜 컨텍스트 (이번 주 월~금)
     today = datetime.now()
@@ -248,48 +245,18 @@ def process_schedule_mode(ocr_result) -> AIChatParsed:
     # 3. 시간표 전용 프롬프트
     instructions = """
     1. **Class Schedule (EVENT)**:
-       - Extract EACH class as a separate EVENT.
-       - Title: Full class name (correct any OCR typos - see TYPO CORRECTION below).
-       - Location: Include room number if visible (e.g., D309, I311, G203, 상허관219, 산학215).
-       
-    2. **TYPO CORRECTION (CRITICAL)**:
-       - "기초베드날에" or "기초베트날어" → "기초베트남어 I"
-       - "나름 바꾸는" or "나를 바꾸논" → "나를 바꾸는 글쓰기"
-       - "College Engli" → "College English I"
-       - "말레 인니학입문" → "말레·인니학입문"
-       - "베트남학입문" → "베트남학입문 I"
-       - "채플" → "채플 I"
-       - "대학생활과 미래 설계" → "대학생활과 미래설계 I"
-       - "소프트웨어와 컴퓨터적 사고" → "소프트웨어와 컴퓨터적 사고"
-       - "상히관" → "상허관" (building name correction)
-       - "CMS진로람색" or "CMS진로탐색" → "CMS진로탐색"
-       - "하눈세상" or "하는세상" → "독립영화와함께하는세상바로보기"
-       - "경제학원론" → "경제학원론1"
-       
-    3. **MERGING RULES**: 
-       - If the SAME class appears in consecutive time slots on the SAME day, MERGE into ONE event with extended duration.
-       - Example: 18:00 'Software...' and 19:00 '...Thinking' on same day → ONE event 18:00~19:30.
-       - DO NOT create separate events for room numbers - room is part of location field.
-       
-    4. **SEPARATION RULES (CRITICAL - MUST FOLLOW)**:
-       - "아세안" is a COMPLETELY SEPARATE class from "말레·인니학입문".
-       - Room numbers (like 상허관219, 산학215) are NOT class names - they belong in "location" field.
-       
-    5. **TIME FORMAT**:
-       - Use +09:00 timezone for all times.
-       - Extract time from the OCR grid position.
+       - If text has Weekday + Time: Create an EVENT.
+       - Title: Class Name.
+       - **MERGING RULES**: If a class name is split across consecutive time slots (e.g. 18:00 'Software...' and 19:00 '...Thinking'), MERGE them into ONE event with extended duration (e.g. 18:00 ~ 20:00).
     """
 
-    prompt_text = f"""You are an AI Schedule Assistant. Extract class schedules from a university timetable.
+    prompt_text = f"""You are an AI Schedule Assistant. Extract events from the text below.
 
-[Reference Dates - This Week]
+[Reference Dates]
 {dates_prompt}
 
-[GRID ANALYSIS DATA]
-{structured_text if structured_text else "No grid data."}
-
-[RAW OCR TEXT (for reference)]
-{raw_text if raw_text else "No raw text."}
+[TEXT DATA]
+{structured_text if structured_text else "No text found."}
 
 [INSTRUCTIONS]
 {instructions}
@@ -304,9 +271,9 @@ def process_schedule_mode(ocr_result) -> AIChatParsed:
       "payload": {{
         "type": "EVENT",
         "category": "수업",
-        "title": "Class Name (corrected)",
-        "start_at": "ISO8601 with +09:00 timezone",
-        "end_at": "ISO8601 with +09:00 timezone"
+        "title": "String",
+        "start_at": "ISO8601",
+        "end_at": "ISO8601"
       }}
     }}
   ]
@@ -316,99 +283,7 @@ OUTPUT ONLY VALID JSON. DO NOT ADD EXPLANATIONS.
     # 4. Text 모델 사용 (70b-instruct 등)
     model = create_model_inference(WATSONX_MODEL_ID_TEXT)
     response = model.generate_text(prompt=prompt_text)
-    parsed = parse_llm_response(response)
-    
-    # 5. 후처리: 오타 교정 및 노이즈 필터링
-    typo_corrections = {
-        "상히관": "상허관",
-        "CMS진로람색": "CMS진로탐색",
-        "하눈세상바로보": "독립영화와함께하는세상바로보기",
-        "기초베드날에": "기초베트남어 I",
-        "기초베트날어": "기초베트남어 I",
-        "나름 바꾸는": "나를 바꾸는 글쓰기",
-        "College Engli": "College English I",
-        "College English Ish I": "College English I",
-        "경제학원론": "경제학원론1",
-    }
-    
-    # 강의실 패턴 (이것들이 title로 들어가면 필터링)
-    room_patterns = ['상허관', '상히관', '산학', 'D2', 'D3', 'I3', 'G2', 
-                     '진A', '진4', '자A', '자B', '종3', '좀3', '문3', '동영상']
-    
-    filtered_actions = []
-    for action in parsed.actions:
-        payload = action.payload
-        title = payload.get('title', '')
-        
-        # 강의실이 title로 잘못 들어간 경우 스킵
-        is_room_only = any(p in title for p in room_patterns) and len(title) < 12
-        if is_room_only:
-            continue
-        
-        # "말레·인니학입문 아세안" 분리 처리
-        if "아세안" in title and "말레" in title:
-            # 아세안 분리 - 현재 이벤트는 말레·인니학입문으로 변경
-            payload['title'] = "말레·인니학입문"
-            # 아세안은 금요일이므로, 이 액션이 금요일이면 아세안으로 변경
-            end_at = payload.get('end_at', '')
-            if '01-16' in end_at or '01-17' in end_at:  # 금요일 체크
-                payload['title'] = "아세안"
-        
-        # 오타 교정 (title)
-        for typo, correct in typo_corrections.items():
-            title = payload['title']
-            if typo in title:
-                payload['title'] = title.replace(typo, correct)
-        
-        # 강의실 정보 제거
-        if 'location' in payload:
-            del payload['location']
-        
-        filtered_actions.append(action)
-    
-    parsed.actions = filtered_actions
-    return parsed
-
-
-def convert_to_lecture_format(parsed: AIChatParsed) -> list:
-    """
-    Vision 결과를 Lecture API 형식으로 변환
-    - 병합하지 않고 각 수업을 개별 레코드로 반환
-    - 요일별로 시간이 다를 수 있으므로 분리 유지
-    """
-    lectures = []
-    
-    for action in parsed.actions:
-        payload = action.payload
-        title = payload.get('title', '')
-        start_at = payload.get('start_at', '')
-        end_at = payload.get('end_at', '')
-        
-        if not title or not start_at or not end_at:
-            continue
-        
-        # "Unknown Class" 필터링
-        if "Unknown" in title:
-            continue
-        
-        try:
-            start_dt = datetime.fromisoformat(start_at.replace("Z", "+00:00"))
-            end_dt = datetime.fromisoformat(end_at.replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        
-        start_time = start_dt.strftime("%H:%M")
-        end_time = end_dt.strftime("%H:%M")
-        weekday = start_dt.weekday()  # 0(월) ~ 6(일)
-        
-        lectures.append({
-            "title": title,
-            "start_time": start_time,
-            "end_time": end_time,
-            "week": weekday  # 단일 값 (0~6)
-        })
-    
-    return lectures
+    return parse_llm_response(response)
 
 def process_poster_mode(ocr_result) -> AIChatParsed:
     """ [모드 2] 포스터 처리 로직 (Text Dump + Text Model) """
@@ -419,7 +294,7 @@ def process_poster_mode(ocr_result) -> AIChatParsed:
     today = datetime.now()
     dates_prompt = f"Today: {today.strftime('%Y-%m-%d')}\nNOTE: Use dates found in text explicitly."
 
-    # 3. 포스터 전용 프롬프트 (핵심 일정만 추출 + Sub-task 생성)
+    # 3. 포스터 전용 프롬프트 (핵심 일정만 추출)
     instructions = """
     This is a POSTER for an event (Contest, Recruitment, Activity).
     
@@ -429,30 +304,16 @@ def process_poster_mode(ocr_result) -> AIChatParsed:
        - 활동 시작일 (Activity Start) - if clearly stated
        - 결과 발표일 (Result Announcement) - if clearly stated
        
-    2. **TITLE FORMAT (Korean)**:
+    2. **DO NOT CREATE** preparation tasks like "지원서 작성". Only extract ACTUAL dates from the poster.
+       
+    3. **TITLE FORMAT (Korean)**:
        - Include event name + date type (e.g., "서울청년정책네트워크 모집 마감", "K-water 봉사단 활동 시작")
        
-    3. **SCORING**:
-       - importance_score: 7-9 for deadlines, 5-6 for other dates
-       - estimated_minute: 60-180 depending on task complexity
+    4. **SCORING**:
+       - importance_score: 7 for deadlines, 5 for other dates
+       - estimated_minute: 30-60
        
-    4. **DATES**: Extract EXACT dates from text. Do not guess or use current year if year is specified.
-    
-    5. **SUB-TASK AUTO-GENERATION (ONLY FOR 공모전)**:
-       - IF category is '공모전':
-       - YOU MUST generate 3 to 5 'Sub-tasks' (Preparation steps) leading up to the deadline.
-       - Sub-task Payload:
-         * title: "[준비] {Original Event Title} - {Step Description}"
-         * end_at: D-1, D-2, D-3... days before the main deadline.
-         * importance_score: 6-8 (lower than main deadline)
-         * estimated_minute: 60-180 (reasonable prep time)
-         * category: "공모전"
-         * tip: "Short, practical advice for this step (Korean, Max 20 chars)"
-       - Example Sub-tasks for 공모전:
-         * "[준비] OO공모전 마감 - 공모요강 분석" (D-7)
-         * "[준비] OO공모전 마감 - 아이디어 구상" (D-5)
-         * "[준비] OO공모전 마감 - 초안 작성" (D-3)
-         * "[준비] OO공모전 마감 - 최종 검토 및 제출" (D-1)
+    5. **DATES**: Extract EXACT dates from text. Do not guess or use current year if year is specified.
     """
 
     prompt_text = f"""You are an AI Event Helper. Extract key schedule dates from the poster.
@@ -477,20 +338,9 @@ Output must be in KOREAN. Extract only REAL dates mentioned in the poster.
       "payload": {{
         "title": "이벤트명 + 마감/시작/발표",
         "end_at": "ISO8601",
-        "importance_score": 8,
-        "estimated_minute": 120,
-        "category": "공모전"|"대외활동"|"기타"
-      }}
-    }},
-    {{
-      "op": "CREATE",
-      "payload": {{
-        "title": "[준비] 이벤트명 - 준비단계",
-        "end_at": "ISO8601 (D-N before deadline)",
         "importance_score": 7,
-        "estimated_minute": 90,
-        "category": "공모전"|"대외활동",
-        "tip": "실천 팁 (20자 이내)"
+        "estimated_minute": 40,
+        "category": "공모전"|"대외활동"|"기타"
       }}
     }}
   ]
@@ -501,14 +351,13 @@ OUTPUT ONLY VALID JSON. NO EXPLANATIONS.
     model = create_model_inference(WATSONX_MODEL_ID_TEXT)
     response = model.generate_text(prompt=prompt_text)
     
-    # 5. 포스터 전용 후처리 (노이즈 제거 - [준비] 태스크는 유지)
+    # 5. 포스터 전용 후처리 (노이즈 강력 제거)
     parsed = parse_llm_response(response)
-    exclude_keywords = ["심사", "선발", "문의", "면접", "서류", "교육", "OT", "사전", "혜택"]
+    exclude_keywords = ["심사", "선발", "문의", "면접", "서류", "교육", "OT", "사전", "혜택", "지원서 작성"]
     if parsed.actions:
         filtered_actions = [
             a for a in parsed.actions 
-            if "[준비]" in a.payload.get('title', '') or  # 준비 태스크는 항상 유지
-               not any(k in a.payload.get('title', '') for k in exclude_keywords)
+            if not any(k in a.payload.get('title', '') for k in exclude_keywords)
         ]
         parsed.actions = filtered_actions
         
@@ -536,41 +385,29 @@ async def analyze_image_schedule(
         image_type = detect_image_type(ocr_result)
         
         # 3. 타입별 처리 로직 완전 분리
-        lectures_data = None
         if image_type == 'schedule':
             ai_parsed_result = process_schedule_mode(ocr_result)
-            # Lecture 형식으로 변환 (같은 수업 요일 병합)
-            lectures_data = convert_to_lecture_format(ai_parsed_result)
         else:
             ai_parsed_result = process_poster_mode(ocr_result)
             
         action_cnt = len(ai_parsed_result.actions)
-        lecture_cnt = len(lectures_data) if lectures_data else 0
         
-        # 개선된 assistant_message 생성 (sub-task 개수 표시)
+        # 개선된 assistant_message 생성
         if action_cnt > 0:
             if image_type == 'poster':
-                # sub-task 개수 계산
-                sub_task_count = sum(1 for a in ai_parsed_result.actions if "[준비]" in a.payload.get('title', ''))
-                main_task_count = action_cnt - sub_task_count
-                
-                if sub_task_count > 0:
-                    assistant_msg = f"[POSTER] 분석 완료: {main_task_count}건의 일정과 준비 과정 {sub_task_count}건을 함께 등록할까요?"
-                elif action_cnt == 1:
-                    titles = [a.payload.get('title', '') for a in ai_parsed_result.actions]
+                titles = [a.payload.get('title', '') for a in ai_parsed_result.actions]
+                if action_cnt == 1:
                     assistant_msg = f"[POSTER] 분석 완료: '{titles[0]}' 일정을 확인했습니다."
                 else:
                     assistant_msg = f"[POSTER] 분석 완료: {action_cnt}건의 주요 일정을 확인했습니다."
             else:
-                # 시간표: lectures 개수 기준으로 메시지 생성
-                assistant_msg = f"[SCHEDULE] 분석 완료: {lecture_cnt}건의 강의를 발견했습니다."
+                assistant_msg = f"[{image_type.upper()}] 분석 완료: {action_cnt}건의 일정을 발견했습니다."
         else:
             assistant_msg = "일정을 찾지 못했습니다."
 
         return APIResponse(status=200, message="Success", data=ChatResponseData(
             parsed_result=ai_parsed_result,
-            assistant_message=assistant_msg,
-            lectures=lectures_data
+            assistant_message=assistant_msg
         ))
 
     except Exception as e:

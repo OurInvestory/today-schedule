@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Home from './pages/Home';
+import FullCalendar from './pages/FullCalendar';
 import TaskDetail from './pages/TaskDetail';
 import ScheduleDetail from './pages/ScheduleDetail';
 import Archive from './pages/Archive';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
+import Timetable from './pages/Timetable';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { ToastProvider } from './components/common/Toast';
 import NetworkStatus from './components/common/NetworkStatus';
@@ -33,8 +35,6 @@ const requestNotificationPermission = async () => {
 };
 
 function App() {
-  const [isFullCalendarMode, setIsFullCalendarMode] = useState(false);
-
   // 앱 시작 시 알림 권한 요청 및 알림 서비스 초기화
   useEffect(() => {
     requestNotificationPermission().then((granted) => {
@@ -53,10 +53,6 @@ function App() {
     };
   }, []);
 
-  const handleViewModeToggle = () => {
-    setIsFullCalendarMode(!isFullCalendarMode);
-  };
-
   return (
     <ErrorBoundary>
       <ToastProvider>
@@ -69,13 +65,9 @@ function App() {
             path="/"
             element={
               <>
-                <Header 
-                  hasNotification={true} 
-                  isFullCalendarMode={isFullCalendarMode}
-                  onViewModeToggle={handleViewModeToggle}
-                />
+                <Header hasNotification={true} />
                 <div className="app__content">
-                  <Home isFullCalendarMode={isFullCalendarMode} />
+                  <Home />
                 </div>
               </>
             }
@@ -115,8 +107,10 @@ function App() {
           />
           
           {/* 독립 페이지 (헤더/네비게이션 없음) */}
+          <Route path="/calendar" element={<FullCalendar />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/timetable" element={<Timetable />} />
         </Routes>
           </div>
         </BrowserRouter>

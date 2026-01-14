@@ -18,7 +18,9 @@ from app.schemas.ai_chat import (
     ChatRequest, 
     APIResponse, 
     ChatResponseData, 
-    AIChatParsed
+    AIChatParsed,
+    Action,
+    MissingField
 )
 from app.db.database import get_db
 from app.models.schedule import Schedule
@@ -67,6 +69,42 @@ def get_schedules_for_period(db: Session, start_date: datetime, end_date: dateti
     ).order_by(Schedule.end_at.asc()).all()
     return schedules
 
+def search_schedules_by_keyword(db: Session, keyword: str, limit: int = 5) -> list:
+    """키워드가 포함된 최근 일정을 검색합니다."""
+    test_user_id = "7822a162-788d-4f36-9366-c956a68393e1"
+    now = datetime.now()
+    # 최근 30일 이내 + 앞으로 14일 이내 일정에서 검색
+    start_date = now - timedelta(days=30)
+    end_date = now + timedelta(days=14)
+    
+    schedules = db.query(Schedule).filter(
+        and_(
+            Schedule.user_id == test_user_id,
+            Schedule.title.ilike(f"%{keyword}%"),
+            Schedule.start_at >= start_date,
+            Schedule.start_at <= end_date
+        )
+    ).order_by(Schedule.start_at.asc()).limit(limit).all()
+    return schedules
+
+# 카테고리 영어→한국어 매핑
+CATEGORY_MAP = {
+    "class": "수업",
+    "assignment": "과제",
+    "exam": "시험",
+    "contest": "공모전",
+    "activity": "대외활동",
+    "team": "팀 프로젝트",
+    "personal": "개인",
+    "other": "기타",
+}
+
+def translate_category(category: str) -> str:
+    """영어 카테고리를 한국어로 변환합니다."""
+    if not category:
+        return "기타"
+    return CATEGORY_MAP.get(category.lower(), category)
+
 def format_schedules_for_display(schedules: list) -> str:
     """일정 목록을 사람이 읽기 좋은 형식으로 변환합니다."""
     if not schedules:
@@ -76,7 +114,7 @@ def format_schedules_for_display(schedules: list) -> str:
     for s in schedules:
         date_str = s.end_at.strftime("%m/%d(%a)") if s.end_at else ""
         time_str = s.end_at.strftime("%H:%M") if s.end_at else ""
-        category = s.category or "기타"
+        category = translate_category(s.category)
         result.append(f"• [{category}] {s.title} - {date_str} {time_str}")
     
     return "\n".join(result)
@@ -235,14 +273,25 @@ JSON: {{
   ]
 }}
 
+# Example 2-1: TASK with natural deadline expression
+User: "오늘 저녁까지 보고서 작성 할 일 추가"
+Context: Today is 2026-01-14.
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "TASK",
+  "actions": [
+    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "보고서 작성", "date": "2026-01-14", "end_at": "2026-01-14T18:00:00+09:00", "importance_score": 7, "estimated_minute": 90, "category": "과제", "priority": "high"}} }}
+  ]
+}}
+
 # Example 3: Notification without specifying schedule -> CLARIFY
 User: "회의 10분 전에 알림 예약해줘"
 JSON: {{
   "intent": "CLARIFY",
   "type": "TASK",
   "actions": [],
-  "preserved_info": {{ "minutes_before": 10, "notification_msg": "회의 10분 전입니다!" }},
-  "missingFields": [{{ "field": "schedule_title", "question": "어떤 회의에 대한 알림을 설정할까요? 일정 목록에서 선택하거나 이름을 알려주세요." }}]
+  "preserved_info": {{ "minutes_before": 10, "notification_msg": "회의 10분 전입니다!", "search_keyword": "회의" }},
+  "missingFields": [{{ "field": "schedule_title", "question": "어떤 회의에 대한 알림을 설정할까요?", "choices": [] }}]
 }}
 
 # Example 4: Notification with specific schedule
@@ -311,14 +360,37 @@ JSON Output:
         assistant_msg = "일정을 확인했습니다."
         
         if ai_parsed_result.intent == "CLARIFY":
+            # 알림 설정 관련 CLARIFY인 경우, 키워드로 일정 검색하여 choices 제공
+            preserved = ai_parsed_result.preserved_info or {}
+            search_keyword = preserved.get('search_keyword') or preserved.get('notification_msg', '').split()[0] if preserved.get('notification_msg') else None
+            
+            if search_keyword and ai_parsed_result.missingFields:
+                # 키워드로 관련 일정 검색
+                related_schedules = search_schedules_by_keyword(db, search_keyword)
+                if related_schedules:
+                    choices = [s.title for s in related_schedules]
+                    # missingFields의 첫 번째 항목에 choices 추가
+                    field_info = ai_parsed_result.missingFields[0]
+                    if isinstance(field_info, dict):
+                        field_info['choices'] = choices
+                    else:
+                        field_info.choices = choices
+            
             if ai_parsed_result.missingFields:
                 # missingFields 구조가 바뀌었을 수 있으므로 안전하게 처리
                 field_info = ai_parsed_result.missingFields[0]
                 # Pydantic 모델 or Dict 처리
                 if isinstance(field_info, dict):
-                    assistant_msg = field_info.get('question', "정보가 부족합니다.")
+                    question = field_info.get('question', "정보가 부족합니다.")
+                    choices = field_info.get('choices', [])
                 else: 
-                    assistant_msg = getattr(field_info, 'question', "정보가 부족합니다.")
+                    question = getattr(field_info, 'question', "정보가 부족합니다.")
+                    choices = getattr(field_info, 'choices', [])
+                
+                assistant_msg = question
+                if choices:
+                    choice_text = "\n".join([f"• {c}" for c in choices])
+                    assistant_msg = f"{question}\n\n다음 일정을 찾았어요:\n{choice_text}"
             else:
                 assistant_msg = "정보가 부족합니다. 조금 더 자세히 말씀해 주세요."
                 
@@ -330,7 +402,54 @@ JSON Output:
                 target_type = getattr(actions[0], 'target', 'SCHEDULE')
 
                 if target_type == "NOTIFICATION":
-                     assistant_msg = "알림 설정을 변경할까요?"
+                    # 알림 설정 시 DB에서 해당 일정 확인
+                    payload = actions[0].payload
+                    schedule_title = payload.get('schedule_title', '')
+                    
+                    if schedule_title:
+                        # DB에서 해당 제목의 일정 검색
+                        matching_schedules = search_schedules_by_keyword(db, schedule_title, limit=1)
+                        exact_match = [s for s in matching_schedules if s.title == schedule_title]
+                        
+                        if exact_match:
+                            # 일정이 존재하면 알림 설정 진행
+                            schedule = exact_match[0]
+                            # schedule_id를 payload에 추가
+                            payload['schedule_id'] = str(schedule.id)
+                            assistant_msg = f"'{schedule_title}' 일정에 알림을 설정할까요?"
+                        elif matching_schedules:
+                            # 유사한 일정이 있는 경우
+                            similar_title = matching_schedules[0].title
+                            assistant_msg = f"'{schedule_title}' 일정을 찾지 못했어요. 혹시 '{similar_title}'을 말씀하신 건가요?"
+                        else:
+                            # 일정이 없으면 새 일정 생성 유도
+                            # actions를 일정 생성으로 변경
+                            ai_parsed_result.actions = [
+                                Action(
+                                    op="CREATE",
+                                    target="SCHEDULE",
+                                    payload={
+                                        "title": schedule_title,
+                                        "importance_score": 5,
+                                        "category": "기타"
+                                    }
+                                )
+                            ]
+                            ai_parsed_result.missingFields = [
+                                MissingField(
+                                    field="schedule_time",
+                                    question=f"'{schedule_title}' 일정이 없어요. 새로 추가하려면 시간을 알려주세요! (예: 내일 3시)",
+                                    choices=[]
+                                )
+                            ]
+                            ai_parsed_result.intent = "CLARIFY"
+                            ai_parsed_result.preserved_info = {
+                                **payload,
+                                'pending_title': schedule_title
+                            }
+                            assistant_msg = f"'{schedule_title}' 일정이 등록되어 있지 않아요. 새로 추가하려면 시간을 알려주세요! (예: 내일 3시)"
+                    else:
+                        assistant_msg = "알림 설정을 변경할까요?"
                 elif op_type == "DELETE":
                     assistant_msg = "해당 일정을 취소할까요?"
                 elif op_type == "UPDATE":

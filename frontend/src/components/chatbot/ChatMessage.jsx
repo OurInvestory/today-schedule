@@ -3,7 +3,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { CATEGORY_LABELS } from '../../utils/constants';
 import './ChatMessage.css';
 
-const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle }) => {
+const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, onChoiceSelect }) => {
   const isUser = message.role === 'user';
   const isError = message.isError;
   const hasActions = message.actions && message.actions.length > 0;
@@ -51,6 +51,14 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle })
     // target이 있으면 사용, 없으면 payload.type으로 판단
     const actionTarget = target || (payload.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
     
+    // LECTURES (시간표 강의 일괄 추가)
+    if (actionTarget === 'LECTURES') {
+      const lectures = Array.isArray(payload) ? payload : [payload];
+      const titles = lectures.slice(0, 3).map(l => l.title).join(', ');
+      const moreText = lectures.length > 3 ? ` 외 ${lectures.length - 3}개` : '';
+      return `${titles}${moreText}`;
+    }
+    
     if (actionTarget === 'SCHEDULE' || payload.type === 'EVENT' || payload.type === 'TASK') {
       if (payload.title) parts.push(`제목: ${payload.title}`);
       // start_at/end_at 또는 start_time/end_time 처리
@@ -79,6 +87,10 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle })
     const target = action.target || (action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
     const payloadType = action.payload?.type;
     
+    if (target === 'LECTURES') {
+      const count = Array.isArray(action.payload) ? action.payload.length : 1;
+      return { icon: '📚', label: `강의 ${count}개` };
+    }
     if (target === 'SUB_TASK' || payloadType === 'TASK') {
       return { icon: '✓', label: '할 일' };
     }
@@ -244,7 +256,7 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle })
                   <button 
                     type="button" 
                     className="chat-message__action-btn chat-message__action-btn--cancel"
-                    onClick={handleCancel}
+                    onClick={handleCancelAll}
                     disabled={message.actionLoading}
                   >
                     ✕ 취소
@@ -335,11 +347,30 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle })
             <div className="chat-message__missing-fields">
               <div className="chat-message__missing-fields-title">추가 정보가 필요해요:</div>
               <ul className="chat-message__missing-fields-list">
-                {message.missingFields.map((field, index) => (
-                  <li key={index}>
-                    {typeof field === 'string' ? field : (field.question || field.field || '정보 필요')}
-                  </li>
-                ))}
+                {message.missingFields.map((field, index) => {
+                  const fieldData = typeof field === 'string' ? { field, question: field } : field;
+                  const choices = fieldData.choices || [];
+                  
+                  return (
+                    <li key={index}>
+                      {fieldData.question || fieldData.field || '정보 필요'}
+                      {/* 선택지가 있으면 버튼으로 표시 */}
+                      {choices.length > 0 && (
+                        <div className="chat-message__choices">
+                          {choices.map((choice, choiceIdx) => (
+                            <button
+                              key={choiceIdx}
+                              className="chat-message__choice-btn"
+                              onClick={() => onChoiceSelect && onChoiceSelect(choice)}
+                            >
+                              {choice}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

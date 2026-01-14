@@ -230,7 +230,7 @@ export const saveLectures = async (lectures) => {
 /**
  * 시간표/포스터 이미지 분석 및 일정 추출
  */
-export const analyzeTimetableImage = async (imageFile, autoSave = false) => {
+export const analyzeTimetableImage = async (imageFile) => {
   try {
     const formData = new FormData();
     formData.append('file', imageFile);

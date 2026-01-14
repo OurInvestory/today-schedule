@@ -1,0 +1,604 @@
+.timetable {
+  min-height: 100vh;
+  background-color: var(--color-bg-default);
+}
+
+.timetable--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 헤더 */
+.timetable__header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-bg-default);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.timetable__back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__back-btn:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-primary);
+}
+
+.timetable__title-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.timetable__title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.timetable__today-btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--color-gray-300);
+  background: white;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__today-btn:hover {
+  background-color: var(--color-gray-50);
+  color: var(--color-text-primary);
+}
+
+.timetable__add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--color-primary-500);
+  border-radius: var(--radius-full);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.timetable__add-btn:hover {
+  background: var(--color-primary-600);
+  transform: scale(1.05);
+}
+
+/* 네비게이션 바 */
+.timetable__nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: var(--color-bg-default);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.timetable__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.timetable__nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__nav-btn:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-text-primary);
+}
+
+.timetable__nav-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  min-width: 100px;
+  text-align: center;
+}
+
+/* 에러 메시지 */
+.timetable__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--color-danger-50);
+  border: 1px solid var(--color-danger-200);
+  border-radius: var(--radius-md);
+  color: var(--color-danger-600);
+  font-size: var(--font-size-sm);
+}
+
+.timetable__error button {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-danger-300);
+  background: white;
+  border-radius: var(--radius-sm);
+  color: var(--color-danger-600);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__error button:hover {
+  background-color: var(--color-danger-100);
+}
+
+/* 그리드 컨테이너 */
+.timetable__grid-container {
+  padding: var(--spacing-md);
+  overflow-x: auto;
+}
+
+.timetable__grid {
+  min-width: 100%;
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: white;
+}
+
+/* 행 */
+.timetable__row {
+  display: flex;
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.timetable__row:last-child {
+  border-bottom: none;
+}
+
+.timetable__row--header {
+  background-color: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+/* 셀 */
+.timetable__cell {
+  flex: 1;
+  min-width: 80px;
+  min-height: 60px;
+  padding: var(--spacing-xs);
+  border-right: 1px solid var(--color-gray-100);
+  position: relative;
+}
+
+.timetable__cell:last-child {
+  border-right: none;
+}
+
+.timetable__cell--time {
+  flex: 0 0 60px;
+  min-width: 60px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  background-color: var(--color-gray-50);
+  border-right: 1px solid var(--color-gray-200);
+}
+
+.timetable__cell--header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  min-height: auto;
+}
+
+.timetable__cell--today {
+  background-color: var(--color-primary-50);
+}
+
+.timetable__cell--today-col {
+  background-color: rgba(var(--color-primary-rgb, 59, 130, 246), 0.03);
+}
+
+.timetable__day-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.timetable__cell--today .timetable__day-label {
+  color: var(--color-primary-500);
+}
+
+.timetable__day-date {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.timetable__cell--today .timetable__day-date {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-primary-500);
+  color: white;
+  border-radius: var(--radius-full);
+}
+
+/* 강의 블록 */
+.timetable__lecture {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  overflow: hidden;
+  z-index: 1;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timetable__lecture:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+}
+
+.timetable__lecture-title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.timetable__lecture-time {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* 모달 콘텐츠 */
+.timetable__modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.timetable__form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+.timetable__form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.timetable__form-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.timetable__day-selector {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.timetable__day-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-gray-300);
+  background: white;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__day-btn:hover {
+  background-color: var(--color-gray-50);
+  border-color: var(--color-gray-400);
+}
+
+.timetable__day-btn--selected {
+  background-color: var(--color-primary-500);
+  border-color: var(--color-primary-500);
+  color: white;
+}
+
+.timetable__day-btn--selected:hover {
+  background-color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+}
+
+.timetable__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-gray-100);
+}
+
+.timetable__modal-actions--edit {
+  justify-content: space-between;
+}
+
+.timetable__modal-actions-right {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* 반응형 */
+@media (max-width: 640px) {
+  .timetable__header {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .timetable__title {
+    font-size: var(--font-size-lg);
+  }
+
+  .timetable__cell {
+    min-width: 60px;
+    min-height: 50px;
+  }
+
+  .timetable__cell--time {
+    flex: 0 0 45px;
+    min-width: 45px;
+  }
+
+  .timetable__form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .timetable__nav-bar {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}
+
+/* 빈 시간표 안내 */
+.timetable__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-3xl) var(--spacing-lg);
+  text-align: center;
+}
+
+.timetable__empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-md);
+}
+
+.timetable__empty-text {
+  font-size: var(--font-size-md);
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--spacing-lg) 0;
+}
+
+.timetable__empty-btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: none;
+  background: var(--color-primary-500);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__empty-btn:hover {
+  background: var(--color-primary-600);
+}
+
+/* 시간 슬롯 */
+.timetable__time-slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.timetable__time-slots-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timetable__time-slots-count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.timetable__time-slot {
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  background: var(--color-gray-50);
+}
+
+.timetable__time-slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+}
+
+.timetable__time-slot-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--color-primary-500);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.timetable__time-slot-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__time-slot-remove:hover {
+  background: var(--color-danger-100);
+  color: var(--color-danger-500);
+}
+
+.timetable__time-slot-content {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.timetable__time-slot-day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+}
+
+.timetable__time-slot-times {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
+.timetable__time-slot-time {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+  flex: 1;
+}
+
+.timetable__time-slot-separator {
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-tertiary);
+}
+
+.timetable__form-label-sm {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+}
+
+.timetable__select {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  background: white;
+  cursor: pointer;
+}
+
+.timetable__select:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.timetable__time-input {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  background: white;
+}
+
+.timetable__time-input:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* 시간 추가 버튼 */
+.timetable__add-time-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  border: 2px dashed var(--color-gray-300);
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.timetable__add-time-btn:hover {
+  border-color: var(--color-primary-400);
+  color: var(--color-primary-500);
+  background: var(--color-primary-50);
+}
