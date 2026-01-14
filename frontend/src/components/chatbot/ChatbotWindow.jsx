@@ -34,6 +34,7 @@ const ChatbotWindow = ({
   const [scrollLeft, setScrollLeft] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isFileDragging, setIsFileDragging] = useState(false);
+  const [isTimetableUpload, setIsTimetableUpload] = useState(false); // "시간표 사진" 버튼으로 파일 선택 여부
   const [loadingMessage, setLoadingMessage] = useState('');
   
   // 로딩 상태 변경 시 랜덤 메시지 설정 (2초마다 변경)
@@ -96,7 +97,8 @@ const ChatbotWindow = ({
     }
   };
 
-  const handleFileUpload = () => {
+  const handleFileUpload = (isTimetable = false) => {
+    setIsTimetableUpload(isTimetable);
     fileInputRef.current?.click();
   };
 
@@ -164,7 +166,10 @@ const ChatbotWindow = ({
     if (selectedFiles.length > 0) {
       // 파일 객체만 추출
       const fileObjects = selectedFiles.map(f => f.file);
-      onSendMessage(text, null, fileObjects);
+      
+      // "시간표 사진" 버튼으로 파일 선택했으면 자동 메시지 전송
+      const messageText = text || (isTimetableUpload ? '시간표 사진에 있는 강의 추가해줘' : '');
+      onSendMessage(messageText, null, fileObjects);
       
       // 미리보기 URL 정리
       selectedFiles.forEach(f => {
@@ -174,6 +179,7 @@ const ChatbotWindow = ({
       });
       
       setSelectedFiles([]);
+      setIsTimetableUpload(false); // 플래그 초기화
     } else {
       onSendMessage(text);
     }
@@ -188,9 +194,9 @@ const ChatbotWindow = ({
   };
 
   const handleSuggestedQuestion = (question) => {
-    // "시간표 사진에 있는 강의 추가해줘" 클릭 시 파일 선택 열기
+    // "시간표 사진에 있는 강의 추가해줘" 클릭 시 파일 선택 열기 (isTimetable=true)
     if (question.includes('시간표 사진')) {
-      handleFileUpload();
+      handleFileUpload(true);
       return;
     }
     onSendMessage(question);

@@ -174,16 +174,13 @@ export const useChatbot = () => {
     }) : null;
 
     // 사용자 메시지 추가
-    // 시간표 이미지 분석인 경우 적절한 메시지 사용
-    let userContent = text;
-    if (!text && imageFiles.length > 0) {
-      userContent = '시간표 사진에 있는 강의 추가해줘';
-    }
+    // 텍스트가 없고 이미지만 있으면 적절한 메시지 사용
+    let userContent = text || '이미지를 분석해주세요';
     
     const userMessage = {
       id: Date.now(),
       role: 'user',
-      content: userContent || '이미지를 분석해주세요',
+      content: userContent,
       timestamp: new Date().toISOString(),
       files: fileInfo,
     };
