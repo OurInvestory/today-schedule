@@ -19,10 +19,13 @@ const DAY_LABELS = {
   6: '토',
 };
 
+// 기본 시간 슬롯
+const DEFAULT_TIME_SLOT = { day: 1, start_time: '09:00', end_time: '10:30' };
+const MAX_TIME_SLOTS = 7;
+
 const Timetable = () => {
   const navigate = useNavigate();
   const {
-    // lectures는 getLecturesForDay를 통해 간접 사용
     error,
     year,
     weekNumber,
@@ -42,7 +45,17 @@ const Timetable = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState(null);
+  
+  // 강의 추가용 폼 데이터 (시간 슬롯 배열 지원)
   const [formData, setFormData] = useState({
+    title: '',
+    start_day: '',
+    end_day: '',
+    timeSlots: [{ ...DEFAULT_TIME_SLOT }],
+  });
+  
+  // 강의 편집용 폼 데이터 (단일 시간)
+  const [editFormData, setEditFormData] = useState({
     title: '',
     start_time: '09:00',
     end_time: '10:30',
@@ -50,6 +63,7 @@ const Timetable = () => {
     end_day: '',
     week: [],
   });
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 시간 배열 생성 (minHour부터 maxHour까지)
@@ -58,7 +72,7 @@ const Timetable = () => {
     hours.push(h);
   }
 
-  // 폼 초기화
+  // 폼 초기화 (추가용)
   const resetForm = () => {
     const today = new Date();
     const threeMonthsLater = new Date();
@@ -66,12 +80,44 @@ const Timetable = () => {
     
     setFormData({
       title: '',
-      start_time: '09:00',
-      end_time: '10:30',
       start_day: formatDate(today, 'YYYY-MM-DD'),
       end_day: formatDate(threeMonthsLater, 'YYYY-MM-DD'),
-      week: [],
+      timeSlots: [{ ...DEFAULT_TIME_SLOT }],
     });
+  };
+
+  // 시간 슬롯 추가
+  const addTimeSlot = () => {
+    if (formData.timeSlots.length >= MAX_TIME_SLOTS) {
+      alert(`시간 슬롯은 최대 ${MAX_TIME_SLOTS}개까지 추가할 수 있습니다.`);
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      timeSlots: [...prev.timeSlots, { ...DEFAULT_TIME_SLOT }],
+    }));
+  };
+
+  // 시간 슬롯 삭제
+  const removeTimeSlot = (index) => {
+    if (formData.timeSlots.length <= 1) {
+      alert('최소 1개의 시간 슬롯이 필요합니다.');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      timeSlots: prev.timeSlots.filter((_, i) => i !== index),
+    }));
+  };
+
+  // 시간 슬롯 업데이트
+  const updateTimeSlot = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      timeSlots: prev.timeSlots.map((slot, i) => 
+        i === index ? { ...slot, [field]: value } : slot
+      ),
+    }));
   };
 
   // 강의 추가 모달 열기
@@ -82,8 +128,12 @@ const Timetable = () => {
 
   // 강의 편집 모달 열기
   const handleOpenEditModal = (lecture) => {
+    if (!lecture || !lecture.id) {
+      console.error('Invalid lecture data:', lecture);
+      return;
+    }
     setSelectedLecture(lecture);
-    setFormData({
+    setEditFormData({
       title: lecture.title || '',
       start_time: lecture.start_time?.slice(0, 5) || '09:00',
       end_time: lecture.end_time?.slice(0, 5) || '10:30',
@@ -94,9 +144,9 @@ const Timetable = () => {
     setIsEditModalOpen(true);
   };
 
-  // 요일 토글
+  // 요일 토글 (편집용)
   const handleDayToggle = (day) => {
-    setFormData(prev => ({
+    setEditFormData(prev => ({
       ...prev,
       week: prev.week.includes(day)
         ? prev.week.filter(d => d !== day)
@@ -104,27 +154,59 @@ const Timetable = () => {
     }));
   };
 
-  // 강의 추가 처리
+  // 시간 유효성 검사
+  const validateTimeSlot = (slot) => {
+    const startParts = slot.start_time.split(':');
+    const endParts = slot.end_time.split(':');
+    const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+    const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+    return endMinutes > startMinutes;
+  };
+
+  // 강의 추가 처리 (여러 시간 슬롯)
   const handleAddLecture = async () => {
+    // 유효성 검사
     if (!formData.title.trim()) {
       alert('강의명을 입력해주세요.');
       return;
     }
-    if (formData.week.length === 0) {
-      alert('요일을 선택해주세요.');
+    
+    if (!formData.start_day || !formData.end_day) {
+      alert('시작 날짜와 종료 날짜를 입력해주세요.');
       return;
+    }
+    
+    if (formData.timeSlots.length === 0) {
+      alert('최소 1개의 시간을 추가해주세요.');
+      return;
+    }
+    
+    // 각 시간 슬롯 유효성 검사
+    for (let i = 0; i < formData.timeSlots.length; i++) {
+      const slot = formData.timeSlots[i];
+      if (!validateTimeSlot(slot)) {
+        alert(`${i + 1}번째 시간의 종료 시간이 시작 시간보다 빠릅니다.`);
+        return;
+      }
     }
     
     setIsSubmitting(true);
     try {
-      await addLecture({
-        ...formData,
-        start_time: formData.start_time + ':00',
-        end_time: formData.end_time + ':00',
-      });
+      // 각 시간 슬롯별로 강의 생성
+      for (const slot of formData.timeSlots) {
+        await addLecture({
+          title: formData.title,
+          start_time: slot.start_time + ':00',
+          end_time: slot.end_time + ':00',
+          start_day: formData.start_day,
+          end_day: formData.end_day,
+          week: [slot.day],
+        });
+      }
       setIsAddModalOpen(false);
       resetForm();
     } catch (err) {
+      console.error('Add lecture error:', err);
       alert(err.message || '강의 추가에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
@@ -133,21 +215,38 @@ const Timetable = () => {
 
   // 강의 수정 처리
   const handleEditLecture = async () => {
-    if (!formData.title.trim()) {
+    if (!formData.title?.trim() && !editFormData.title?.trim()) {
       alert('강의명을 입력해주세요.');
+      return;
+    }
+    
+    if (!selectedLecture?.id) {
+      alert('선택된 강의가 없습니다.');
+      return;
+    }
+    
+    // 시간 유효성 검사
+    const startParts = editFormData.start_time.split(':');
+    const endParts = editFormData.end_time.split(':');
+    const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+    const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+    
+    if (endMinutes <= startMinutes) {
+      alert('종료 시간이 시작 시간보다 빠릅니다.');
       return;
     }
     
     setIsSubmitting(true);
     try {
       await editLecture(selectedLecture.id, {
-        ...formData,
-        start_time: formData.start_time + ':00',
-        end_time: formData.end_time + ':00',
+        ...editFormData,
+        start_time: editFormData.start_time + ':00',
+        end_time: editFormData.end_time + ':00',
       });
       setIsEditModalOpen(false);
       setSelectedLecture(null);
     } catch (err) {
+      console.error('Edit lecture error:', err);
       alert(err.message || '강의 수정에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
@@ -156,6 +255,11 @@ const Timetable = () => {
 
   // 강의 삭제 처리
   const handleDeleteLecture = async () => {
+    if (!selectedLecture?.id) {
+      alert('선택된 강의가 없습니다.');
+      return;
+    }
+    
     if (!window.confirm('이 강의를 삭제하시겠습니까?')) return;
     
     setIsSubmitting(true);
@@ -164,6 +268,7 @@ const Timetable = () => {
       setIsEditModalOpen(false);
       setSelectedLecture(null);
     } catch (err) {
+      console.error('Delete lecture error:', err);
       alert(err.message || '강의 삭제에 실패했습니다.');
     } finally {
       setIsSubmitting(false);
@@ -173,10 +278,14 @@ const Timetable = () => {
   // 특정 시간대의 강의 찾기
   const getLectureAtTime = (dayOfWeek, hour) => {
     const dayLectures = getLecturesForDay(dayOfWeek);
+    if (!Array.isArray(dayLectures)) return [];
+    
     return dayLectures.filter(lecture => {
-      const startHour = parseInt(lecture.start_time?.split(':')[0], 10);
-      const endHour = parseInt(lecture.end_time?.split(':')[0], 10);
-      const endMinute = parseInt(lecture.end_time?.split(':')[1], 10);
+      if (!lecture?.start_time || !lecture?.end_time) return false;
+      
+      const startHour = parseInt(lecture.start_time.split(':')[0], 10);
+      const endHour = parseInt(lecture.end_time.split(':')[0], 10);
+      const endMinute = parseInt(lecture.end_time.split(':')[1], 10);
       const effectiveEndHour = endMinute > 0 ? endHour : endHour - 1;
       return hour >= startHour && hour <= effectiveEndHour;
     });
@@ -184,69 +293,90 @@ const Timetable = () => {
 
   // 강의 셀 높이 계산 (시간 단위)
   const getLectureDuration = (lecture) => {
-    const startHour = parseInt(lecture.start_time?.split(':')[0], 10);
-    const startMinute = parseInt(lecture.start_time?.split(':')[1], 10);
-    const endHour = parseInt(lecture.end_time?.split(':')[0], 10);
-    const endMinute = parseInt(lecture.end_time?.split(':')[1], 10);
+    if (!lecture?.start_time || !lecture?.end_time) return 1;
+    
+    const startHour = parseInt(lecture.start_time.split(':')[0], 10);
+    const startMinute = parseInt(lecture.start_time.split(':')[1], 10);
+    const endHour = parseInt(lecture.end_time.split(':')[0], 10);
+    const endMinute = parseInt(lecture.end_time.split(':')[1], 10);
     
     return (endHour * 60 + endMinute - startHour * 60 - startMinute) / 60;
   };
 
   // 강의가 해당 시간의 시작인지 확인
   const isLectureStart = (lecture, hour) => {
-    const startHour = parseInt(lecture.start_time?.split(':')[0], 10);
+    if (!lecture?.start_time) return false;
+    const startHour = parseInt(lecture.start_time.split(':')[0], 10);
     return startHour === hour;
   };
 
   // 뒤로가기
   const handleBack = () => {
-    navigate('/');
+    navigate(-1);
   };
-
-  // 에러가 있어도 빈 시간표를 표시 (로딩 화면 없이)
-  // loading 중에도 UI는 보이도록 하고, 데이터만 로딩 표시
 
   return (
     <div className="timetable">
-      {/* 헤더 */}
-      <div className="timetable__header">
-        <button className="timetable__back-btn" onClick={handleBack}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
+      {/* 헤더 - FullCalendar 스타일 */}
+      <header className="timetable__header">
+        <button 
+          className="timetable__back-btn"
+          onClick={handleBack}
+          aria-label="뒤로 가기"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
         
-        <div className="timetable__title-section">
-          <div className="timetable__nav">
-            <button className="timetable__nav-btn" onClick={goToPreviousWeek}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <h1 className="timetable__title">{year}년 {weekNumber}주</h1>
-            <button className="timetable__nav-btn" onClick={goToNextWeek}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          </div>
-          <button className="timetable__today-btn" onClick={goToToday}>
-            오늘
-          </button>
-        </div>
-
-        <button className="timetable__add-btn" onClick={handleOpenAddModal}>
+        <h1 className="timetable__title">이번 주 시간표</h1>
+        
+        <button 
+          className="timetable__add-btn"
+          onClick={handleOpenAddModal}
+          aria-label="강의 추가"
+        >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
+        </button>
+      </header>
+      
+      {/* 네비게이션 바 */}
+      <div className="timetable__nav-bar">
+        <div className="timetable__nav">
+          <button className="timetable__nav-btn" onClick={goToPreviousWeek}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <span className="timetable__nav-title">{year}년 {weekNumber}주</span>
+          <button className="timetable__nav-btn" onClick={goToNextWeek}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+        <button className="timetable__today-btn" onClick={goToToday}>
+          오늘
         </button>
       </div>
 
       {/* 에러 메시지 */}
       {error && (
         <div className="timetable__error">
-          {error}
+          <span>⚠️ {error}</span>
+          <button onClick={() => window.location.reload()}>새로고침</button>
         </div>
       )}
 
@@ -258,14 +388,14 @@ const Timetable = () => {
             <div className="timetable__cell timetable__cell--time"></div>
             {displayDays.map(day => {
               const date = getDateForDay(day);
-              const isToday = formatDate(date, 'YYYY-MM-DD') === formatDate(new Date(), 'YYYY-MM-DD');
+              const isToday = date && formatDate(date, 'YYYY-MM-DD') === formatDate(new Date(), 'YYYY-MM-DD');
               return (
                 <div 
                   key={day} 
                   className={`timetable__cell timetable__cell--header ${isToday ? 'timetable__cell--today' : ''}`}
                 >
                   <span className="timetable__day-label">{DAY_LABELS[day]}</span>
-                  <span className="timetable__day-date">{date.getDate()}</span>
+                  <span className="timetable__day-date">{date?.getDate() || ''}</span>
                 </div>
               );
             })}
@@ -280,7 +410,7 @@ const Timetable = () => {
               {displayDays.map(day => {
                 const lecturesAtTime = getLectureAtTime(day, hour);
                 const date = getDateForDay(day);
-                const isToday = formatDate(date, 'YYYY-MM-DD') === formatDate(new Date(), 'YYYY-MM-DD');
+                const isToday = date && formatDate(date, 'YYYY-MM-DD') === formatDate(new Date(), 'YYYY-MM-DD');
                 
                 return (
                   <div 
@@ -291,7 +421,7 @@ const Timetable = () => {
                       if (!isLectureStart(lecture, hour)) return null;
                       
                       const duration = getLectureDuration(lecture);
-                      const bgColor = getLectureColor(lecture.title);
+                      const bgColor = getLectureColor(lecture.title || '');
                       const textColor = getLectureTextColor(bgColor);
                       
                       return (
@@ -319,6 +449,17 @@ const Timetable = () => {
           ))}
         </div>
       </div>
+      
+      {/* 빈 시간표 안내 */}
+      {hours.length > 0 && displayDays.every(day => getLecturesForDay(day).length === 0) && (
+        <div className="timetable__empty">
+          <div className="timetable__empty-icon">📚</div>
+          <p className="timetable__empty-text">등록된 강의가 없습니다</p>
+          <button className="timetable__empty-btn" onClick={handleOpenAddModal}>
+            강의 추가하기
+          </button>
+        </div>
+      )}
 
       {/* 강의 추가 모달 */}
       <Modal
@@ -336,21 +477,6 @@ const Timetable = () => {
           
           <div className="timetable__form-row">
             <Input
-              label="시작 시간"
-              type="time"
-              value={formData.start_time}
-              onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-            />
-            <Input
-              label="종료 시간"
-              type="time"
-              value={formData.end_time}
-              onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-            />
-          </div>
-          
-          <div className="timetable__form-row">
-            <Input
               label="시작 날짜"
               type="date"
               value={formData.start_day}
@@ -364,27 +490,91 @@ const Timetable = () => {
             />
           </div>
 
-          <div className="timetable__form-group">
-            <label className="timetable__form-label">요일 선택</label>
-            <div className="timetable__day-selector">
-              {[1, 2, 3, 4, 5, 6, 0].map(day => (
-                <button
-                  key={day}
-                  type="button"
-                  className={`timetable__day-btn ${formData.week.includes(day) ? 'timetable__day-btn--selected' : ''}`}
-                  onClick={() => handleDayToggle(day)}
-                >
-                  {DAY_LABELS[day]}
-                </button>
-              ))}
+          {/* 시간 슬롯 목록 */}
+          <div className="timetable__time-slots">
+            <div className="timetable__time-slots-header">
+              <label className="timetable__form-label">시간 설정</label>
+              <span className="timetable__time-slots-count">
+                {formData.timeSlots.length}/{MAX_TIME_SLOTS}
+              </span>
             </div>
+            
+            {formData.timeSlots.map((slot, index) => (
+              <div key={index} className="timetable__time-slot">
+                <div className="timetable__time-slot-header">
+                  <span className="timetable__time-slot-number">{index + 1}</span>
+                  {formData.timeSlots.length > 1 && (
+                    <button
+                      type="button"
+                      className="timetable__time-slot-remove"
+                      onClick={() => removeTimeSlot(index)}
+                      aria-label="시간 삭제"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                
+                <div className="timetable__time-slot-content">
+                  <div className="timetable__time-slot-day">
+                    <label className="timetable__form-label-sm">요일</label>
+                    <select
+                      value={slot.day}
+                      onChange={(e) => updateTimeSlot(index, 'day', parseInt(e.target.value))}
+                      className="timetable__select"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 0].map(day => (
+                        <option key={day} value={day}>{DAY_LABELS[day]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="timetable__time-slot-times">
+                    <div className="timetable__time-slot-time">
+                      <label className="timetable__form-label-sm">시작</label>
+                      <input
+                        type="time"
+                        value={slot.start_time}
+                        onChange={(e) => updateTimeSlot(index, 'start_time', e.target.value)}
+                        className="timetable__time-input"
+                      />
+                    </div>
+                    <span className="timetable__time-slot-separator">~</span>
+                    <div className="timetable__time-slot-time">
+                      <label className="timetable__form-label-sm">종료</label>
+                      <input
+                        type="time"
+                        value={slot.end_time}
+                        onChange={(e) => updateTimeSlot(index, 'end_time', e.target.value)}
+                        className="timetable__time-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* 시간 추가 버튼 */}
+            {formData.timeSlots.length < MAX_TIME_SLOTS && (
+              <button
+                type="button"
+                className="timetable__add-time-btn"
+                onClick={addTimeSlot}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>시간 추가</span>
+              </button>
+            )}
           </div>
 
           <div className="timetable__modal-actions">
-            <Button variant="ghost" onClick={() => setIsAddModalOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleAddLecture} disabled={isSubmitting}>
+            <Button onClick={handleAddLecture} disabled={isSubmitting} fullWidth>
               {isSubmitting ? '추가 중...' : '추가'}
             </Button>
           </div>
@@ -400,8 +590,8 @@ const Timetable = () => {
         <div className="timetable__modal-content">
           <Input
             label="강의명"
-            value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            value={editFormData.title}
+            onChange={(e) => setEditFormData(prev => ({ ...prev, title: e.target.value }))}
             placeholder="예: 데이터베이스 실습"
           />
           
@@ -409,14 +599,14 @@ const Timetable = () => {
             <Input
               label="시작 시간"
               type="time"
-              value={formData.start_time}
-              onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+              value={editFormData.start_time}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, start_time: e.target.value }))}
             />
             <Input
               label="종료 시간"
               type="time"
-              value={formData.end_time}
-              onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+              value={editFormData.end_time}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, end_time: e.target.value }))}
             />
           </div>
           
@@ -424,14 +614,14 @@ const Timetable = () => {
             <Input
               label="시작 날짜"
               type="date"
-              value={formData.start_day}
-              onChange={(e) => setFormData(prev => ({ ...prev, start_day: e.target.value }))}
+              value={editFormData.start_day}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, start_day: e.target.value }))}
             />
             <Input
               label="종료 날짜"
               type="date"
-              value={formData.end_day}
-              onChange={(e) => setFormData(prev => ({ ...prev, end_day: e.target.value }))}
+              value={editFormData.end_day}
+              onChange={(e) => setEditFormData(prev => ({ ...prev, end_day: e.target.value }))}
             />
           </div>
 
@@ -442,7 +632,7 @@ const Timetable = () => {
                 <button
                   key={day}
                   type="button"
-                  className={`timetable__day-btn ${formData.week.includes(day) ? 'timetable__day-btn--selected' : ''}`}
+                  className={`timetable__day-btn ${editFormData.week.includes(day) ? 'timetable__day-btn--selected' : ''}`}
                   onClick={() => handleDayToggle(day)}
                 >
                   {DAY_LABELS[day]}
@@ -455,14 +645,9 @@ const Timetable = () => {
             <Button variant="danger" onClick={handleDeleteLecture} disabled={isSubmitting}>
               삭제
             </Button>
-            <div className="timetable__modal-actions-right">
-              <Button variant="ghost" onClick={() => setIsEditModalOpen(false)}>
-                취소
-              </Button>
-              <Button onClick={handleEditLecture} disabled={isSubmitting}>
-                {isSubmitting ? '저장 중...' : '저장'}
-              </Button>
-            </div>
+            <Button onClick={handleEditLecture} disabled={isSubmitting}>
+              {isSubmitting ? '저장 중...' : '저장'}
+            </Button>
           </div>
         </div>
       </Modal>

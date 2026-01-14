@@ -103,11 +103,17 @@ export const useTimetable = () => {
   const addLecture = async (lectureData) => {
     try {
       const response = await createLecture(lectureData);
-      if (response.status === 200) {
+      // lectureService는 response.data를 반환하므로 response 자체가 {status, data, message}
+      if (response && (response.status === 200 || response.status === 201)) {
         await fetchLectures();
         return response;
       }
-      throw new Error(response.message || '강의 추가에 실패했습니다.');
+      // status가 없으면 성공으로 간주 (일부 API는 직접 데이터만 반환)
+      if (response && !response.status) {
+        await fetchLectures();
+        return { status: 200, data: response };
+      }
+      throw new Error(response?.message || '강의 추가에 실패했습니다.');
     } catch (err) {
       console.error('Failed to add lecture:', err);
       throw err;
@@ -118,11 +124,17 @@ export const useTimetable = () => {
   const editLecture = async (lectureId, lectureData) => {
     try {
       const response = await updateLecture(lectureId, lectureData);
-      if (response.status === 200) {
+      // lectureService는 response.data를 반환하므로 response 자체가 {status, data, message}
+      if (response && (response.status === 200 || response.status === 201)) {
         await fetchLectures();
         return response;
       }
-      throw new Error(response.message || '강의 수정에 실패했습니다.');
+      // status가 없으면 성공으로 간주
+      if (response && !response.status) {
+        await fetchLectures();
+        return { status: 200, data: response };
+      }
+      throw new Error(response?.message || '강의 수정에 실패했습니다.');
     } catch (err) {
       console.error('Failed to update lecture:', err);
       throw err;
@@ -133,11 +145,17 @@ export const useTimetable = () => {
   const removeLecture = async (lectureId) => {
     try {
       const response = await deleteLecture(lectureId);
-      if (response.status === 200) {
+      // lectureService는 response.data를 반환하므로 response 자체가 {status, data, message}
+      if (response && (response.status === 200 || response.status === 201 || response.status === 204)) {
         await fetchLectures();
         return response;
       }
-      throw new Error(response.message || '강의 삭제에 실패했습니다.');
+      // status가 없으면 성공으로 간주
+      if (response && !response.status) {
+        await fetchLectures();
+        return { status: 200, data: response };
+      }
+      throw new Error(response?.message || '강의 삭제에 실패했습니다.');
     } catch (err) {
       console.error('Failed to delete lecture:', err);
       throw err;
