@@ -250,23 +250,17 @@ export const toggleTodoComplete = async (id, completed, todoData) => {
 };
 
 /**
- * 오늘의 할 일 조회 (AI 우선순위 기반)
- * - 마감일이 지나지 않은 미완료 할 일
- * - 시작일이 오늘 이전인 할 일 (시작일이 없으면 포함)
- * - 우선순위 점수로 정렬 (useTodo에서 처리)
+ * 오늘의 할 일 조회
+ * - 오늘 날짜에 해당하는 할 일만 표시
  */
 export const getTodayTodos = async () => {
   const today = new Date().toISOString().split('T')[0];
   const allTodos = await fetchTodos();
 
   return allTodos.filter(todo => {
-    const startDate = todo.startDate;
-    const dueDate = todo.dueDate;
-
-    const canStart = !startDate || startDate <= today;
-    const isRelevant = !dueDate || dueDate >= today || !todo.completed;
-
-    return canStart && (isRelevant || !todo.completed);
+    // 오늘 날짜와 정확히 일치하는 할일만 표시
+    const todoDate = todo.dueDate ? todo.dueDate.split('T')[0] : null;
+    return todoDate === today;
   });
 };
 
