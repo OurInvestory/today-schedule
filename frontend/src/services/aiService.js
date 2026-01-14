@@ -109,13 +109,29 @@ export const createScheduleFromAI = async (payload) => {
  */
 export const createSubTaskFromAI = async (scheduleId, payload) => {
   try {
+    // importance_score (1-10)를 priority (high/medium/low)로 변환
+    const getPriority = (score) => {
+      if (score >= 7) return 'high';
+      if (score >= 4) return 'medium';
+      return 'low';
+    };
+    
+    // 날짜 추출 (end_at에서 날짜만 추출 또는 date 필드 사용)
+    let taskDate = payload.date;
+    if (!taskDate && payload.end_at) {
+      taskDate = payload.end_at.split('T')[0];
+    }
+    if (!taskDate) {
+      taskDate = new Date().toISOString().split('T')[0];
+    }
+    
     // AI가 생성한 할 일 데이터를 백엔드 스키마에 맞게 변환
     const subTaskPayload = {
       schedule_id: scheduleId || null, // scheduleId 없으면 독립 할 일
       title: payload.title,
-      date: payload.due_date || payload.date || new Date().toISOString().split('T')[0],
+      date: taskDate,
       estimated_minute: payload.estimated_minute || 60,
-      priority: payload.priority || 'medium',
+      priority: payload.priority || getPriority(payload.importance_score || 5),
       category: payload.category || '기타',
       tip: payload.tip || payload.reason || null,
     };

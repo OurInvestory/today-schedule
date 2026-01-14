@@ -18,7 +18,7 @@ class Action(BaseModel):
 
 # 3) Parsed payload
 class AIChatParsed(BaseModel):
-    intent: Literal["SCHEDULE_MUTATION", "SCHEDULE_QUERY", "CLARIFY", "NOTIFICATION_REQUEST"]
+    intent: Literal["SCHEDULE_MUTATION", "SCHEDULE_QUERY", "CLARIFY", "NOTIFICATION_REQUEST", "IMAGE_ANALYSIS", "PRIORITY_QUERY"]
     type: Literal["EVENT", "TASK", "UNKNOWN"] = "UNKNOWN"
     confidence: float = 0.0
     actions: List[Action] = Field(default_factory=list)
