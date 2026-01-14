@@ -182,3 +182,26 @@ export const analyzeTimetableImage = async (imageFile) => {
     throw error;
   }
 };
+
+/**
+ * AI 파싱 결과로 강의(Lecture) 생성
+ */
+export const createLectureFromAI = async (payload) => {
+  try {
+    const lecturePayload = {
+      title: payload.title,
+      start_time: payload.start_time,
+      end_time: payload.end_time,
+      start_day: payload.start_day,
+      end_day: payload.end_day,
+      week: payload.week || [],
+    };
+    
+    console.log('Creating lecture:', lecturePayload);
+    const response = await api.post('/api/lectures', lecturePayload);
+    return response;
+  } catch (error) {
+    console.error('Failed to create lecture from AI:', error);
+    throw error;
+  }
+};

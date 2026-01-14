@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage } from '../services/aiService';
+import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage, createLectureFromAI } from '../services/aiService';
 import { scheduleReminder, scheduleReminderForSchedule } from '../services/notificationService';
 
 // localStorage 키
@@ -352,16 +352,24 @@ export const useChatbot = () => {
       }
       // 액션 타입에 따라 처리
       // target이 없으면 payload.type으로 판단 (이미지 분석 결과)
-      const actionTarget = action?.target || (action?.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
+      const payloadType = action?.payload?.type?.toUpperCase();
+      const actionTarget = action?.target || 
+        (payloadType === 'LECTURE' ? 'LECTURE' : 
+         payloadType === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
       
       if (action?.op === 'CREATE') {
-        if (actionTarget === 'SCHEDULE' || action?.payload?.type === 'EVENT') {
+        if (actionTarget === 'LECTURE' || payloadType === 'LECTURE') {
+          // 강의 생성
+          const response = await createLectureFromAI(action.payload);
+          result = response?.data || response;
+          confirmContent = '강의가 성공적으로 추가되었습니다! 📚';
+        } else if (actionTarget === 'SCHEDULE' || payloadType === 'EVENT') {
           // 일정 생성
           const response = await createScheduleFromAI(action.payload);
           // axios 응답에서 data 추출
           result = response?.data || response;
           confirmContent = '일정이 성공적으로 추가되었습니다! ✅';
-        } else if (actionTarget === 'SUB_TASK' || action?.payload?.type === 'TASK') {
+        } else if (actionTarget === 'SUB_TASK' || payloadType === 'TASK') {
           // 할 일 생성 - importance_score를 priority로 변환
           const importanceScore = action.payload.importance_score || 5;
           let priority = 'medium';
