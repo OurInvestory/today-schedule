@@ -18,24 +18,27 @@ export const useCalendar = () => {
   // 캘린더 날짜 배열 생성
   const dates = getCalendarDates(year, month);
 
-  // 월별 일정(Schedule) 조회
+  // 월별 일정(Schedule) 조회 - 구글 포함 모든 일정
   const fetchMonthlyEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const schedules = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
 
-      // 일정 필터링 (event, task, schedule 타입 모두 포함, google 제외)
-      const schedulesOnly = schedules.filter(item => {
+      // 일정 필터링 (event, task, schedule 타입 모두 포함)
+      // 구글 일정도 포함 (source 필터링 제거)
+      const allSchedules = schedules.filter(item => {
         // type이 'event', 'task', 'schedule' 또는 type이 없는 경우
         const isScheduleType = !item.type || ['event', 'task', 'schedule'].includes(item.type);
-        // source가 'google'이 아닌 것만 (구글 일정은 별도 처리)
-        const isManual = !item.source || item.source === 'manual';
-        return isScheduleType && isManual;
+        return isScheduleType;
       });
 
-      console.log('가져온 일정 목록:', schedulesOnly);
-      setEvents(schedulesOnly);
+      console.log('가져온 일정 목록 (구글 포함):', allSchedules);
+      setEvents(allSchedules);
+      
+      // 구글 일정만 별도로 저장 (indicator용)
+      const googleOnly = allSchedules.filter(item => item.source === 'google' || item.isGoogleEvent);
+      setGoogleEvents(googleOnly);
     } catch (error) {
       setError(error);
     } finally {
@@ -56,26 +59,14 @@ export const useCalendar = () => {
     }
   }, []);
 
-  // 구글 캘린더 일정 조회
-  const fetchGoogleEvents = useCallback(async () => {
-    try {
-      const schedules = await getMonthlyEvents(year, month + 1);
-      // 구글 캘린더에서 가져온 일정만 필터링 (source가 'google'인 경우)
-      const googleOnly = schedules.filter(item => item.source === 'google' || item.isGoogleEvent);
-      console.log('구글 캘린더 일정:', googleOnly);
-      setGoogleEvents(googleOnly);
-    } catch (err) {
-      console.error('Failed to fetch Google events:', err);
-      setGoogleEvents([]);
-    }
-  }, [year, month]);
+  // 구글 캘린더 일정은 fetchMonthlyEvents에서 함께 처리됨
+  // 별도 호출 불필요
 
   // 월 변경 시 데이터 조회
   useEffect(() => {
     fetchMonthlyEvents();
     fetchTodos();
-    fetchGoogleEvents();
-  }, [fetchMonthlyEvents, fetchTodos, fetchGoogleEvents]);
+  }, [fetchMonthlyEvents, fetchTodos]);
 
   // 이전 달로 이동
   const goToPreviousMonth = useCallback(() => {
@@ -199,8 +190,7 @@ export const useCalendar = () => {
   const refetch = useCallback(() => {
     fetchMonthlyEvents();
     fetchTodos();
-    fetchGoogleEvents();
-  }, [fetchMonthlyEvents, fetchTodos, fetchGoogleEvents]);
+  }, [fetchMonthlyEvents, fetchTodos]);
 
   return {
     currentDate,
