@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getScheduleById, updateCalendarEvent, deleteCalendarEvent } from '../services/calendarService';
 import { getSubTasksBySchedule, createSubTask, updateSubTask, deleteSubTask } from '../services/subTaskService';
-import { calculatePriority } from '../utils/priorityUtils';
 import { CATEGORY_LABELS } from '../utils/constants';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
@@ -50,6 +49,17 @@ const ScheduleDetail = () => {
   const dragStartRef = useRef({});
   const dragCurrentRef = useRef({});
 
+  // 할 일 목록 조회 (useEffect보다 먼저 선언)
+  const fetchSubTasks = useCallback(async () => {
+    try {
+      const tasks = await getSubTasksBySchedule(id);
+      console.log('조회된 할 일 목록:', tasks);
+      setSubTasks(tasks);
+    } catch (err) {
+      console.error('할 일 목록 조회 실패:', err);
+    }
+  }, [id]);
+
   // 일정 상세 정보 불러오기
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -72,18 +82,7 @@ const ScheduleDetail = () => {
     };
     
     fetchSchedule();
-  }, [id]);
-
-  // 할 일 목록 조회
-  const fetchSubTasks = async () => {
-    try {
-      const tasks = await getSubTasksBySchedule(id);
-      console.log('조회된 할 일 목록:', tasks);
-      setSubTasks(tasks);
-    } catch (err) {
-      console.error('할 일 목록 조회 실패:', err);
-    }
-  };
+  }, [id, fetchSubTasks]);
 
   // 할 일 추가
   const handleAddSubTask = async () => {
@@ -99,9 +98,6 @@ const ScheduleDetail = () => {
     try {
       // schedule의 category를 사용 (없으면 사용자 선택값)
       const category = schedule?.category || newSubTask.category;
-      
-      // 우선순위 자동 계산
-      const priority = calculatePriority(newSubTask.date, newSubTask.estimatedMinute);
       
       await createSubTask({
         scheduleId: id,
@@ -606,7 +602,7 @@ const ScheduleDetail = () => {
                               {task.title}
                               {task.category && (
                                 <span className="schedule-detail__subtask-category">
-                                  [{task.category}]
+                                  [{CATEGORY_LABELS[task.category] || task.category}]
                                 </span>
                               )}
                             </span>

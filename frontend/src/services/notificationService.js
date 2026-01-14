@@ -3,6 +3,7 @@
 const STORAGE_KEY = 'notification_settings';
 const NOTIFICATIONS_KEY = 'app_notifications';
 const SCHEDULED_ALERTS_KEY = 'scheduled_deadline_alerts';
+const SCHEDULED_REMINDERS_KEY = 'scheduled_reminders'; // 챗봇 알림 예약
 
 // 기본 알림 설정값
 const defaultSettings = {
@@ -22,6 +23,7 @@ const defaultSettings = {
 // 스케줄러 ID 저장
 let deadlineCheckInterval = null;
 let dailyBriefingTimeout = null;
+let reminderCheckInterval = null; // 챗봇 알림 예약 체크
 
 /**
  * 알림 설정 가져오기
@@ -155,6 +157,33 @@ export const deleteNotification = (id) => {
 // ============ 브라우저 알림 ============
 
 /**
+ * 방해 금지 시간인지 확인
+ */
+const isDoNotDisturbTime = (settings) => {
+  if (!settings.doNotDisturb) return false;
+  
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  const startTime = settings.doNotDisturbStart || '22:00';
+  const endTime = settings.doNotDisturbEnd || '08:00';
+  
+  const [startHour, startMin] = startTime.split(':').map(Number);
+  const [endHour, endMin] = endTime.split(':').map(Number);
+  
+  const startMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
+  
+  // 자정을 넘기는 경우 (예: 22:00 ~ 08:00)
+  if (startMinutes > endMinutes) {
+    return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+  }
+  
+  // 같은 날 내 범위 (예: 13:00 ~ 15:00)
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+};
+
+/**
  * 브라우저 알림 보내기
  */
 export const sendBrowserNotification = async (title, options = {}) => {
@@ -164,7 +193,9 @@ export const sendBrowserNotification = async (title, options = {}) => {
     return null;
   }
   
-  if (settings.doNotDisturb) {
+  // 방해 금지 시간 체크
+  if (isDoNotDisturbTime(settings)) {
+    console.log('Do Not Disturb mode active, notification suppressed');
     return null;
   }
   
@@ -407,6 +438,7 @@ const formatTimeAgo = (date) => {
 export const initNotificationService = async () => {
   await scheduleDeadlineAlerts();
   await scheduleDailyBriefing();
+  await startReminderChecker(); // 챗봇 알림 예약 체커 시작
 };
 
 /**
@@ -421,6 +453,151 @@ export const cleanupNotificationService = () => {
     clearTimeout(dailyBriefingTimeout);
     dailyBriefingTimeout = null;
   }
+  if (reminderCheckInterval) {
+    clearInterval(reminderCheckInterval);
+    reminderCheckInterval = null;
+  }
+};
+
+// ============ 챗봇 알림 예약 ============
+
+/**
+ * 예약된 알림 목록 가져오기
+ */
+export const getScheduledReminders = () => {
+  try {
+    const stored = localStorage.getItem(SCHEDULED_REMINDERS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error getting scheduled reminders:', error);
+    return [];
+  }
+};
+
+/**
+ * 예약된 알림 저장하기
+ */
+export const saveScheduledReminders = (reminders) => {
+  try {
+    localStorage.setItem(SCHEDULED_REMINDERS_KEY, JSON.stringify(reminders));
+  } catch (error) {
+    console.error('Error saving scheduled reminders:', error);
+  }
+};
+
+/**
+ * 새 알림 예약 추가
+ * @param {Object} reminder - { title, message, scheduledTime (ISO string), scheduleId? }
+ */
+export const scheduleReminder = (reminder) => {
+  const reminders = getScheduledReminders();
+  const newReminder = {
+    id: Date.now(),
+    title: reminder.title,
+    message: reminder.message || '',
+    scheduledTime: reminder.scheduledTime,
+    scheduleId: reminder.scheduleId || null,
+    createdAt: new Date().toISOString(),
+    triggered: false,
+  };
+  reminders.push(newReminder);
+  saveScheduledReminders(reminders);
+  return newReminder;
+};
+
+/**
+ * 알림 예약 삭제
+ */
+export const cancelScheduledReminder = (reminderId) => {
+  const reminders = getScheduledReminders();
+  const updated = reminders.filter(r => r.id !== reminderId);
+  saveScheduledReminders(updated);
+  return updated;
+};
+
+/**
+ * 예약 알림 체크 및 발송 (1분마다 실행)
+ */
+const checkScheduledReminders = async () => {
+  const settings = await getNotificationSettings();
+  
+  if (!settings.pushNotification || settings.doNotDisturb) {
+    return;
+  }
+  
+  const reminders = getScheduledReminders();
+  const now = new Date();
+  let hasChanges = false;
+  
+  reminders.forEach(reminder => {
+    if (reminder.triggered) return;
+    
+    const scheduledTime = new Date(reminder.scheduledTime);
+    
+    // 예약 시간이 지났거나 1분 이내인 경우 알림 발송
+    if (scheduledTime <= now) {
+      sendBrowserNotification(`🔔 ${reminder.title}`, {
+        body: reminder.message || '예약된 알림입니다.',
+        tag: `reminder-${reminder.id}`,
+        requireInteraction: true,
+      });
+      
+      reminder.triggered = true;
+      hasChanges = true;
+    }
+  });
+  
+  if (hasChanges) {
+    // 발송된 알림 제거 (24시간 후 자동 정리)
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const cleaned = reminders.filter(r => 
+      !r.triggered || new Date(r.scheduledTime) > oneDayAgo
+    );
+    saveScheduledReminders(cleaned);
+  }
+};
+
+/**
+ * 예약 알림 체커 시작
+ */
+export const startReminderChecker = async () => {
+  // 기존 인터벌 정리
+  if (reminderCheckInterval) {
+    clearInterval(reminderCheckInterval);
+  }
+  
+  // 1분마다 체크
+  reminderCheckInterval = setInterval(() => {
+    checkScheduledReminders();
+  }, 60000);
+  
+  // 즉시 한 번 체크
+  checkScheduledReminders();
+};
+
+/**
+ * 일정에 대한 알림 예약 (N분 전 알림)
+ * @param {Object} schedule - { id, title, endTime (or end_at) }
+ * @param {number} minutesBefore - 몇 분 전에 알림을 보낼지
+ */
+export const scheduleReminderForSchedule = (schedule, minutesBefore = 60) => {
+  const endTime = schedule.endTime || schedule.end_at || schedule.dueDate;
+  if (!endTime) return null;
+  
+  const endDate = new Date(endTime);
+  const reminderTime = new Date(endDate.getTime() - minutesBefore * 60 * 1000);
+  
+  // 이미 지난 시간이면 예약하지 않음
+  if (reminderTime <= new Date()) {
+    return null;
+  }
+  
+  return scheduleReminder({
+    title: schedule.title,
+    message: `${minutesBefore}분 후에 "${schedule.title}"이(가) 있습니다.`,
+    scheduledTime: reminderTime.toISOString(),
+    scheduleId: schedule.id,
+  });
 };
 
 export default {
@@ -440,4 +617,11 @@ export default {
   triggerDailyBriefing,
   initNotificationService,
   cleanupNotificationService,
+  // 챗봇 알림 예약
+  getScheduledReminders,
+  saveScheduledReminders,
+  scheduleReminder,
+  cancelScheduledReminder,
+  startReminderChecker,
+  scheduleReminderForSchedule,
 };

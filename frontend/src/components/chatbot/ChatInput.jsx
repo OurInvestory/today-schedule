@@ -15,6 +15,7 @@ const ChatInput = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // 텍스트가 있거나, 파일이 있으면 전송 가능
     if (canSend && !disabled) {
       onSend(value.trim());
       setValue('');
@@ -57,9 +58,7 @@ const ChatInput = ({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={
-          hasFiles ? '이미지와 함께 보낼 메시지 (선택사항)' : placeholder
-        }
+        placeholder={hasFiles ? '시간표 사진에 있는 강의 추가해줘' : placeholder}
         disabled={disabled}
         rows={1}
       />

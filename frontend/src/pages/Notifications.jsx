@@ -175,9 +175,6 @@ const Notifications = () => {
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
           <h1 className="notifications__title">알림</h1>
-          {unreadCount > 0 && (
-            <span className="notifications__badge">{unreadCount}</span>
-          )}
         </div>
         {unreadCount > 0 && (
           <button className="notifications__mark-all" onClick={handleMarkAllAsRead}>

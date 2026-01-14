@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
 from typing import Optional
 
@@ -29,9 +29,15 @@ class ScheduleResponse(BaseModel):
     update_text: Optional[str]
     estimated_minute: Optional[int]
     source: Optional[str]
+    is_ai_generated: bool = False
 
     class Config:
         from_attributes = True
+        
+    @model_validator(mode='after')
+    def set_is_ai_generated(self) -> 'ScheduleResponse':
+        self.is_ai_generated = self.original_text is not None
+        return self
 
 # 일정 수정 요청 스키마
 class UpdateScheduleRequest(BaseModel):

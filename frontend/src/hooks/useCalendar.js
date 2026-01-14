@@ -18,25 +18,27 @@ export const useCalendar = () => {
   // 캘린더 날짜 배열 생성
   const dates = getCalendarDates(year, month);
 
-  // 월별 일정(Schedule) 조회
+  // 월별 일정(Schedule) 조회 - 구글 포함 모든 일정
   const fetchMonthlyEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const schedules = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
 
-      // schedule 타입이고 시간이 있는 일정만 필터링
-      const schedulesOnly = schedules.filter(item => {
-        // type이 'schedule'이거나 type이 없는 경우 (기본값)
-        const isSchedule = !item.type || item.type === 'schedule';
-        // start_at 또는 startDate에 시간이 포함되어 있는지 확인
-        const hasTime = (item.start_at && item.start_at.includes('T')) || 
-                       (item.startDate && typeof item.startDate === 'string' && item.startDate.includes('T'));
-        return isSchedule && hasTime;
+      // 일정 필터링 (event, task, schedule 타입 모두 포함)
+      // 구글 일정도 포함 (source 필터링 제거)
+      const allSchedules = schedules.filter(item => {
+        // type이 'event', 'task', 'schedule' 또는 type이 없는 경우
+        const isScheduleType = !item.type || ['event', 'task', 'schedule'].includes(item.type);
+        return isScheduleType;
       });
 
-      console.log('가져온 일정 목록:', schedulesOnly);
-      setEvents(schedulesOnly);
+      console.log('가져온 일정 목록 (구글 포함):', allSchedules);
+      setEvents(allSchedules);
+      
+      // 구글 일정만 별도로 저장 (indicator용)
+      const googleOnly = allSchedules.filter(item => item.source === 'google' || item.isGoogleEvent);
+      setGoogleEvents(googleOnly);
     } catch (error) {
       setError(error);
     } finally {
@@ -47,36 +49,29 @@ export const useCalendar = () => {
   // 할 일(Todo) 조회 - 캘린더에서 할 일 아이콘 표시용
   const fetchTodos = useCallback(async () => {
     try {
-      const data = await getTodos({});
+      // 현재 캘린더에서 보는 달의 할 일 조회
+      const from = new Date(year, month, 1).toISOString().split('T')[0];
+      const to = new Date(year, month + 1, 0).toISOString().split('T')[0];
+      
+      const data = await getTodos({ from, to });
       // 할 일(Todo)만 필터링 (type이 'todo'이거나 type 필드가 없는 경우)
       const todosOnly = (data || []).filter(item => !item.type || item.type === 'todo');
+      console.log('캘린더 할 일 조회:', todosOnly);
       setTodos(todosOnly);
     } catch (err) {
       console.error('Failed to fetch todos for calendar:', err);
       setTodos([]);
     }
-  }, []);
-
-  // 구글 캘린더 일정 조회
-  const fetchGoogleEvents = useCallback(async () => {
-    try {
-      const schedules = await getMonthlyEvents(year, month + 1);
-      // 구글 캘린더에서 가져온 일정만 필터링 (source가 'google'인 경우)
-      const googleOnly = schedules.filter(item => item.source === 'google' || item.isGoogleEvent);
-      console.log('구글 캘린더 일정:', googleOnly);
-      setGoogleEvents(googleOnly);
-    } catch (err) {
-      console.error('Failed to fetch Google events:', err);
-      setGoogleEvents([]);
-    }
   }, [year, month]);
+
+  // 구글 캘린더 일정은 fetchMonthlyEvents에서 함께 처리됨
+  // 별도 호출 불필요
 
   // 월 변경 시 데이터 조회
   useEffect(() => {
     fetchMonthlyEvents();
     fetchTodos();
-    fetchGoogleEvents();
-  }, [fetchMonthlyEvents, fetchTodos, fetchGoogleEvents]);
+  }, [fetchMonthlyEvents, fetchTodos]);
 
   // 이전 달로 이동
   const goToPreviousMonth = useCallback(() => {
@@ -108,11 +103,19 @@ export const useCalendar = () => {
   // 특정 날짜의 이벤트 가져오기
   const getEventsForDate = useCallback((date) => {
     return events.filter(event => {
-      const eventDate = new Date(event.date);
+      // startDate, date, start_at 순서로 날짜 추출
+      const dateStr = event.startDate || event.date || event.start_at || event.end_at;
+      if (!dateStr) return false;
+      
+      // 날짜 문자열에서 날짜 부분만 추출 (YYYY-MM-DD)
+      const datePart = typeof dateStr === 'string' ? dateStr.split('T')[0] : null;
+      if (!datePart) return false;
+      
+      const [yearStr, monthStr, dayStr] = datePart.split('-');
       return (
-        eventDate.getFullYear() === date.getFullYear() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getDate() === date.getDate()
+        parseInt(yearStr) === date.getFullYear() &&
+        parseInt(monthStr) === date.getMonth() + 1 &&
+        parseInt(dayStr) === date.getDate()
       );
     });
   }, [events]);
@@ -120,12 +123,19 @@ export const useCalendar = () => {
   // 특정 날짜의 할 일 가져오기
   const getTodosForDate = useCallback((date) => {
     return todos.filter(todo => {
-      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
-      if (!todoDate) return false;
+      // dueDate 또는 date 필드 사용
+      const todoDateStr = todo.dueDate || todo.date;
+      if (!todoDateStr) return false;
+      
+      // 날짜 문자열에서 날짜 부분만 추출 (YYYY-MM-DD)
+      const datePart = typeof todoDateStr === 'string' ? todoDateStr.split('T')[0] : null;
+      if (!datePart) return false;
+      
+      const [yearStr, monthStr, dayStr] = datePart.split('-');
       return (
-        todoDate.getFullYear() === date.getFullYear() &&
-        todoDate.getMonth() === date.getMonth() &&
-        todoDate.getDate() === date.getDate()
+        parseInt(yearStr) === date.getFullYear() &&
+        parseInt(monthStr) === date.getMonth() + 1 &&
+        parseInt(dayStr) === date.getDate()
       );
     });
   }, [todos]);
@@ -137,44 +147,18 @@ export const useCalendar = () => {
 
   // 특정 날짜에 할 일이 있는지 확인
   const hasTodosOnDate = useCallback((date) => {
-    return todos.some(todo => {
-      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
-      if (!todoDate) return false;
-      return (
-        todoDate.getFullYear() === date.getFullYear() &&
-        todoDate.getMonth() === date.getMonth() &&
-        todoDate.getDate() === date.getDate()
-      );
-    });
-  }, [todos]);
+    return getTodosForDate(date).length > 0;
+  }, [getTodosForDate]);
 
   // 특정 날짜에 완료된 할 일이 있는지 확인
   const hasCompletedTodosOnDate = useCallback((date) => {
-    return todos.some(todo => {
-      if (!todo.completed) return false;
-      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
-      if (!todoDate) return false;
-      return (
-        todoDate.getFullYear() === date.getFullYear() &&
-        todoDate.getMonth() === date.getMonth() &&
-        todoDate.getDate() === date.getDate()
-      );
-    });
-  }, [todos]);
+    return getTodosForDate(date).some(todo => todo.completed);
+  }, [getTodosForDate]);
 
   // 특정 날짜에 미완료 할 일이 있는지 확인
   const hasPendingTodosOnDate = useCallback((date) => {
-    return todos.some(todo => {
-      if (todo.completed) return false;
-      const todoDate = todo.dueDate ? new Date(todo.dueDate) : null;
-      if (!todoDate) return false;
-      return (
-        todoDate.getFullYear() === date.getFullYear() &&
-        todoDate.getMonth() === date.getMonth() &&
-        todoDate.getDate() === date.getDate()
-      );
-    });
-  }, [todos]);
+    return getTodosForDate(date).some(todo => !todo.completed);
+  }, [getTodosForDate]);
 
   // 특정 날짜에 구글 캘린더 일정이 있는지 확인
   const hasGoogleEventsOnDate = useCallback((date) => {
@@ -192,8 +176,7 @@ export const useCalendar = () => {
   const refetch = useCallback(() => {
     fetchMonthlyEvents();
     fetchTodos();
-    fetchGoogleEvents();
-  }, [fetchMonthlyEvents, fetchTodos, fetchGoogleEvents]);
+  }, [fetchMonthlyEvents, fetchTodos]);
 
   return {
     currentDate,
