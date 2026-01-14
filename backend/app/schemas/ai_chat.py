@@ -57,10 +57,20 @@ class ChatRequest(BaseModel):
     user_context: Optional[Dict[str, Any]] = Field(None, alias="userContext")
     model_config = ConfigDict(populate_by_name=True)
 
-# 5) Response Wrapper
+# 5) Lecture 형식 (Vision API용)
+class LectureItem(BaseModel):
+    title: str
+    start_time: str = Field(alias="startTime")  # "09:00"
+    end_time: str = Field(alias="endTime")      # "10:30"
+    week: int                                    # 단일 값 (0=월 ~ 6=일)
+    
+    model_config = ConfigDict(populate_by_name=True, by_alias=True)
+
+# 6) Response Wrapper
 class ChatResponseData(BaseModel):
     parsed_result: AIChatParsed = Field(alias="parsedResult")
     assistant_message: Optional[str] = Field(None, alias="assistantMessage")
+    lectures: Optional[List[LectureItem]] = None  # 시간표 분석 시 Lecture 형식으로 반환
 
     model_config = ConfigDict(populate_by_name=True, by_alias=True)
 

@@ -433,3 +433,40 @@
   background: #ffeae8;
   color: #f04438;
 }
+
+/* 강의 목록 스타일 */
+.chat-message__lectures-list {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.chat-message__lectures-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.chat-message__lectures-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--color-gray-700);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.chat-message__lectures-list li:last-child {
+  border-bottom: none;
+}
+
+.chat-message__lecture-time {
+  font-size: 12px;
+  color: var(--color-gray-500);
+  margin-left: 8px;
+  white-space: nowrap;
+}
