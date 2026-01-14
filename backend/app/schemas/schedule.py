@@ -29,7 +29,6 @@ class ScheduleResponse(BaseModel):
     estimated_minute: Optional[int]
 
     class Config:
-        orm_mode = True
         from_attributes = True
 
 # 일정 수정 요청 스키마

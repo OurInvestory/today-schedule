@@ -131,8 +131,8 @@ def delete_schedule(schedule_id: str, db: Session = Depends(get_db)):
 # 일정 조회
 @router.get("", response_model=ResponseDTO)
 def get_schedules(
-    from_date: datetime = Query(..., alias="from", example="2026-06-01"),
-    to_date: datetime = Query(..., alias="to", example="2026-06-30"),
+    from_date: datetime = Query(..., alias="from", examples=["2026-06-01"]),
+    to_date: datetime = Query(..., alias="to", examples=["2026-06-30"]),
     db: Session = Depends(get_db)
 ):
     try:

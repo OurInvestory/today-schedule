@@ -35,7 +35,6 @@ class LectureResponse(BaseModel):
     update_text: Optional[str]
 
     class Config:
-        orm_mode = True
         from_attributes = True
 
     # DB에 문자열로 저장된 week를 리스트로 변환

@@ -33,5 +33,4 @@ class SubTaskResponse(BaseModel):
     ai_reason: Optional[str] = None # [추가]
 
     class Config:
-        orm_mode = True
         from_attributes = True

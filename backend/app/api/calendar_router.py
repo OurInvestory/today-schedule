@@ -17,8 +17,8 @@ router = APIRouter(prefix="/api/calendar", tags=["Calendar"])
 # 강의 및 일정 조회
 @router.get("", response_model=ResponseDTO)
 def get_calendar_combined(
-    from_date: date = Query(..., alias="from", example="2026-06-01"),
-    to_date: date = Query(..., alias="to", example="2026-06-30"),
+    from_date: date = Query(..., alias="from", examples=["2026-06-01"]),
+    to_date: date = Query(..., alias="to", examples=["2026-06-30"]),
     db: Session = Depends(get_db)
 ):
     try:
