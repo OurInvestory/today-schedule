@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.models import user, lecture, schedule, sub_task, notification
 from app.models.user import User
 from app.db.database import engine, Base, db_session
+from app.db.seed_data import seed_database
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
 from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router
 from contextlib import asynccontextmanager
@@ -13,32 +14,19 @@ from datetime import datetime
 Base.metadata.create_all(bind=engine)
 
 
-# 테스트 유저를 자동 생성하는 Lifespan 설정
+# 테스트 유저 및 시드 데이터를 자동 생성하는 Lifespan 설정
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # [Startup] 서버 시작 시 실행
     db = db_session()
     try:
-        user_id = "7822a162-788d-4f36-9366-c956a68393e1"   # 테스트용 고정 UUID
-        
-        existing_user = db.query(User).filter(User.user_id == user_id).first()     # 유저 존재 여부 확인
-        
-        if not existing_user:
-            test_user = User(
-                user_id=user_id,
-                email="test@example.com",
-                password="test_password",
-                create_at=datetime.now(),
-                update_at=datetime.now()
-            )
-            db.add(test_user)
-            db.commit()
-            print("테스트 유저 생성에 성공했습니다.")   # TEST CODE
-        else:
-            print("테스트 유저가 이미 존재합니다.")   # TEST CODE
+        # 시드 데이터 삽입 (사용자, 일정, 할 일)
+        seed_database(db)
+        print("✅ 데이터베이스 초기화 완료")
 
     except Exception as e:
         db.rollback()
+        print(f"❌ 데이터베이스 초기화 실패: {e}")
     finally:
         db.close()
     

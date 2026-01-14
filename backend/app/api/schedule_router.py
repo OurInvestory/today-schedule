@@ -60,7 +60,7 @@ def save_schedules(
                 original_text=item.original_text,
                 update_text=None,
                 estimated_minute=item.estimated_minute,
-                source='manual'  # 수동 추가 일정
+                source=item.source or 'manual'  # 요청에서 source 사용, 없으면 manual
             )
             db.add(new_schedule)
             saved_schedules.append(new_schedule)
