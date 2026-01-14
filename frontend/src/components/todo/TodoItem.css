@@ -147,7 +147,7 @@
   line-height: 1.5;
 }
 
-.todo-item__ai-reason {
+.todo-item__tip {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -156,25 +156,26 @@
   margin-top: 8px;
   padding: 10px 14px;
   line-height: 1.5;
-  background: #F9FAFB;
+  background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
   border-radius: 0 0 12px 12px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #D1FAE5;
 }
 
-.ai-reason-icon {
+.tip-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: 18px;
   height: 18px;
-  color: #6366F1;
+  color: #10B981;
 }
 
-.ai-reason-text {
+.tip-text {
   flex: 1;
   font-weight: 500;
   letter-spacing: -0.01em;
+  color: #047857;
 }
 
 .todo-item__footer {

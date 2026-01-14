@@ -30,8 +30,7 @@ except ImportError:
     print("Warning: easyocr not installed. Image analysis will be limited.")
 
 # 모델 ID
-WATSONX_MODEL_ID_TEXT = os.getenv("WATSONX_MODEL_ID")  # schedule용: 70b-instruct
-WATSONX_MODEL_ID_VISION = "meta-llama/llama-3-2-90b-vision-instruct"  # poster용: vision
+WATSONX_MODEL_ID_TEXT = os.getenv("WATSONX_MODEL_ID")  # 70b-instruct (OCR 텍스트 분석용)
 
 credentials = {
     "url": os.getenv("WATSONX_URL"),
@@ -43,26 +42,36 @@ def detect_image_type(ocr_results) -> str:
     """이미지 타입 감지: 'schedule' 또는 'poster'"""
     texts = [text for (_, text, _) in ocr_results]
     text_combined = " ".join(texts).lower()
+    text_no_space = text_combined.replace(" ", "")
     
-    # 1. [강력한 신호] 포스터 키워드가 명확하면 우선반환 (시간표에는 절대 안 나올 단어들)
-    strong_poster_keywords = ['공모전', '대외활동', '서포터즈', '채용', '콘테스트', 'competition', 'recruit']
-    if any(kw in text_combined for kw in strong_poster_keywords):
+    # 1. [강력한 신호] 포스터 키워드가 명확하면 우선반환
+    # 공백 제거 버전에서도 체크 (OCR이 "공 모 전"으로 읽을 수 있음)
+    strong_poster_keywords = ['공모전', '대외활동', '서포터즈', '채용', '콘테스트', 'competition', 'recruit',
+                              '상금', '상장', '시상', '주최', '후원', '응모']
+    if any(kw in text_combined or kw in text_no_space for kw in strong_poster_keywords):
         return 'poster'
 
     # 2. Schedule 점수 계산
     schedule_keywords = ['시간표', '강의실', '교시', 'timetable', 'class', 'lecture', 'professor', '학기', 'semester']
     schedule_score = sum(1 for kw in schedule_keywords if kw in text_combined)
     
-    # [복구 및 강화] 요일이 3개 이상 발견되면 시간표일 확률 급상승
+    # [개선] 요일 감지 - 날짜 형식(월), (화)는 제외하고, 독립적인 요일만 카운트
+    # 날짜 형식의 괄호 요일 제거 후 체크
+    import re
+    text_cleaned = re.sub(r'\([월화수목금토일]\)', '', text_combined)
+    
     days_kor = ['월', '화', '수', '목', '금']
     days_eng = ['mon', 'tue', 'wed', 'thu', 'fri']
     
-    # 단순 포함 여부만 체크 (한 글자라 오탐 가능성이 있지만, 3개 이상 모이면 확실함)
+    # 독립적인 요일 발견 (공백이나 단어 경계로 구분)
     found_days = 0
     for d in days_kor:
-        if d in text_combined: found_days += 1
+        # 독립적으로 등장하는 요일만 (예: "월 화 수" 또는 단독 셀)
+        if re.search(rf'(^|\s){d}($|\s)', text_cleaned):
+            found_days += 1
     for d in days_eng:
-        if d in text_combined: found_days += 1
+        if re.search(rf'\b{d}\b', text_cleaned):
+            found_days += 1
         
     if found_days >= 3:
         schedule_score += 5  # 강력한 가산점 부여
@@ -210,6 +219,14 @@ def parse_llm_response(generated_response: str) -> AIChatParsed:
     parsed_data.setdefault("intent", "SCHEDULE_MUTATION")
     parsed_data.setdefault("type", "UNKNOWN")
     parsed_data.setdefault("actions", [])
+    
+    # 시간 형식 보정 (24:00:00 -> 23:59:59)
+    for action in parsed_data.get("actions", []):
+        payload = action.get("payload", {})
+        for time_field in ["start_at", "end_at"]:
+            if time_field in payload and payload[time_field]:
+                payload[time_field] = payload[time_field].replace("T24:00:00", "T23:59:59")
+    
     return AIChatParsed(**parsed_data)
 
 def process_schedule_mode(ocr_result) -> AIChatParsed:
@@ -252,13 +269,11 @@ def process_schedule_mode(ocr_result) -> AIChatParsed:
     {{
       "op": "CREATE",
       "payload": {{
-        "type": "TASK" | "EVENT",
+        "type": "EVENT",
         "category": "수업",
         "title": "String",
         "start_at": "ISO8601",
-        "end_at": "ISO8601",
-        "importance_score": 1-10,
-        "estimated_minute": Int
+        "end_at": "ISO8601"
       }}
     }}
   ]
@@ -271,7 +286,7 @@ OUTPUT ONLY VALID JSON. DO NOT ADD EXPLANATIONS.
     return parse_llm_response(response)
 
 def process_poster_mode(ocr_result) -> AIChatParsed:
-    """ [모드 2] 포스터 처리 로직 (Text Dump + Vision Model) """
+    """ [모드 2] 포스터 처리 로직 (Text Dump + Text Model) """
     # 1. 단순 텍스트 나열 (문맥 보존)
     structured_text = simple_text_dump(ocr_result)
     
@@ -279,25 +294,30 @@ def process_poster_mode(ocr_result) -> AIChatParsed:
     today = datetime.now()
     dates_prompt = f"Today: {today.strftime('%Y-%m-%d')}\nNOTE: Use dates found in text explicitly."
 
-    # 3. 포스터 전용 프롬프트 (엄격한 필터링)
+    # 3. 포스터 전용 프롬프트 (핵심 일정만 추출)
     instructions = """
-    This image is a POSTER or NOTICE for an event (Contest, Recruitment, Activity).
+    This is a POSTER for an event (Contest, Recruitment, Activity).
     
-    CRITICAL RULES:
-    1. **MINIMIZE OUTPUT**: Only create events for the PRIMARY deadlines or start/end dates.
-       - A typical poster should result in ONLY 1 to 3 events (e.g., "Application Deadline", "Event Start").
-    2. **STRICT FILTERING**: 
-       - DO NOT create events for: Organizers, Sponsors, Qualifications, Prizes, Contact Info, Website URLs.
-       - If a line of text is not a specific date/time for an event, IGNORE IT completely.
-    3. **MERGING**: 
-       - Do not split a single event into multiple entries. 
-       - Example: If text is "Host: K-Water" and "Date: 2023-10-01", create ONE event with Title "K-Water Event" at "2023-10-01". Do NOT create a separate event for "Host".
-    4. **DATES**:
-       - Extract the EXACT YEAR/MONTH/DAY from the text (e.g., "2023.9.18"). 
-       - Do not default to the current year if the text specifies a different one.
+    RULES:
+    1. **OUTPUT ONLY 1-2 MEANINGFUL EVENTS** from distinct dates in the poster:
+       - 접수/모집 마감일 (Application Deadline) - MOST IMPORTANT
+       - 활동 시작일 (Activity Start) - if clearly stated
+       - 결과 발표일 (Result Announcement) - if clearly stated
+       
+    2. **DO NOT CREATE** preparation tasks like "지원서 작성". Only extract ACTUAL dates from the poster.
+       
+    3. **TITLE FORMAT (Korean)**:
+       - Include event name + date type (e.g., "서울청년정책네트워크 모집 마감", "K-water 봉사단 활동 시작")
+       
+    4. **SCORING**:
+       - importance_score: 7 for deadlines, 5 for other dates
+       - estimated_minute: 30-60
+       
+    5. **DATES**: Extract EXACT dates from text. Do not guess or use current year if year is specified.
     """
 
-    prompt_text = f"""You are an AI Event Helper. Extract key schedule info from the poster text.
+    prompt_text = f"""You are an AI Event Helper. Extract key schedule dates from the poster.
+Output must be in KOREAN. Extract only REAL dates mentioned in the poster.
 
 [Reference Dates]
 {dates_prompt}
@@ -311,33 +331,30 @@ def process_poster_mode(ocr_result) -> AIChatParsed:
 [OUTPUT FORMAT]
 {{
   "intent": "SCHEDULE_MUTATION",
-  "type": "UNKNOWN",
+  "type": "TASK",
   "actions": [
     {{
       "op": "CREATE",
       "payload": {{
-        "type": "EVENT" | "TASK",
-        "category": "공모전"|"대외활동"|"기타",
-        "title": "String",
-        "start_at": "ISO8601",
+        "title": "이벤트명 + 마감/시작/발표",
         "end_at": "ISO8601",
-        "importance_score": 1,
-        "estimated_minute": 60
+        "importance_score": 7,
+        "estimated_minute": 40,
+        "category": "공모전"|"대외활동"|"기타"
       }}
     }}
   ]
 }}
-OUTPUT ONLY VALID JSON. DO NOT ADD EXPLANATIONS.
+OUTPUT ONLY VALID JSON. NO EXPLANATIONS.
 """
-    # 4. Vision 모델 사용 (90b-vision-instruct) - 텍스트 처리 능력이 더 우수함
-    model = create_model_inference(WATSONX_MODEL_ID_VISION)
+    # 4. Text 모델 사용 (70b-instruct) - OCR 텍스트 분석
+    model = create_model_inference(WATSONX_MODEL_ID_TEXT)
     response = model.generate_text(prompt=prompt_text)
     
     # 5. 포스터 전용 후처리 (노이즈 강력 제거)
     parsed = parse_llm_response(response)
-    exclude_keywords = ["심사", "선발", "문의", "면접", "서류", "교육", "OT", "사전", "발표", "혜택"]
+    exclude_keywords = ["심사", "선발", "문의", "면접", "서류", "교육", "OT", "사전", "혜택", "지원서 작성"]
     if parsed.actions:
-        # Pydantic 모델(Action)의 payload는 Dict[str, Any]임
         filtered_actions = [
             a for a in parsed.actions 
             if not any(k in a.payload.get('title', '') for k in exclude_keywords)
@@ -374,7 +391,19 @@ async def analyze_image_schedule(
             ai_parsed_result = process_poster_mode(ocr_result)
             
         action_cnt = len(ai_parsed_result.actions)
-        assistant_msg = f"[{image_type.upper()}] 분석 완료: {action_cnt}건의 일정을 발견했습니다." if action_cnt > 0 else "일정을 찾지 못했습니다."
+        
+        # 개선된 assistant_message 생성
+        if action_cnt > 0:
+            if image_type == 'poster':
+                titles = [a.payload.get('title', '') for a in ai_parsed_result.actions]
+                if action_cnt == 1:
+                    assistant_msg = f"[POSTER] 분석 완료: '{titles[0]}' 일정을 확인했습니다."
+                else:
+                    assistant_msg = f"[POSTER] 분석 완료: {action_cnt}건의 주요 일정을 확인했습니다."
+            else:
+                assistant_msg = f"[{image_type.upper()}] 분석 완료: {action_cnt}건의 일정을 발견했습니다."
+        else:
+            assistant_msg = "일정을 찾지 못했습니다."
 
         return APIResponse(status=200, message="Success", data=ChatResponseData(
             parsed_result=ai_parsed_result,

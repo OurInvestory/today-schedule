@@ -117,7 +117,7 @@ export const createSubTaskFromAI = async (scheduleId, payload) => {
       estimated_minute: payload.estimated_minute || 60,
       priority: payload.priority || 'medium',
       category: payload.category || '기타',
-      ai_reason: payload.ai_reason || payload.reason || `AI가 추천한 할 일입니다.`,
+      tip: payload.tip || payload.reason || null,
     };
     
     // 직접 sub-tasks 엔드포인트로 POST

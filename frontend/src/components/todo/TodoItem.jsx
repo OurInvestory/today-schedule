@@ -4,46 +4,39 @@ import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
 import './TodoItem.css';
 
-// AI 이유 생성 함수 - 백엔드에서 받은 ai_reason 우선, 없으면 자동 생성
-const getAIReason = (todo) => {
-  // 백엔드에서 받은 ai_reason이 있으면 우선 사용 (AI 꿀팁)
-  if (todo.ai_reason) return todo.ai_reason;
-  if (todo.aiReason) return todo.aiReason;
+// 응원 문구 15개 (AI tip이 없을 때 랜덤 표시)
+const ENCOURAGEMENT_TIPS = [
+  "💪 조금만 더 하면 됩니다! 파이팅!",
+  "🌟 한 걸음씩 나아가면 목표에 도달해요!",
+  "✨ 오늘의 노력이 내일의 성과가 됩니다!",
+  "🎯 집중하면 금방 끝나요! 할 수 있어요!",
+  "🚀 시작이 반이에요! 이미 반은 했네요!",
+  "💡 잠깐 쉬었다 해도 괜찮아요, 다시 시작하면 돼요!",
+  "🏃 꾸준히 하면 분명 좋은 결과가 있을 거예요!",
+  "🌈 힘들 때 조금만 버티면 무지개가 뜹니다!",
+  "⭐ 당신은 할 수 있어요! 믿어요!",
+  "🔥 열정을 불태워요! 완료까지 얼마 안 남았어요!",
+  "🎉 완료하면 뿌듯할 거예요! 조금만 더!",
+  "💎 작은 노력이 모여 큰 성과가 됩니다!",
+  "🌻 오늘 하루도 수고 많으셨어요!",
+  "📚 천천히 하나씩 해결해 나가요!",
+  "🏆 끝까지 포기하지 않는 당신이 멋져요!",
+];
+
+// 랜덤 응원 문구 가져오기 (todo.id 기반으로 일관성 유지)
+const getRandomEncouragement = (todoId) => {
+  // todoId를 기반으로 인덱스 계산 (같은 todo에는 항상 같은 문구)
+  const hash = todoId ? todoId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+  return ENCOURAGEMENT_TIPS[hash % ENCOURAGEMENT_TIPS.length];
+};
+
+// tip 가져오기 - 백엔드 tip 우선, 없으면 응원 문구
+const getTip = (todo) => {
+  // 백엔드에서 받은 tip이 있으면 우선 사용
+  if (todo.tip) return todo.tip;
   
-  // 백엔드 ai_reason이 없으면 마감일 기반으로 자동 생성
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dueDate = new Date(todo.dueDate);
-  dueDate.setHours(0, 0, 0, 0);
-  const daysUntil = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-  const estimatedHours = todo.estimatedMinute ? Math.floor(todo.estimatedMinute / 60) : 0;
-  
-  // 마감일 기반 이유
-  if (daysUntil < 0) {
-    return '⏰ 이미 마감일이 지났습니다. 서둘러 처리하세요!';
-  } else if (daysUntil === 0) {
-    return '🔥 오늘이 마감일입니다. 우선적으로 처리하세요!';
-  } else if (daysUntil === 1) {
-    if (estimatedHours >= 2) {
-      return '⚡ 내일 마감이고 소요 시간이 길어요. 지금 시작하세요!';
-    }
-    return '📌 내일까지 완료해야 합니다. 서둘러 준비하세요!';
-  } else if (daysUntil <= 3) {
-    if (estimatedHours >= 3) {
-      return `💡 ${daysUntil}일 후 마감이지만 소요 시간이 길어요. 미리 시작하는 게 좋아요.`;
-    }
-    return `✅ ${daysUntil}일 후 마감입니다. 여유를 가지고 처리하세요.`;
-  } else if (daysUntil <= 7) {
-    if (estimatedHours >= 5) {
-      return `📊 ${daysUntil}일 후 마감. 소요 시간을 고려해 계획을 세우세요.`;
-    }
-    return `📆 ${daysUntil}일의 여유가 있어요. 계획적으로 진행하세요.`;
-  } else {
-    if (estimatedHours >= 10) {
-      return `🎯 장기 프로젝트네요. 단계별로 나눠서 진행하는 것을 추천해요.`;
-    }
-    return `🌟 ${daysUntil}일 후 마감. 충분한 시간을 활용하세요.`;
-  }
+  // 없으면 랜덤 응원 문구 (todo.id 기반 일관성)
+  return getRandomEncouragement(todo.id);
 };
 
 const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
@@ -54,8 +47,8 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
   const startXRef = useRef(0);
   const currentXRef = useRef(0);
 
-  // AI 이유 (백엔드 ai_reason 우선, 없으면 자동 생성)
-  const aiReason = useMemo(() => getAIReason(todo), [todo]);
+  // 팁 (백엔드 tip 우선, 없으면 응원 문구)
+  const tip = useMemo(() => getTip(todo), [todo]);
 
   const handleCheckboxChange = (e) => {
     e.stopPropagation();
@@ -217,14 +210,16 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
         </div>
       </div>
       
-      {aiReason && (
-        <div className="todo-item__ai-reason">
-          <div className="ai-reason-icon">
+      {tip && (
+        <div className="todo-item__tip">
+          <div className="tip-icon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
           </div>
-          <span className="ai-reason-text">{aiReason}</span>
+          <span className="tip-text">{tip}</span>
         </div>
       )}
     </div>

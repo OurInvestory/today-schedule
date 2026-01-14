@@ -88,7 +88,7 @@ export const fetchTodos = async () => {
         completed: todo.is_done === true, // is_done 필드를 completed로 매핑
         estimatedMinute: todo.estimated_minute,
         scheduleId: todo.schedule_id,
-        aiReason: todo.ai_reason,
+        tip: todo.tip,
         category: todo.category || 'other', // 카테고리 없으면 기타
         priority, // 계산된 우선순위 레이블
         priorityScore, // 우선순위 점수 (1-10)

@@ -362,14 +362,12 @@ export const useChatbot = () => {
           result = response?.data || response;
           confirmContent = '일정이 성공적으로 추가되었습니다! ✅';
         } else if (actionTarget === 'SUB_TASK' || action?.payload?.type === 'TASK') {
-          // 할 일 생성 - AI reason 자동 생성
-          const payloadWithReason = {
+          // 할 일 생성 - tip 전달
+          const payloadWithTip = {
             ...action.payload,
-            ai_reason: action.payload.ai_reason || 
-              action.payload.reason || 
-              `AI가 분석한 중요한 할 일입니다. 마감일에 맞춰 계획을 세워보세요.`,
+            tip: action.payload.tip || action.payload.reason || null,
           };
-          const response = await createSubTaskFromAI(action.scheduleId, payloadWithReason);
+          const response = await createSubTaskFromAI(action.scheduleId, payloadWithTip);
           result = response?.data || response;
           confirmContent = '할 일이 성공적으로 추가되었습니다! ✅';
         }

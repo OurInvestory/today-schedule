@@ -9,9 +9,33 @@ from app.models.sub_task import SubTask
 from app.models.schedule import Schedule
 from app.schemas.sub_task import SaveSubTaskRequest, UpdateSubTaskRequest, SubTaskResponse
 from app.schemas.common import ResponseDTO
+import random
 
 
 router = APIRouter(prefix="/api/sub-tasks", tags=["SubTask"])
+
+# 응원 문구 15개 (AI 연동이 안 될 때 랜덤 표시)
+ENCOURAGEMENT_TIPS = [
+    "💪 조금만 더 하면 됩니다! 파이팅!",
+    "🌟 한 걸음씩 나아가면 목표에 도달해요!",
+    "✨ 오늘의 노력이 내일의 성과가 됩니다!",
+    "🎯 집중하면 금방 끝나요! 할 수 있어요!",
+    "🚀 시작이 반이에요! 이미 반은 했네요!",
+    "💡 잠깐 쉬었다 해도 괜찮아요, 다시 시작하면 돼요!",
+    "🏃 꾸준히 하면 분명 좋은 결과가 있을 거예요!",
+    "🌈 힘들 때 조금만 버티면 무지개가 뜹니다!",
+    "⭐ 당신은 할 수 있어요! 믿어요!",
+    "🔥 열정을 불태워요! 완료까지 얼마 안 남았어요!",
+    "🎉 완료하면 뿌듯할 거예요! 조금만 더!",
+    "💎 작은 노력이 모여 큰 성과가 됩니다!",
+    "🌻 오늘 하루도 수고 많으셨어요!",
+    "📚 천천히 하나씩 해결해 나가요!",
+    "🏆 끝까지 포기하지 않는 당신이 멋져요!",
+]
+
+def get_random_encouragement():
+    """랜덤 응원 문구 반환"""
+    return random.choice(ENCOURAGEMENT_TIPS)
 
 
 # 할 일 저장
@@ -36,7 +60,7 @@ def create_sub_tasks(
                 update_text=None,
                 priority=item.priority if hasattr(item, 'priority') else 'medium',
                 category=item.category if hasattr(item, 'category') else 'other',
-                ai_reason=item.ai_reason if hasattr(item, 'ai_reason') else None
+                tip=item.tip if hasattr(item, 'tip') else None
             )
             db.add(new_task)
             saved_items.append(new_task)
@@ -104,8 +128,8 @@ def delete_sub_task(sub_task_id: str, db: Session = Depends(get_db)):
 # 할 일 조회
 @router.get("", response_model=ResponseDTO)
 def get_sub_tasks(
-    from_date: date = Query(..., alias="from", example="2026-06-01"),
-    to_date: date = Query(..., alias="to", example="2026-06-30"),
+    from_date: date = Query(..., alias="from", examples=["2026-06-01"]),
+    to_date: date = Query(..., alias="to", examples=["2026-06-30"]),
     db: Session = Depends(get_db)
 ):
     try:
@@ -119,7 +143,7 @@ def get_sub_tasks(
             )
         ).order_by(SubTask.date.asc()).all()
 
-        # 응답 데이터 생성 - schedule 정보를 포함하여 ai_reason과 category 추가
+        # 응답 데이터 생성 - schedule 정보를 포함하여 tip과 category 추가
         response_data = []
         for task in tasks:
             task_dict = {
@@ -131,39 +155,27 @@ def get_sub_tasks(
                 "estimated_minute": task.estimated_minute,
                 "is_done": task.is_done,
                 "update_text": task.update_text,
-                "ai_reason": None,
+                "tip": None,
                 "category": "other"  # 기본값
             }
             
+            # DB에 저장된 tip이 있으면 사용
+            if task.tip:
+                task_dict["tip"] = task.tip
             # schedule_id가 있으면 schedule 정보 조회
-            if task.schedule_id:
+            elif task.schedule_id:
                 schedule = db.query(Schedule).filter(Schedule.schedule_id == task.schedule_id).first()
                 if schedule:
-                    task_dict["ai_reason"] = schedule.ai_reason
                     task_dict["category"] = schedule.category if schedule.category else "other"
-                    
-                    # AI reason 자동 생성 (없는 경우)
-                    if not task_dict["ai_reason"] and schedule.end_at:
-                        days_until = (schedule.end_at.date() - datetime.now().date()).days
-                        if days_until < 0:
-                            task_dict["ai_reason"] = f"이미 마감된 일정입니다."
-                        elif days_until == 0:
-                            task_dict["ai_reason"] = f"오늘 마감되는 일정이므로 우선적으로 처리하세요."
-                        elif days_until == 1:
-                            task_dict["ai_reason"] = f"내일 마감되는 일정이므로 서둘러 처리하세요."
-                        else:
-                            task_dict["ai_reason"] = f"{days_until}일 후 마감됩니다. 여유를 가지고 처리하세요."
+                    # schedule에 tip이 있으면 사용
+                    if hasattr(schedule, 'tip') and schedule.tip:
+                        task_dict["tip"] = schedule.tip
+                    else:
+                        # AI tip이 없으면 랜덤 응원 문구
+                        task_dict["tip"] = get_random_encouragement()
             else:
-                # schedule_id가 없는 경우 독립 할일 - 날짜 기반으로 AI reason 생성
-                days_until = (task.date - datetime.now().date()).days
-                if days_until < 0:
-                    task_dict["ai_reason"] = f"이미 지난 할 일입니다."
-                elif days_until == 0:
-                    task_dict["ai_reason"] = f"오늘까지 처리해야 하는 할 일입니다."
-                elif days_until == 1:
-                    task_dict["ai_reason"] = f"내일까지 처리해야 합니다."
-                else:
-                    task_dict["ai_reason"] = f"{days_until}일 후까지 처리하세요."
+                # schedule_id가 없는 독립 할일 - 랜덤 응원 문구
+                task_dict["tip"] = get_random_encouragement()
             
             response_data.append(SubTaskResponse(**task_dict))
 
