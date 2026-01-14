@@ -51,7 +51,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "IBM 오프라인 수업 Day 1",
-            "category": "수업",
+            "category": "class",
             "start_at": datetime(base_year, base_month, 5, 9, 0),
             "end_at": datetime(base_year, base_month, 5, 18, 0),
             "priority_score": 9,
@@ -63,7 +63,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "IBM 오프라인 수업 Day 2",
-            "category": "수업",
+            "category": "class",
             "start_at": datetime(base_year, base_month, 6, 9, 0),
             "end_at": datetime(base_year, base_month, 6, 18, 0),
             "priority_score": 9,
@@ -75,7 +75,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "IBM 오프라인 수업 Day 3",
-            "category": "수업",
+            "category": "class",
             "start_at": datetime(base_year, base_month, 7, 9, 0),
             "end_at": datetime(base_year, base_month, 7, 18, 0),
             "priority_score": 9,
@@ -87,7 +87,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "IBM 오프라인 수업 Day 4",
-            "category": "수업",
+            "category": "class",
             "start_at": datetime(base_year, base_month, 8, 9, 0),
             "end_at": datetime(base_year, base_month, 8, 18, 0),
             "priority_score": 9,
@@ -101,7 +101,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "온라인 멘토링 1차",
-            "category": "대외활동",
+            "category": "activity",
             "start_at": datetime(base_year, base_month, 10, 14, 0),
             "end_at": datetime(base_year, base_month, 10, 16, 0),
             "priority_score": 8,
@@ -113,7 +113,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "온라인 멘토링 2차",
-            "category": "대외활동",
+            "category": "activity",
             "start_at": datetime(base_year, base_month, 13, 14, 0),
             "end_at": datetime(base_year, base_month, 13, 16, 0),
             "priority_score": 8,
@@ -125,7 +125,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "온라인 멘토링 3차 (최종)",
-            "category": "대외활동",
+            "category": "activity",
             "start_at": datetime(base_year, base_month, 15, 14, 0),
             "end_at": datetime(base_year, base_month, 15, 16, 0),
             "priority_score": 9,
@@ -139,7 +139,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "🔥 캡스톤 해커톤 발표 및 수상",
-            "category": "대외활동",
+            "category": "activity",
             "start_at": datetime(base_year, base_month, 16, 14, 0),
             "end_at": datetime(base_year, base_month, 16, 18, 0),
             "priority_score": 10,
@@ -153,7 +153,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "📅 팀 스탠드업 미팅",
-            "category": "미팅",
+            "category": "team",
             "start_at": datetime(base_year, base_month, 9, 10, 0),
             "end_at": datetime(base_year, base_month, 9, 10, 30),
             "priority_score": 6,
@@ -165,7 +165,7 @@ def get_seed_schedules():
             "user_id": TEST_USER_ID,
             "type": "event",
             "title": "📅 Google Meet: 프로젝트 리뷰",
-            "category": "미팅",
+            "category": "team",
             "start_at": datetime(base_year, base_month, 14, 15, 0),
             "end_at": datetime(base_year, base_month, 14, 16, 0),
             "priority_score": 7,
@@ -183,44 +183,44 @@ def get_seed_sub_tasks():
     
     sub_tasks = [
         # === IBM 오프라인 수업 Day 1 (1/5) - 완료 ===
-        {"schedule_id": SCHEDULE_IDS["ibm_day1"], "title": "Watsonx.ai 환경 설정", "date": date(base_year, base_month, 5), "estimated_minute": 60, "is_done": True, "priority": "high", "category": "수업", "tip": "API 키 미리 발급받으세요! 🔑"},
-        {"schedule_id": SCHEDULE_IDS["ibm_day1"], "title": "LLM 기초 실습", "date": date(base_year, base_month, 5), "estimated_minute": 90, "is_done": True, "priority": "high", "category": "수업", "tip": "프롬프트 엔지니어링 핵심! ✨"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day1"], "title": "Watsonx.ai 환경 설정", "date": date(base_year, base_month, 5), "estimated_minute": 60, "is_done": True, "priority": "high", "category": "class", "tip": "API 키 미리 발급받으세요! 🔑"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day1"], "title": "LLM 기초 실습", "date": date(base_year, base_month, 5), "estimated_minute": 90, "is_done": True, "priority": "high", "category": "class", "tip": "프롬프트 엔지니어링 핵심! ✨"},
         
         # === IBM 오프라인 수업 Day 2 (1/6) - 완료 ===
-        {"schedule_id": SCHEDULE_IDS["ibm_day2"], "title": "RAG 아키텍처 학습", "date": date(base_year, base_month, 6), "estimated_minute": 120, "is_done": True, "priority": "high", "category": "수업", "tip": "벡터 DB 개념 정리! 📚"},
-        {"schedule_id": SCHEDULE_IDS["ibm_day2"], "title": "팀 프로젝트 기획", "date": date(base_year, base_month, 6), "estimated_minute": 60, "is_done": True, "priority": "medium", "category": "수업", "tip": "역할 분담 명확하게! 👥"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day2"], "title": "RAG 아키텍처 학습", "date": date(base_year, base_month, 6), "estimated_minute": 120, "is_done": True, "priority": "high", "category": "class", "tip": "벡터 DB 개념 정리! 📚"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day2"], "title": "팀 프로젝트 기획", "date": date(base_year, base_month, 6), "estimated_minute": 60, "is_done": True, "priority": "medium", "category": "class", "tip": "역할 분담 명확하게! 👥"},
         
         # === IBM 오프라인 수업 Day 3 (1/7) - 완료 ===
-        {"schedule_id": SCHEDULE_IDS["ibm_day3"], "title": "백엔드 API 개발", "date": date(base_year, base_month, 7), "estimated_minute": 180, "is_done": True, "priority": "high", "category": "수업", "tip": "FastAPI 문서화 필수! 📝"},
-        {"schedule_id": SCHEDULE_IDS["ibm_day3"], "title": "프론트엔드 UI 구현", "date": date(base_year, base_month, 7), "estimated_minute": 150, "is_done": True, "priority": "high", "category": "수업", "tip": "컴포넌트 재사용하세요! ♻️"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day3"], "title": "백엔드 API 개발", "date": date(base_year, base_month, 7), "estimated_minute": 180, "is_done": True, "priority": "high", "category": "class", "tip": "FastAPI 문서화 필수! 📝"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day3"], "title": "프론트엔드 UI 구현", "date": date(base_year, base_month, 7), "estimated_minute": 150, "is_done": True, "priority": "high", "category": "class", "tip": "컴포넌트 재사용하세요! ♻️"},
         
         # === IBM 오프라인 수업 Day 4 (1/8) - 완료 ===
-        {"schedule_id": SCHEDULE_IDS["ibm_day4"], "title": "AI 챗봇 연동", "date": date(base_year, base_month, 8), "estimated_minute": 120, "is_done": True, "priority": "high", "category": "수업", "tip": "에러 핸들링 꼼꼼히! 🔧"},
-        {"schedule_id": SCHEDULE_IDS["ibm_day4"], "title": "시연 데모 준비", "date": date(base_year, base_month, 8), "estimated_minute": 60, "is_done": True, "priority": "medium", "category": "수업", "tip": "시나리오 미리 작성! 🎬"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day4"], "title": "AI 챗봇 연동", "date": date(base_year, base_month, 8), "estimated_minute": 120, "is_done": True, "priority": "high", "category": "class", "tip": "에러 핸들링 꼼꼼히! 🔧"},
+        {"schedule_id": SCHEDULE_IDS["ibm_day4"], "title": "시연 데모 준비", "date": date(base_year, base_month, 8), "estimated_minute": 60, "is_done": True, "priority": "medium", "category": "class", "tip": "시나리오 미리 작성! 🎬"},
         
         # === 팀 스탠드업 (1/9 구글) - 완료 ===
-        {"schedule_id": SCHEDULE_IDS["google_standup"], "title": "진행 상황 정리", "date": date(base_year, base_month, 9), "estimated_minute": 15, "is_done": True, "priority": "medium", "category": "미팅", "tip": "간단명료하게! 📋"},
+        {"schedule_id": SCHEDULE_IDS["google_standup"], "title": "진행 상황 정리", "date": date(base_year, base_month, 9), "estimated_minute": 15, "is_done": True, "priority": "medium", "category": "team", "tip": "간단명료하게! 📋"},
         
         # === 온라인 멘토링 1차 (1/10) - 완료 ===
-        {"schedule_id": SCHEDULE_IDS["mentoring_1"], "title": "멘토 피드백 정리", "date": date(base_year, base_month, 10), "estimated_minute": 30, "is_done": True, "priority": "high", "category": "대외활동", "tip": "핵심 피드백 메모! 📝"},
-        {"schedule_id": SCHEDULE_IDS["mentoring_1"], "title": "개선점 반영", "date": date(base_year, base_month, 10), "estimated_minute": 90, "is_done": True, "priority": "high", "category": "대외활동", "tip": "우선순위 높은 것부터! 🎯"},
+        {"schedule_id": SCHEDULE_IDS["mentoring_1"], "title": "멘토 피드백 정리", "date": date(base_year, base_month, 10), "estimated_minute": 30, "is_done": True, "priority": "high", "category": "activity", "tip": "핵심 피드백 메모! 📝"},
+        {"schedule_id": SCHEDULE_IDS["mentoring_1"], "title": "개선점 반영", "date": date(base_year, base_month, 10), "estimated_minute": 90, "is_done": True, "priority": "high", "category": "activity", "tip": "우선순위 높은 것부터! 🎯"},
         
         # === 온라인 멘토링 2차 (1/13) - 완료 ===
-        {"schedule_id": SCHEDULE_IDS["mentoring_2"], "title": "중간 발표 자료 준비", "date": date(base_year, base_month, 13), "estimated_minute": 120, "is_done": True, "priority": "high", "category": "대외활동", "tip": "슬라이드 10장 이내! 📊"},
-        {"schedule_id": SCHEDULE_IDS["mentoring_2"], "title": "데모 시연 연습", "date": date(base_year, base_month, 13), "estimated_minute": 60, "is_done": True, "priority": "medium", "category": "대외활동", "tip": "타이머 켜고 연습! ⏱️"},
+        {"schedule_id": SCHEDULE_IDS["mentoring_2"], "title": "중간 발표 자료 준비", "date": date(base_year, base_month, 13), "estimated_minute": 120, "is_done": True, "priority": "high", "category": "activity", "tip": "슬라이드 10장 이내! 📊"},
+        {"schedule_id": SCHEDULE_IDS["mentoring_2"], "title": "데모 시연 연습", "date": date(base_year, base_month, 13), "estimated_minute": 60, "is_done": True, "priority": "medium", "category": "activity", "tip": "타이머 켜고 연습! ⏱️"},
         
         # === 구글 프로젝트 리뷰 (1/14) - 오늘 ===
-        {"schedule_id": SCHEDULE_IDS["google_meeting"], "title": "리뷰 준비 자료 작성", "date": date(base_year, base_month, 14), "estimated_minute": 45, "is_done": False, "priority": "high", "category": "미팅", "tip": "핵심 성과 위주로! 🏆"},
-        {"schedule_id": SCHEDULE_IDS["google_meeting"], "title": "버그 수정", "date": date(base_year, base_month, 14), "estimated_minute": 60, "is_done": False, "priority": "medium", "category": "미팅", "tip": "콘솔 로그 확인! 🔍"},
+        {"schedule_id": SCHEDULE_IDS["google_meeting"], "title": "리뷰 준비 자료 작성", "date": date(base_year, base_month, 14), "estimated_minute": 45, "is_done": False, "priority": "high", "category": "team", "tip": "핵심 성과 위주로! 🏆"},
+        {"schedule_id": SCHEDULE_IDS["google_meeting"], "title": "버그 수정", "date": date(base_year, base_month, 14), "estimated_minute": 60, "is_done": False, "priority": "medium", "category": "team", "tip": "콘솔 로그 확인! 🔍"},
         
         # === 온라인 멘토링 3차 최종 (1/15) ===
-        {"schedule_id": SCHEDULE_IDS["mentoring_3"], "title": "최종 발표 자료 완성", "date": date(base_year, base_month, 15), "estimated_minute": 120, "is_done": False, "priority": "high", "category": "대외활동", "tip": "15분 발표 기준! 📽️"},
-        {"schedule_id": SCHEDULE_IDS["mentoring_3"], "title": "발표 대본 작성", "date": date(base_year, base_month, 15), "estimated_minute": 60, "is_done": False, "priority": "high", "category": "대외활동", "tip": "키워드만 메모! 🗒️"},
+        {"schedule_id": SCHEDULE_IDS["mentoring_3"], "title": "최종 발표 자료 완성", "date": date(base_year, base_month, 15), "estimated_minute": 120, "is_done": False, "priority": "high", "category": "activity", "tip": "15분 발표 기준! 📽️"},
+        {"schedule_id": SCHEDULE_IDS["mentoring_3"], "title": "발표 대본 작성", "date": date(base_year, base_month, 15), "estimated_minute": 60, "is_done": False, "priority": "high", "category": "activity", "tip": "키워드만 메모! 🗒️"},
         
         # === 해커톤 발표 및 수상 (1/16) ===
-        {"schedule_id": SCHEDULE_IDS["hackathon_final"], "title": "🔥 해커톤 데모 시연", "date": date(base_year, base_month, 16), "estimated_minute": 90, "is_done": False, "priority": "high", "category": "대외활동", "tip": "예외 상황 대비하세요! 🚨"},
-        {"schedule_id": SCHEDULE_IDS["hackathon_final"], "title": "발표 리허설", "date": date(base_year, base_month, 16), "estimated_minute": 30, "is_done": False, "priority": "high", "category": "대외활동", "tip": "목소리 크게! 📢"},
-        {"schedule_id": SCHEDULE_IDS["hackathon_final"], "title": "시상식 참석", "date": date(base_year, base_month, 16), "estimated_minute": 60, "is_done": False, "priority": "medium", "category": "대외활동", "tip": "수상 소감 준비! 🎉"},
+        {"schedule_id": SCHEDULE_IDS["hackathon_final"], "title": "🔥 해커톤 데모 시연", "date": date(base_year, base_month, 16), "estimated_minute": 90, "is_done": False, "priority": "high", "category": "activity", "tip": "예외 상황 대비하세요! 🚨"},
+        {"schedule_id": SCHEDULE_IDS["hackathon_final"], "title": "발표 리허설", "date": date(base_year, base_month, 16), "estimated_minute": 30, "is_done": False, "priority": "high", "category": "activity", "tip": "목소리 크게! 📢"},
+        {"schedule_id": SCHEDULE_IDS["hackathon_final"], "title": "시상식 참석", "date": date(base_year, base_month, 16), "estimated_minute": 60, "is_done": False, "priority": "medium", "category": "activity", "tip": "수상 소감 준비! 🎉"},
     ]
     
     # user_id와 sub_task_id 자동 추가
