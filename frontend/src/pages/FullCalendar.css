@@ -1,0 +1,81 @@
+.full-calendar-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-default);
+}
+
+.full-calendar-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-bg-default);
+  border-bottom: 1px solid var(--color-gray-200);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-sticky);
+}
+
+.full-calendar-page__back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.full-calendar-page__back-btn:hover {
+  background-color: var(--color-gray-100);
+}
+
+.full-calendar-page__title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.full-calendar-page__spacer {
+  width: 40px;
+}
+
+.full-calendar-page__content {
+  flex: 1;
+  padding: var(--spacing-md);
+  overflow-y: auto;
+}
+
+/* 전체 캘린더 모드에서 캘린더 컴포넌트 스타일 */
+.full-calendar-page__content .calendar {
+  max-width: 100%;
+  height: 100%;
+}
+
+.full-calendar-page__content .calendar-grid {
+  min-height: calc(100vh - 140px);
+}
+
+.full-calendar-page__content .calendar-grid__day {
+  min-height: 100px;
+}
+
+@media (max-width: 768px) {
+  .full-calendar-page__header {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .full-calendar-page__content {
+    padding: var(--spacing-sm);
+  }
+
+  .full-calendar-page__content .calendar-grid__day {
+    min-height: 80px;
+  }
+}

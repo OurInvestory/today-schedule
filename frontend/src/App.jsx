@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Home from './pages/Home';
+import FullCalendar from './pages/FullCalendar';
 import TaskDetail from './pages/TaskDetail';
 import ScheduleDetail from './pages/ScheduleDetail';
 import Archive from './pages/Archive';
@@ -106,6 +107,7 @@ function App() {
           />
           
           {/* 독립 페이지 (헤더/네비게이션 없음) */}
+          <Route path="/calendar" element={<FullCalendar />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/timetable" element={<Timetable />} />

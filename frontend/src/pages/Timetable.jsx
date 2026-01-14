@@ -6,7 +6,6 @@ import { formatDate } from '../utils/dateUtils';
 import Modal from '../components/common/Modal';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
-import Loading from '../components/common/Loading';
 import './Timetable.css';
 
 // 요일 라벨
@@ -23,8 +22,7 @@ const DAY_LABELS = {
 const Timetable = () => {
   const navigate = useNavigate();
   const {
-    lectures,
-    loading,
+    // lectures는 getLecturesForDay를 통해 간접 사용
     error,
     year,
     weekNumber,
@@ -205,13 +203,8 @@ const Timetable = () => {
     navigate('/');
   };
 
-  if (loading && lectures.length === 0) {
-    return (
-      <div className="timetable timetable--loading">
-        <Loading text="시간표를 불러오는 중..." />
-      </div>
-    );
-  }
+  // 에러가 있어도 빈 시간표를 표시 (로딩 화면 없이)
+  // loading 중에도 UI는 보이도록 하고, 데이터만 로딩 표시
 
   return (
     <div className="timetable">

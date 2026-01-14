@@ -70,19 +70,28 @@ export const useTimetable = () => {
       
       const response = await getLectures(from, to);
       
-      // getLectures는 response.data를 반환하므로 직접 사용
-      // response 형식: { status: 200, data: [...], message: '...' }
-      if (response && response.status === 200) {
-        const lectureData = response.data || [];
-        setLectures(Array.isArray(lectureData) ? lectureData : []);
-      } else if (Array.isArray(response)) {
+      // response 구조에 따라 처리
+      let lectureData = [];
+      
+      if (response) {
+        // { status: 200, data: [...] } 형식
+        if (response.status === 200 && response.data) {
+          lectureData = response.data;
+        }
+        // { data: [...] } 형식
+        else if (response.data && Array.isArray(response.data)) {
+          lectureData = response.data;
+        }
         // 직접 배열이 반환된 경우
-        setLectures(response);
-      } else {
-        setLectures([]);
+        else if (Array.isArray(response)) {
+          lectureData = response;
+        }
       }
+      
+      setLectures(Array.isArray(lectureData) ? lectureData : []);
     } catch (err) {
       console.error('Failed to fetch lectures:', err);
+      // API 에러여도 빈 배열로 설정하고 로딩 종료
       setError(err.message || '강의 목록을 불러오는데 실패했습니다.');
       setLectures([]);
     } finally {

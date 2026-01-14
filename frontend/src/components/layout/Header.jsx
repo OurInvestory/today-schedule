@@ -108,7 +108,7 @@ const Header = ({ hasNotification = false }) => {
               <div className="header__menu">
                 <button
                   className="header__menu-item"
-                  onClick={() => handleMenuItemClick('/')}
+                  onClick={() => handleMenuItemClick('/calendar')}
                 >
                   <svg
                     width="18"
