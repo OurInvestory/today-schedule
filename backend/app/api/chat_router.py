@@ -117,6 +117,10 @@ async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
         context_section = ""
         if req.user_context:
             context_dump = json.dumps(req.user_context, ensure_ascii=False)
+            
+            # 이전 대화가 알림 설정 관련 CLARIFY였는지 확인
+            is_notification_clarify = req.user_context.get('previous_intent') == 'CLARIFY' and req.user_context.get('minutes_before')
+            
             context_section = f"""
 [Previous Conversation History]
 The user is continuing a conversation. The previous state was:
@@ -125,6 +129,13 @@ The user is continuing a conversation. The previous state was:
 INSTRUCTION: 
 1. Merge the 'User Input' with the info in [Previous Conversation History].
 2. If the user answers a missing field (e.g., subject name), combine it with the previous time/date to create a 'SCHEDULE_MUTATION'.
+3. **IMPORTANT**: If 'minutes_before' exists in context and user provides a schedule/event name, this is a NOTIFICATION setup request. Create action with target: 'NOTIFICATION'.
+"""
+            if is_notification_clarify:
+                context_section += f"""
+4. **NOTIFICATION MODE**: The user previously asked to set an alarm {req.user_context.get('minutes_before')} minutes before.
+   - DO NOT create a new schedule. Create a NOTIFICATION action instead.
+   - Use: {{"op": "UPDATE", "target": "NOTIFICATION", "payload": {{"schedule_title": "<user's answer>", "minutes_before": {req.user_context.get('minutes_before')}}}}}
 """
         else:
             context_section = "\n[Previous Conversation History]\nNone (New conversation start)"

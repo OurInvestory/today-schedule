@@ -268,6 +268,31 @@
   cursor: not-allowed;
 }
 
+/* 전체 취소 버튼 */
+.chat-message__bulk-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e8eb;
+}
+
+.chat-message__action-btn--cancel-all {
+  background: #f2f4f6;
+  color: #4e5968;
+  padding: 6px 12px;
+  font-size: 12px;
+  border: 1px solid #e5e8eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-message__action-btn--cancel-all:hover {
+  background: #e5e8eb;
+  border-color: #d1d5db;
+}
+
 /* AI 추론 이유 표시 */
 .chat-message__reasoning {
   display: flex;
@@ -394,9 +419,14 @@
   font-weight: 500;
 }
 
-.chat-message__action-status--confirmed {
+.chat-message__action-status--success {
   background: #e6f7ed;
   color: #0ca678;
+}
+
+.chat-message__action-status--cancelled {
+  background: #f2f4f6;
+  color: #6b7280;
 }
 
 .chat-message__action-status--error {

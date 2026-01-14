@@ -189,13 +189,33 @@ export const useChatbot = () => {
     try {
       // 이미지 파일이 있으면 이미지 분석 결과를 사용
       if (imageAnalysisResult && imageAnalysisResult.success) {
+        const actions = imageAnalysisResult.actions || imageAnalysisResult.parsedResult?.actions || [];
+        
+        // 이미지 분석 결과로 일정/할 일 추출 성공
+        let displayMessage = imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸';
+        
+        // actions가 있으면 일정 추가 UI를 표시하기 위한 메시지 구성
+        if (actions.length > 0) {
+          // 강의, 일정, 할 일 카운트
+          const lectureCount = actions.filter(a => a.target === 'LECTURE' || a.payload?.type === 'LECTURE').length;
+          const scheduleCount = actions.filter(a => (a.target === 'SCHEDULE' || a.payload?.type === 'EVENT') && a.target !== 'LECTURE').length;
+          const taskCount = actions.filter(a => a.target === 'SUB_TASK' || a.payload?.type === 'TASK').length;
+          
+          const parts = [];
+          if (lectureCount > 0) parts.push(`강의 ${lectureCount}개`);
+          if (scheduleCount > 0) parts.push(`일정 ${scheduleCount}개`);
+          if (taskCount > 0) parts.push(`할 일 ${taskCount}개`);
+          
+          displayMessage = `이미지에서 ${parts.join(', ')}를 발견했어요! 📸\n추가할 항목을 선택해주세요.`;
+        }
+        
         const newAssistantMessage = {
           id: Date.now() + 1,
           role: 'assistant',
-          content: imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸',
+          content: displayMessage,
           timestamp: new Date().toISOString(),
           parsedResult: imageAnalysisResult.parsedResult,
-          actions: imageAnalysisResult.parsedResult?.actions || [],
+          actions: actions,
           imageAnalysis: imageAnalysisResult,
         };
         setMessages(prev => [...prev, newAssistantMessage]);
@@ -203,8 +223,20 @@ export const useChatbot = () => {
         return;
       }
 
+      // 이전 CLARIFY 컨텍스트 확인 (마지막 assistant 메시지에서)
+      let userContext = {};
+      const lastAssistantMsg = messages.filter(m => m.role === 'assistant').slice(-1)[0];
+      if (lastAssistantMsg?.parsedResult?.intent === 'CLARIFY') {
+        // 이전 CLARIFY의 preserved_info를 userContext로 전달
+        userContext = {
+          ...lastAssistantMsg.parsedResult.preserved_info,
+          previous_intent: 'CLARIFY',
+          previous_type: lastAssistantMsg.parsedResult.type,
+        };
+      }
+
       // 일반 텍스트 메시지 처리
-      const response = await sendChatMessage(text, null, selectedScheduleId, {}, null);
+      const response = await sendChatMessage(text, null, selectedScheduleId, userContext, null);
       
       // axios 응답 구조: response.data가 API 응답 본문
       // API 응답 구조: { status, message, data: { parsedResult, assistantMessage } }
@@ -312,12 +344,24 @@ export const useChatbot = () => {
   }, [lastUserMessage, loading]);
 
   // 인터랙티브 액션 확인 (일정/할 일 생성/알림 예약)
-  const confirmAction = useCallback(async (messageId, action, parsedResult = null) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, actionCompleted: 'confirmed', actionLoading: true }
-        : msg
-    ));
+  const confirmAction = useCallback(async (messageId, action, parsedResult = null, actionIndex = null) => {
+    // 개별 액션 로딩 상태 업데이트
+    if (actionIndex !== null) {
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { 
+              ...msg, 
+              loadingActions: { ...msg.loadingActions, [actionIndex]: true }
+            }
+          : msg
+      ));
+    } else {
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, actionCompleted: 'confirmed', actionLoading: true }
+          : msg
+      ));
+    }
     
     try {
       let result;
@@ -396,21 +440,63 @@ export const useChatbot = () => {
         confirmContent = '일정이 삭제되었습니다! 🗑️';
       }
       
-      // 성공 메시지 업데이트
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, actionLoading: false, actionResult: result }
-          : msg
-      ));
-      
-      // 확인 메시지 추가
-      const confirmMessage = {
-        id: Date.now(),
-        role: 'assistant',
-        content: confirmContent || '처리가 완료되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.',
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, confirmMessage]);
+      // 개별 액션 성공 업데이트
+      if (actionIndex !== null) {
+        setMessages(prev => prev.map(msg => {
+          if (msg.id !== messageId) return msg;
+          
+          const newCompletedActions = { 
+            ...msg.completedActions, 
+            [actionIndex]: 'confirmed' 
+          };
+          const newLoadingActions = { 
+            ...msg.loadingActions, 
+            [actionIndex]: false 
+          };
+          const newActionResults = {
+            ...msg.actionResults,
+            [actionIndex]: { success: true, result, message: confirmContent }
+          };
+          
+          // 모든 액션이 완료되었는지 확인
+          const totalActions = msg.actions?.length || 0;
+          const completedCount = Object.keys(newCompletedActions).length;
+          const allCompleted = completedCount === totalActions;
+          
+          return { 
+            ...msg, 
+            completedActions: newCompletedActions,
+            loadingActions: newLoadingActions,
+            actionResults: newActionResults,
+            actionCompleted: allCompleted ? 'confirmed' : msg.actionCompleted
+          };
+        }));
+        
+        // 개별 성공 메시지 추가
+        const confirmMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: confirmContent || '처리가 완료되었습니다! ✅',
+          timestamp: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, confirmMessage]);
+      } else {
+        // 전체 액션 성공 업데이트 (기존 로직)
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, actionLoading: false, actionResult: result }
+            : msg
+        ));
+        
+        // 확인 메시지 추가
+        const confirmMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: confirmContent || '처리가 완료되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.',
+          timestamp: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, confirmMessage]);
+      }
       
       // 페이지 새로고침을 위한 이벤트 발생
       window.dispatchEvent(new CustomEvent('scheduleUpdated'));
@@ -418,11 +504,28 @@ export const useChatbot = () => {
     } catch (err) {
       console.error('Action confirmation failed:', err);
       
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, actionLoading: false, actionError: err.message }
-          : msg
-      ));
+      if (actionIndex !== null) {
+        // 개별 액션 에러 업데이트
+        setMessages(prev => prev.map(msg => {
+          if (msg.id !== messageId) return msg;
+          
+          return { 
+            ...msg, 
+            loadingActions: { ...msg.loadingActions, [actionIndex]: false },
+            actionResults: {
+              ...msg.actionResults,
+              [actionIndex]: { success: false, error: err.message }
+            }
+          };
+        }));
+      } else {
+        // 전체 액션 에러 업데이트 (기존 로직)
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, actionLoading: false, actionError: err.message }
+            : msg
+        ));
+      }
       
       // 에러 메시지 추가
       const errorMessage = {
@@ -436,22 +539,64 @@ export const useChatbot = () => {
     }
   }, []);
 
-  // 인터랙티브 액션 취소
-  const cancelAction = useCallback((messageId) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, actionCompleted: 'cancelled' }
-        : msg
-    ));
-    
-    // 취소 메시지 추가
-    const cancelMessage = {
-      id: Date.now(),
-      role: 'assistant',
-      content: '알겠습니다. 취소되었습니다. 다른 도움이 필요하시면 말씀해주세요.',
-      timestamp: new Date().toISOString(),
-    };
-    setMessages(prev => [...prev, cancelMessage]);
+  // 인터랙티브 액션 취소 (개별 또는 전체)
+  const cancelAction = useCallback((messageId, actionIndex = null) => {
+    if (actionIndex === 'all') {
+      // 전체 취소 (버튼으로 전체 취소)
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, actionCompleted: 'cancelled' }
+          : msg
+      ));
+      
+      // 취소 메시지 추가
+      const cancelMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '알겠습니다. 모두 취소되었습니다. 다른 도움이 필요하시면 말씀해주세요.',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, cancelMessage]);
+    } else if (actionIndex !== null) {
+      // 개별 액션 취소
+      setMessages(prev => prev.map(msg => {
+        if (msg.id !== messageId) return msg;
+        
+        const newCompletedActions = { 
+          ...msg.completedActions, 
+          [actionIndex]: 'cancelled' 
+        };
+        
+        // 모든 액션이 완료되었는지 확인
+        const totalActions = msg.actions?.length || 0;
+        const completedCount = Object.keys(newCompletedActions).length;
+        const allCompleted = completedCount === totalActions;
+        
+        return { 
+          ...msg, 
+          completedActions: newCompletedActions,
+          actionCompleted: allCompleted ? 'cancelled' : msg.actionCompleted
+        };
+      }));
+      
+      // 개별 취소 시 별도 메시지 없이 UI만 업데이트
+    } else {
+      // 전체 취소 (기존 로직, messageId만 전달된 경우)
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, actionCompleted: 'cancelled' }
+          : msg
+      ));
+      
+      // 취소 메시지 추가
+      const cancelMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '알겠습니다. 취소되었습니다. 다른 도움이 필요하시면 말씀해주세요.',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, cancelMessage]);
+    }
   }, []);
 
   // 메시지 자동 스크롤
