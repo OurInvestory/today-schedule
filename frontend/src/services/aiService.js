@@ -91,7 +91,19 @@ export const createScheduleFromAI = async (payload) => {
  */
 export const createSubTaskFromAI = async (scheduleId, payload) => {
   try {
-    const response = await api.post(`/api/schedules/${scheduleId}/sub-tasks`, payload);
+    // AI가 생성한 할 일 데이터를 백엔드 스키마에 맞게 변환
+    const subTaskPayload = {
+      schedule_id: scheduleId || null, // scheduleId 없으면 독립 할 일
+      title: payload.title,
+      date: payload.due_date || payload.date || new Date().toISOString().split('T')[0],
+      estimated_minute: payload.estimated_minute || 60,
+      priority: payload.priority || 'medium',
+      category: payload.category || '기타',
+      ai_reason: payload.ai_reason || payload.reason || `AI가 추천한 할 일입니다.`,
+    };
+    
+    // 직접 sub-tasks 엔드포인트로 POST
+    const response = await api.post('/api/sub-tasks', subTaskPayload);
     return response;
   } catch (error) {
     console.error('Failed to create sub-task from AI:', error);

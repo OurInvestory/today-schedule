@@ -7,6 +7,9 @@ import ScheduleDetail from './pages/ScheduleDetail';
 import Archive from './pages/Archive';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import { ToastProvider } from './components/common/Toast';
+import NetworkStatus from './components/common/NetworkStatus';
 import { initNotificationService, cleanupNotificationService } from './services/notificationService';
 import './App.css';
 
@@ -55,9 +58,12 @@ function App() {
   };
 
   return (
-    <BrowserRouter>
-      <div className="app">
-        <Routes>
+    <ErrorBoundary>
+      <ToastProvider>
+        <BrowserRouter>
+          <NetworkStatus />
+          <div className="app">
+            <Routes>
           {/* 헤더가 있는 레이아웃 */}
           <Route
             path="/"
@@ -112,8 +118,10 @@ function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
-      </div>
-    </BrowserRouter>
+          </div>
+        </BrowserRouter>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 
