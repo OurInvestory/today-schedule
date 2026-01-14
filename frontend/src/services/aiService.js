@@ -167,8 +167,7 @@ export const analyzeTimetableImage = async (imageFile) => {
     let actions = parsedResult?.actions || [];
     actions = actions.map(action => ({
       ...action,
-      target: action.target || (action.payload?.type === 'LECTURE' ? 'LECTURE' : 
-               action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE'),
+      target: action.target || (action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE'),
     }));
     
     return {

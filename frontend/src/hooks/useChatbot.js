@@ -196,13 +196,11 @@ export const useChatbot = () => {
         
         // actions가 있으면 일정 추가 UI를 표시하기 위한 메시지 구성
         if (actions.length > 0) {
-          // 강의, 일정, 할 일 카운트
-          const lectureCount = actions.filter(a => a.target === 'LECTURE' || a.payload?.type === 'LECTURE').length;
-          const scheduleCount = actions.filter(a => (a.target === 'SCHEDULE' || a.payload?.type === 'EVENT') && a.target !== 'LECTURE').length;
+          // 일정, 할 일 카운트
+          const scheduleCount = actions.filter(a => a.target === 'SCHEDULE' || a.payload?.type === 'EVENT').length;
           const taskCount = actions.filter(a => a.target === 'SUB_TASK' || a.payload?.type === 'TASK').length;
           
           const parts = [];
-          if (lectureCount > 0) parts.push(`강의 ${lectureCount}개`);
           if (scheduleCount > 0) parts.push(`일정 ${scheduleCount}개`);
           if (taskCount > 0) parts.push(`할 일 ${taskCount}개`);
           
@@ -398,16 +396,10 @@ export const useChatbot = () => {
       // target이 없으면 payload.type으로 판단 (이미지 분석 결과)
       const payloadType = action?.payload?.type?.toUpperCase();
       const actionTarget = action?.target || 
-        (payloadType === 'LECTURE' ? 'LECTURE' : 
-         payloadType === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
+        (payloadType === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
       
       if (action?.op === 'CREATE') {
-        if (actionTarget === 'LECTURE' || payloadType === 'LECTURE') {
-          // 강의 생성
-          const response = await createLectureFromAI(action.payload);
-          result = response?.data || response;
-          confirmContent = '강의가 성공적으로 추가되었습니다! 📚';
-        } else if (actionTarget === 'SCHEDULE' || payloadType === 'EVENT') {
+        if (actionTarget === 'SCHEDULE' || payloadType === 'EVENT') {
           // 일정 생성
           const response = await createScheduleFromAI(action.payload);
           // axios 응답에서 data 추출

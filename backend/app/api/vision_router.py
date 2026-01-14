@@ -230,46 +230,30 @@ def parse_llm_response(generated_response: str) -> AIChatParsed:
     return AIChatParsed(**parsed_data)
 
 def process_schedule_mode(ocr_result) -> AIChatParsed:
-    """ [모드 1] 시간표 처리 로직 (Grid Analysis + Text Model) - 강의(Lecture) 생성 """
+    """ [모드 1] 시간표 처리 로직 (Grid Analysis + Text Model) """
     # 1. 격자 분석 (좌표 기반)
     structured_text = geometric_grid_analysis(ocr_result)
     
-    # 2. 날짜 컨텍스트 (학기 기간)
+    # 2. 날짜 컨텍스트 (이번 주 월~금)
     today = datetime.now()
-    # 현재 월 기준으로 학기 시작/종료일 추정
-    if today.month >= 9:  # 2학기 (9월~12월)
-        semester_start = f"{today.year}-09-01"
-        semester_end = f"{today.year}-12-20"
-    elif today.month >= 3:  # 1학기 (3월~6월)
-        semester_start = f"{today.year}-03-02"
-        semester_end = f"{today.year}-06-20"
-    else:  # 1~2월 (겨울방학 or 다음 학기 준비)
-        semester_start = f"{today.year}-03-02"
-        semester_end = f"{today.year}-06-20"
+    start_of_week = today - timedelta(days=today.weekday())
+    dates_prompt = "\n".join([
+        f"- {day}: {(start_of_week + timedelta(days=i)).strftime('%Y-%m-%d')}"
+        for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri"])
+    ])
 
-    # 요일 매핑: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4
-    days_mapping = "Mon=0, Tue=1, Wed=2, Thu=3, Fri=4"
-
-    # 3. 시간표 전용 프롬프트 (강의 생성)
+    # 3. 시간표 전용 프롬프트
     instructions = """
-    1. **Lecture Schedule**:
-       - If text has Weekday + Time: Create a LECTURE.
-       - Title: Class/Course Name.
-       - **MERGING RULES**: If a class name is split across consecutive time slots (e.g. 18:00 'Software...' and 19:00 '...Thinking'), MERGE them into ONE lecture with extended duration.
-       
-    2. **Week Format**:
-       - Convert day names to numbers: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4
-       - If same course appears on multiple days, include all days in the week array.
+    1. **Class Schedule (EVENT)**:
+       - If text has Weekday + Time: Create an EVENT.
+       - Title: Class Name.
+       - **MERGING RULES**: If a class name is split across consecutive time slots (e.g. 18:00 'Software...' and 19:00 '...Thinking'), MERGE them into ONE event with extended duration (e.g. 18:00 ~ 20:00).
     """
 
-    prompt_text = f"""You are an AI Schedule Assistant. Extract LECTURE schedules from the text below.
+    prompt_text = f"""You are an AI Schedule Assistant. Extract events from the text below.
 
-[Semester Period]
-start_day: {semester_start}
-end_day: {semester_end}
-
-[Day Mapping]
-{days_mapping}
+[Reference Dates]
+{dates_prompt}
 
 [TEXT DATA]
 {structured_text if structured_text else "No text found."}
@@ -279,19 +263,17 @@ end_day: {semester_end}
 
 [OUTPUT FORMAT]
 {{
-  "intent": "LECTURE_MUTATION",
-  "type": "LECTURE",
+  "intent": "SCHEDULE_MUTATION",
+  "type": "UNKNOWN",
   "actions": [
     {{
       "op": "CREATE",
       "payload": {{
-        "type": "LECTURE",
-        "title": "강의명 (한글로)",
-        "start_time": "HH:MM:SS",
-        "end_time": "HH:MM:SS",
-        "start_day": "{semester_start}",
-        "end_day": "{semester_end}",
-        "week": [0, 2]
+        "type": "EVENT",
+        "category": "수업",
+        "title": "String",
+        "start_at": "ISO8601",
+        "end_at": "ISO8601"
       }}
     }}
   ]
@@ -415,19 +397,13 @@ async def analyze_image_schedule(
             if image_type == 'poster':
                 titles = [a.payload.get('title', '') for a in ai_parsed_result.actions]
                 if action_cnt == 1:
-                    assistant_msg = f"📋 포스터 분석 완료! '{titles[0]}' 일정을 확인했어요."
+                    assistant_msg = f"[POSTER] 분석 완료: '{titles[0]}' 일정을 확인했습니다."
                 else:
-                    assistant_msg = f"📋 포스터 분석 완료! {action_cnt}건의 주요 일정을 확인했어요."
+                    assistant_msg = f"[POSTER] 분석 완료: {action_cnt}건의 주요 일정을 확인했습니다."
             else:
-                # 시간표 -> 강의
-                titles = [a.payload.get('title', '') for a in ai_parsed_result.actions[:3]]
-                titles_text = ", ".join([t for t in titles if t])
-                if titles_text:
-                    assistant_msg = f"📚 시간표 분석 완료! {action_cnt}개의 강의를 발견했어요:\n{titles_text}{'...' if action_cnt > 3 else ''}\n\n추가하시겠어요?"
-                else:
-                    assistant_msg = f"📚 시간표 분석 완료! {action_cnt}개의 강의를 발견했어요. 추가하시겠어요?"
+                assistant_msg = f"[{image_type.upper()}] 분석 완료: {action_cnt}건의 일정을 발견했습니다."
         else:
-            assistant_msg = "일정을 찾지 못했어요. 다른 이미지를 시도해주세요."
+            assistant_msg = "일정을 찾지 못했습니다."
 
         return APIResponse(status=200, message="Success", data=ChatResponseData(
             parsed_result=ai_parsed_result,
