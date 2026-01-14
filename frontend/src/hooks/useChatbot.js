@@ -202,7 +202,7 @@ export const useChatbot = () => {
         // 백엔드 응답의 parsedResult.actions에 일정 데이터가 있음
         
         // 이미지 분석 결과로 일정/할 일 추출 성공
-        let displayMessage = imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸';
+        let displayMessage = '이미지를 분석했지만 일정을 찾지 못했어요. 📸';
         
         // actions가 있으면 일정 추가 UI를 표시하기 위한 메시지 구성
         if (actions.length > 0) {
@@ -220,13 +220,14 @@ export const useChatbot = () => {
           const taskActions = actions.filter(a => a.target === 'SUB_TASK' || a.payload?.type === 'TASK');
           const taskCount = taskActions.length;
           
+          const totalCount = lectureCount + scheduleCount + taskCount;
           const parts = [];
           if (lectureCount > 0) parts.push(`강의 ${lectureCount}개`);
           if (scheduleCount > 0) parts.push(`일정 ${scheduleCount}개`);
           if (taskCount > 0) parts.push(`할 일 ${taskCount}개`);
           
           if (parts.length > 0) {
-            displayMessage = `시간표에서 ${parts.join(', ')}를 발견했어요! 📸\n추가하시려면 아래 버튼을 눌러주세요.`;
+            displayMessage = `이미지에서 ${parts.join(', ')}를 발견했어요! 📸\n시간표에 추가할까요?`;
           }
         }
         
@@ -564,12 +565,24 @@ export const useChatbot = () => {
   // 인터랙티브 액션 취소 (개별 또는 전체)
   const cancelAction = useCallback((messageId, actionIndex = null) => {
     if (actionIndex === 'all') {
-      // 전체 취소 (버튼으로 전체 취소)
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, actionCompleted: 'cancelled' }
-          : msg
-      ));
+      // 전체 취소 (버튼으로 전체 취소) - 모든 pending 액션을 cancelled로 표시
+      setMessages(prev => prev.map(msg => {
+        if (msg.id !== messageId) return msg;
+        
+        // 모든 액션을 cancelled로 표시
+        const newCompletedActions = { ...msg.completedActions };
+        (msg.actions || []).forEach((_, idx) => {
+          if (!newCompletedActions[idx]) {
+            newCompletedActions[idx] = 'cancelled';
+          }
+        });
+        
+        return { 
+          ...msg, 
+          completedActions: newCompletedActions,
+          actionCompleted: 'cancelled' 
+        };
+      }));
       
       // 취소 메시지 추가
       const cancelMessage = {
@@ -581,8 +594,12 @@ export const useChatbot = () => {
       setMessages(prev => [...prev, cancelMessage]);
     } else if (actionIndex !== null) {
       // 개별 액션 취소
+      let actionTitle = '';
       setMessages(prev => prev.map(msg => {
         if (msg.id !== messageId) return msg;
+        
+        // 취소된 액션의 제목 저장
+        actionTitle = msg.actions?.[actionIndex]?.payload?.title || '항목';
         
         const newCompletedActions = { 
           ...msg.completedActions, 
@@ -597,11 +614,18 @@ export const useChatbot = () => {
         return { 
           ...msg, 
           completedActions: newCompletedActions,
-          actionCompleted: allCompleted ? 'cancelled' : msg.actionCompleted
+          actionCompleted: allCompleted ? 'partial' : msg.actionCompleted
         };
       }));
       
-      // 개별 취소 시 별도 메시지 없이 UI만 업데이트
+      // 개별 취소 메시지 추가
+      const cancelMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `'${actionTitle}' 항목이 취소되었습니다.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, cancelMessage]);
     } else {
       // 전체 취소 (기존 로직, messageId만 전달된 경우)
       setMessages(prev => prev.map(msg => 
