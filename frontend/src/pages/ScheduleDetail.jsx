@@ -602,7 +602,7 @@ const ScheduleDetail = () => {
                               {task.title}
                               {task.category && (
                                 <span className="schedule-detail__subtask-category">
-                                  [{task.category}]
+                                  [{CATEGORY_LABELS[task.category] || task.category}]
                                 </span>
                               )}
                             </span>

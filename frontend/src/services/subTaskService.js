@@ -64,7 +64,7 @@ export const updateSubTask = async (id, subTaskData) => {
     if (subTaskData.title !== undefined) payload.title = subTaskData.title;
     if (subTaskData.date !== undefined) payload.date = subTaskData.date;
     if (subTaskData.estimatedMinute !== undefined) payload.estimated_minute = subTaskData.estimatedMinute;
-    if (subTaskData.completed !== undefined) payload.is_completed = subTaskData.completed;
+    if (subTaskData.completed !== undefined) payload.is_done = subTaskData.completed;
     if (subTaskData.category !== undefined) payload.category = subTaskData.category;
     if (subTaskData.priority !== undefined) payload.priority = subTaskData.priority;
 
