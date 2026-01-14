@@ -256,7 +256,7 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
                   <button 
                     type="button" 
                     className="chat-message__action-btn chat-message__action-btn--cancel"
-                    onClick={handleCancel}
+                    onClick={handleCancelAll}
                     disabled={message.actionLoading}
                   >
                     ✕ 취소
