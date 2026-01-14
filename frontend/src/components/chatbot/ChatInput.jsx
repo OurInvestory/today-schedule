@@ -58,7 +58,7 @@ const ChatInput = ({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={hasFiles ? '시간표 사진에 있는 강의 추가해줘' : placeholder}
+        placeholder={hasFiles ? '이미지에 대해 물어보세요...' : placeholder}
         disabled={disabled}
         rows={1}
       />
