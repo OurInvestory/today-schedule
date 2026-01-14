@@ -115,6 +115,63 @@
     background-color: var(--color-error);
     border-radius: 50%;
   }
+
+  /* 햄버거 메뉴 오버플로 */
+  .header__menu-wrapper {
+    position: relative;
+  }
+
+  .header__menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    background: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    z-index: var(--z-index-dropdown);
+    overflow: hidden;
+    animation: header-menu-fade-in 0.15s ease-out;
+  }
+
+  @keyframes header-menu-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .header__menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: var(--spacing-md);
+    border: none;
+    background: transparent;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+  }
+
+  .header__menu-item:hover {
+    background-color: var(--color-gray-50);
+  }
+
+  .header__menu-item:not(:last-child) {
+    border-bottom: 1px solid var(--color-gray-100);
+  }
+
+  .header__menu-item svg {
+    color: var(--color-text-secondary);
+  }
   
   .header__user {
     display: flex;
