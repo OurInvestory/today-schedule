@@ -7,6 +7,7 @@ const SearchableSelect = ({
   onChange,
   placeholder = '선택하세요',
   searchPlaceholder = '검색...',
+  // eslint-disable-next-line no-unused-vars
   required = false,
   disabled = false,
   formatOption = (option) => option.label || option.title,

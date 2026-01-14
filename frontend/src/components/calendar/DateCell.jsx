@@ -7,24 +7,6 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
   const hasTodos = hasCompleted || hasPending;
   const lastTapRef = useRef(0);
   const [isExpanded, setIsExpanded] = useState(false);
-
-  // 날짜와 ID 기반 일관된 랜덤 색상 생성
-  const getRandomColor = (id, date) => {
-    const colors = [
-      '#3b82f6', // Blue
-      '#10b981', // Green  
-      '#8b5cf6', // Purple
-      '#f59e0b', // Amber
-      '#ec4899', // Pink
-      '#06b6d4', // Cyan
-      '#ef4444', // Red
-      '#84cc16', // Lime
-      '#f97316', // Orange
-      '#a855f7', // Violet
-    ];
-    const seed = (id || 0) + date.getDate() + date.getMonth() * 31;
-    return colors[seed % colors.length];
-  };
   
   const cellClass = [
     'date-cell',
@@ -69,35 +51,36 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
   const renderDetailedEvents = () => {
     if (events.length === 0 && todos.length === 0) return null;
 
-    // 일정별로 그룹화된 할일
-    const todosBySchedule = {};
-    const todosWithoutSchedule = [];
+    // 완료된 할일과 미완료 할일 분리
+    const completedTodos = todos.filter(todo => todo.completed);
+    const pendingTodos = todos.filter(todo => !todo.completed);
 
-    todos.forEach(todo => {
-      if (todo.scheduleId) {
-        if (!todosBySchedule[todo.scheduleId]) {
-          todosBySchedule[todo.scheduleId] = [];
-        }
-        todosBySchedule[todo.scheduleId].push(todo);
-      } else {
-        todosWithoutSchedule.push(todo);
-      }
-    });
+    // 일반 일정과 구글 일정 분리
+    const regularEvents = events.filter(event => event.source !== 'google');
+    const googleEvents = events.filter(event => event.source === 'google');
 
     const allItems = [];
 
-    // 1. 일정 + 일정별 할일
-    events.forEach(event => {
-      allItems.push({ type: 'event', data: event });
-      const eventTodos = todosBySchedule[event.id] || [];
-      eventTodos.forEach(todo => {
-        allItems.push({ type: 'todo', data: todo });
-      });
+    // 표시 순서: 완료한 할일(초록) > 미완료 할일(노란) > 일정(파랑) > 구글 일정(빨강)
+    
+    // 1. 완료한 할일 (초록색)
+    completedTodos.forEach(todo => {
+      allItems.push({ type: 'todo', data: todo });
     });
 
-    // 2. 일정 없는 할일
-    todosWithoutSchedule.forEach(todo => {
+    // 2. 미완료 할일 (노란색)
+    pendingTodos.forEach(todo => {
       allItems.push({ type: 'todo', data: todo });
+    });
+
+    // 3. 일반 일정 (파란색)
+    regularEvents.forEach(event => {
+      allItems.push({ type: 'event', data: event });
+    });
+
+    // 4. 구글 캘린더 일정 (빨간색)
+    googleEvents.forEach(event => {
+      allItems.push({ type: 'event', data: event });
     });
 
     // 모바일과 PC에서 다른 줄 수 제한
@@ -112,7 +95,8 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
           if (item.type === 'event') {
             const event = item.data;
             const isGoogleEvent = event.source === 'google';
-            const eventColor = isGoogleEvent ? '#ea4335' : getRandomColor(event.id, date);
+            // 구글 일정: 빨간색, 일반 일정: 파란색
+            const eventColor = isGoogleEvent ? '#ea4335' : '#3b82f6';
             
             return (
               <div
@@ -126,7 +110,7 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
               </div>
             );
           } else {
-            // 할일
+            // 할일: 완료=초록색, 미완료=노란색
             const todo = item.data;
             const todoColor = todo.completed ? '#10b981' : '#eab308';
             
