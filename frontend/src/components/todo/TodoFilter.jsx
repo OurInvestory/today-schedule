@@ -68,7 +68,7 @@ const DesktopFilter = ({ filter, handleCategoryChange, handlePriorityChange, han
 );
 
 // 모바일용 하단 시트 필터
-const MobileFilter = ({ filter, activeCount, handleCategoryChange, handlePriorityChange, handleCompletedChange, onFilterChange, isBottomSheetOpen, setIsBottomSheetOpen }) => (
+const MobileFilter = ({ filter, handleCategoryChange, handlePriorityChange, handleCompletedChange, onFilterChange, isBottomSheetOpen, setIsBottomSheetOpen }) => (
   <>
     <button 
       className="todo-filter__mobile-trigger"
@@ -78,9 +78,6 @@ const MobileFilter = ({ filter, activeCount, handleCategoryChange, handlePriorit
         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
       </svg>
       <span>필터</span>
-      {activeCount > 0 && (
-        <span className="todo-filter__badge">{activeCount}</span>
-      )}
     </button>
 
     {isBottomSheetOpen && (

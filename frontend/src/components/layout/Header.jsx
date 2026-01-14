@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Header.css';
 
-const Header = ({ hasNotification = false }) => {
+const Header = ({ hasNotification = false, isFullCalendarMode = false, onViewModeToggle }) => {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -21,6 +21,12 @@ const Header = ({ hasNotification = false }) => {
 
   const handleSettingsClick = () => {
     navigate('/settings');
+  };
+
+  const handleViewModeToggle = () => {
+    if (onViewModeToggle) {
+      onViewModeToggle();
+    }
   };
 
   return (
@@ -48,6 +54,36 @@ const Header = ({ hasNotification = false }) => {
         </Link>
 
         <div className="header__actions">
+          <button
+            className={`header__icon-btn ${isFullCalendarMode ? 'header__icon-btn--active' : ''}`}
+            onClick={handleViewModeToggle}
+            aria-label={isFullCalendarMode ? '대시보드 모드' : '전체 캘린더 모드'}
+            title={isFullCalendarMode ? '대시보드 모드로 전환' : '전체 캘린더 모드로 전환'}
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {isFullCalendarMode ? (
+                // 축소 아이콘 (대시보드로 돌아가기)
+                <>
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+                </>
+              ) : (
+                // 확대 아이콘 (전체 캘린더 모드)
+                <>
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                </>
+              )}
+            </svg>
+          </button>
+
           <button
             className={`header__icon-btn ${hasNotification ? 'header__icon-btn--has-notification' : ''}`}
             onClick={handleNotificationClick}

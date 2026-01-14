@@ -48,6 +48,15 @@
     margin: 0;
     letter-spacing: -0.02em;
   }
+
+  .header__icon-btn--active {
+    background-color: var(--color-primary-50);
+    color: var(--color-primary-500);
+  }
+
+  .header__icon-btn--active:hover {
+    background-color: var(--color-primary-100);
+  }
   
   .header__actions {
     display: flex;

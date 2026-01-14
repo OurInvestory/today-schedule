@@ -80,7 +80,17 @@ export const useTodo = (initialFilter = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const newTodo = await createTodo(todoData);
+
+      const newTodo = await createTodo({
+        title: todoData.title,
+        description: todoData.description,
+        dueDate: todoData.date || todoData.dueDate, // date 또는 dueDate 필드 사용
+        priority: todoData.priority,
+        estimatedMinute: todoData.estimatedMinute,
+        category: todoData.category,
+        scheduleId: todoData.scheduleId,
+      });
+
       await fetchTodos(); // 목록 새로고침
       return newTodo;
     } catch (err) {
@@ -125,23 +135,32 @@ export const useTodo = (initialFilter = {}) => {
     }
   };
 
-  // Todo 완료 토글
+  // Todo 완료 상태 토글
   const toggleComplete = async (id, completed) => {
     try {
-      // 낙관적 업데이트
-      setAllTodos(prev =>
-        prev.map(todo =>
-          todo.id === id ? { ...todo, completed } : todo
-        )
-      );
+      const targetTodo = allTodos.find(todo => todo.id === id);
       
-      await toggleTodoComplete(id, completed);
-      await fetchTodos(); // 목록 새로고침 (정렬 반영)
+      if (!targetTodo) {
+        console.error('Todo not found:', id);
+        return;
+      }
+      
+      console.log('Toggling todo:', { 
+        id, 
+        currentCompleted: targetTodo.completed, 
+        newCompleted: completed, 
+        targetTodo 
+      });
+      
+      await toggleTodoComplete(id, completed, targetTodo);
+      console.log('Toggle 성공, 목록 새로고침 실행');
+      
+      // API 호출 후 목록 새로고침
+      await fetchTodos();
+      console.log('fetchTodos 완료');
     } catch (err) {
       setError(err.message || '완료 상태 변경에 실패했습니다.');
       console.error('Failed to toggle todo complete:', err);
-      await fetchTodos(); // 실패 시 원상복구
-      throw err;
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Home from './pages/Home';
@@ -30,6 +30,8 @@ const requestNotificationPermission = async () => {
 };
 
 function App() {
+  const [isFullCalendarMode, setIsFullCalendarMode] = useState(false);
+
   // 앱 시작 시 알림 권한 요청 및 알림 서비스 초기화
   useEffect(() => {
     requestNotificationPermission().then((granted) => {
@@ -48,6 +50,10 @@ function App() {
     };
   }, []);
 
+  const handleViewModeToggle = () => {
+    setIsFullCalendarMode(!isFullCalendarMode);
+  };
+
   return (
     <BrowserRouter>
       <div className="app">
@@ -57,9 +63,13 @@ function App() {
             path="/"
             element={
               <>
-                <Header hasNotification={true} />
+                <Header 
+                  hasNotification={true} 
+                  isFullCalendarMode={isFullCalendarMode}
+                  onViewModeToggle={handleViewModeToggle}
+                />
                 <div className="app__content">
-                  <Home />
+                  <Home isFullCalendarMode={isFullCalendarMode} />
                 </div>
               </>
             }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sendChatMessage, getChatHistory } from '../services/aiService';
+import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage } from '../services/aiService';
 
 // 첫 인사 메시지
 const getGreetingMessage = () => {
@@ -53,16 +53,46 @@ export const useChatbot = () => {
     }
   }, [isOpen, hasGreeted, messages.length]);
 
-  // 메시지 전송
-  const sendMessage = async (text) => {
-    if (!text.trim()) return;
+  // 메시지 전송 (파일 업로드 지원)
+  const sendMessage = async (text, selectedScheduleId = null, files = null) => {
+    if (!text.trim() && (!files || files.length === 0)) return;
+
+    // 이미지 파일 분석
+    let imageAnalysisResult = null;
+    const imageFiles = files ? Array.from(files).filter(f => f.type.startsWith('image/')) : [];
+    
+    if (imageFiles.length > 0) {
+      try {
+        // 첫 번째 이미지 분석 (시간표 감지)
+        imageAnalysisResult = await analyzeTimetableImage(imageFiles[0]);
+      } catch (error) {
+        console.error('Image analysis failed:', error);
+      }
+    }
+
+    // 파일 정보 생성 (미리보기 URL 포함)
+    const fileInfo = files ? Array.from(files).map(f => {
+      const info = { 
+        name: f.name, 
+        type: f.type, 
+        size: f.size 
+      };
+      
+      // 이미지 파일인 경우 미리보기 URL 추가
+      if (f.type.startsWith('image/')) {
+        info.preview = URL.createObjectURL(f);
+      }
+      
+      return info;
+    }) : null;
 
     // 사용자 메시지 추가
     const userMessage = {
       id: Date.now(),
       role: 'user',
-      content: text,
+      content: text || '이미지를 분석해주세요',
       timestamp: new Date().toISOString(),
+      files: fileInfo,
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -70,22 +100,56 @@ export const useChatbot = () => {
     setError(null);
 
     try {
-      const response = await sendChatMessage(text, conversationId);
+      // 이미지 파일이 있으면 이미지 분석 결과를 사용
+      if (imageAnalysisResult && imageAnalysisResult.success) {
+        const newAssistantMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸',
+          timestamp: new Date().toISOString(),
+          parsedResult: imageAnalysisResult.parsedResult,
+          actions: imageAnalysisResult.parsedResult?.actions || [],
+          imageAnalysis: imageAnalysisResult,
+        };
+        setMessages(prev => [...prev, newAssistantMessage]);
+        setLoading(false);
+        return;
+      }
+
+      // 일반 텍스트 메시지 처리
+      const response = await sendChatMessage(text, null, selectedScheduleId, {}, null);
+      
+      // axios 응답 구조: response.data가 API 응답 본문
+      // API 응답 구조: { status, message, data: { parsedResult, assistantMessage } }
+      const apiResponse = response.data;
+      console.log('API Response:', apiResponse); // 디버깅용
+      
+      // data가 없거나 오류인 경우 처리
+      if (!apiResponse || apiResponse.status !== 200) {
+        throw new Error(apiResponse?.message || '서버 응답 오류');
+      }
+      
+      const responseData = apiResponse.data || {};
+      const parsedResult = responseData.parsed_result || responseData.parsedResult;
+      const assistantMessage = responseData.assistant_message || responseData.assistantMessage;
       
       // 응답 메시지 추가
-      const assistantMessage = {
+      const newAssistantMessage = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: response.message || response.content,
+        content: assistantMessage || '요청을 처리했습니다.',
         timestamp: new Date().toISOString(),
-        data: response.data, // 추가 데이터 (할 일 생성 결과 등)
+        parsedResult: parsedResult,
+        actions: parsedResult?.actions || [],
+        reasoning: parsedResult?.reasoning,
+        missingFields: parsedResult?.missingFields || parsedResult?.missing_fields || [],
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => [...prev, newAssistantMessage]);
       
       // 대화 ID 저장
-      if (response.conversationId) {
-        setConversationId(response.conversationId);
+      if (apiResponse.conversationId) {
+        setConversationId(apiResponse.conversationId);
       }
     } catch (err) {
       setError(err.message || '메시지 전송에 실패했습니다.');
@@ -130,25 +194,66 @@ export const useChatbot = () => {
     setHasGreeted(false);
   }, []);
 
-  // 인터랙티브 액션 확인
-  const confirmAction = useCallback((messageId, data) => {
+  // 인터랙티브 액션 확인 (일정/할 일 생성)
+  const confirmAction = useCallback(async (messageId, action) => {
     setMessages(prev => prev.map(msg => 
       msg.id === messageId 
-        ? { ...msg, actionCompleted: 'confirmed' }
+        ? { ...msg, actionCompleted: 'confirmed', actionLoading: true }
         : msg
     ));
     
-    // 확인 메시지 추가
-    const confirmMessage = {
-      id: Date.now(),
-      role: 'assistant',
-      content: '일정에 반영되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.',
-      timestamp: new Date().toISOString(),
-    };
-    setMessages(prev => [...prev, confirmMessage]);
-    
-    // TODO: 실제 일정 반영 로직 (data 활용)
-    console.log('Action confirmed with data:', data);
+    try {
+      let result;
+      
+      // 액션 타입에 따라 처리
+      if (action.op === 'CREATE') {
+        if (action.target === 'SCHEDULE') {
+          // 일정 생성
+          result = await createScheduleFromAI(action.payload);
+        } else if (action.target === 'SUB_TASK') {
+          // 할 일 생성
+          result = await createSubTaskFromAI(action.scheduleId, action.payload);
+        }
+      }
+      
+      // 성공 메시지 업데이트
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, actionLoading: false, actionResult: result }
+          : msg
+      ));
+      
+      // 확인 메시지 추가
+      const confirmMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `${action.target === 'SCHEDULE' ? '일정이' : '할 일이'} 성공적으로 추가되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, confirmMessage]);
+      
+      // 페이지 새로고침을 위한 이벤트 발생
+      window.dispatchEvent(new CustomEvent('scheduleUpdated'));
+      
+    } catch (err) {
+      console.error('Action confirmation failed:', err);
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, actionLoading: false, actionError: err.message }
+          : msg
+      ));
+      
+      // 에러 메시지 추가
+      const errorMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '죄송합니다. 일정 추가 중 오류가 발생했습니다. 다시 시도해주세요.',
+        timestamp: new Date().toISOString(),
+        isError: true,
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   }, []);
 
   // 인터랙티브 액션 취소

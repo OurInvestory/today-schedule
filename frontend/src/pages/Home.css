@@ -13,6 +13,41 @@
   min-height: calc(100vh - 80px);
 }
 
+/* 전체 캘린더 모드 */
+.home--full-calendar {
+  min-height: 100vh;
+  overflow: auto;
+}
+
+.home--full-calendar .home__container {
+  max-width: 1400px;
+  width: 100%;
+  height: auto;
+  grid-template-columns: 1fr;
+  padding: var(--spacing-lg);
+  margin: 0 auto;
+  gap: 0;
+}
+
+.home__full-calendar {
+  width: 100%;
+  height: auto;
+  min-height: 600px;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+@media (max-width: 640px) {
+  .home--full-calendar .home__container {
+    padding: var(--spacing-sm);
+  }
+  
+  .home__full-calendar {
+    min-height: 500px;
+  }
+}
+
 .home__calendar {
   position: sticky;
   top: 80px;
@@ -80,6 +115,40 @@
   gap: var(--spacing-md);
 }
 
+.add-todo-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-todo-form__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.add-todo-form__select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 8px;
+  background-color: var(--color-bg-default);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-todo-form__select:hover {
+  border-color: var(--color-primary-500);
+}
+
+.add-todo-form__select:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
 @media (max-width: 1024px) {
   .home__container {
     grid-template-columns: 1fr;
@@ -104,7 +173,7 @@
 
   .home__todos {
     padding: 0;
-    margin-top: 12px;
+    margin-top: 4px;
   }
 
   .add-todo-form__row {
