@@ -36,10 +36,17 @@ const ChatbotWindow = ({
   const [isFileDragging, setIsFileDragging] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   
-  // 로딩 상태 변경 시 랜덤 메시지 설정
+  // 로딩 상태 변경 시 랜덤 메시지 설정 (2초마다 변경)
   useEffect(() => {
     if (loading) {
       setLoadingMessage(getRandomLoadingMessage());
+      
+      // 2초마다 메시지 변경
+      const interval = setInterval(() => {
+        setLoadingMessage(getRandomLoadingMessage());
+      }, 2000);
+      
+      return () => clearInterval(interval);
     }
   }, [loading]);
 

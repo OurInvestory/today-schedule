@@ -166,8 +166,8 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
             </div>
           )}
           
-          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 */}
-          {!isUser && message.imageAnalysis && message.actions && message.actions.length > 0 && !message.actionCompleted && (
+          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 (imageAnalysis가 있거나, SCHEDULE 타겟 액션이 여러 개일 때) */}
+          {!isUser && message.actions && message.actions.length > 0 && !message.actionCompleted && (message.imageAnalysis || message.actions.filter(a => a.target === 'SCHEDULE' || a.target === 'LECTURES').length > 1) && (
             <div className="chat-message__image-analysis">
               <div className="chat-message__analysis-header">
                 📷 시간표에서 {message.actions.length}개의 일정을 찾았어요!
@@ -175,6 +175,18 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
               <div className="chat-message__analysis-content">
                 <ul className="chat-message__schedule-list">
                   {message.actions.slice(0, 5).map((action, idx) => {
+                    // LECTURES 타겟인 경우 payload가 배열임
+                    if (action.target === 'LECTURES' && Array.isArray(action.payload)) {
+                      return action.payload.slice(0, 3).map((lecture, lectureIdx) => (
+                        <li key={`${idx}-${lectureIdx}`}>
+                          <strong>{lecture.title}</strong>
+                          <span className="chat-message__schedule-time">
+                            {' - '}{lecture.startTime} ~ {lecture.endTime}
+                          </span>
+                        </li>
+                      ));
+                    }
+                    
                     const startTime = action.payload?.start_at || action.payload?.start_time;
                     const endTime = action.payload?.end_at || action.payload?.end_time;
                     return (

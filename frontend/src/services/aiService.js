@@ -3,6 +3,27 @@ import api from './api';
 /**
  * 챗봇 메시지 전송
  */
+/**
+ * 서울 시간 기준으로 현재 날짜 가져오기
+ */
+const getSeoulDate = () => {
+  const now = new Date();
+  // 서울 시간대로 변환
+  const seoulTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  return seoulTime;
+};
+
+/**
+ * 서울 시간 기준으로 날짜 문자열 (YYYY-MM-DD) 가져오기
+ */
+const getSeoulDateString = () => {
+  const seoulDate = getSeoulDate();
+  const year = seoulDate.getFullYear();
+  const month = String(seoulDate.getMonth() + 1).padStart(2, '0');
+  const day = String(seoulDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const sendChatMessage = async (
   text,
   baseDate = null,
@@ -11,15 +32,14 @@ export const sendChatMessage = async (
   files = null
 ) => {
   try {
-    const now = new Date();
-    const timezone =
-      Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Seoul';
+    // 항상 서울 시간 기준
+    const timezone = 'Asia/Seoul';
 
     // FormData를 사용하여 파일과 텍스트를 함께 전송
     if (files && files.length > 0) {
       const formData = new FormData();
       formData.append('text', text);
-      formData.append('baseDate', baseDate || now.toISOString().split('T')[0]);
+      formData.append('baseDate', baseDate || getSeoulDateString());
       formData.append('timezone', timezone);
       if (selectedScheduleId) {
         formData.append('selectedScheduleId', selectedScheduleId);
@@ -42,7 +62,7 @@ export const sendChatMessage = async (
     // 일반 JSON 요청
     const response = await api.post('/api/chat', {
       text,
-      baseDate: baseDate || now.toISOString().split('T')[0],
+      baseDate: baseDate || getSeoulDateString(),
       timezone,
       selectedScheduleId,
       userContext,
