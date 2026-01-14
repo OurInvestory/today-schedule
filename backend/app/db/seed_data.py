@@ -175,33 +175,33 @@ def get_seed_sub_tasks():
     
     sub_tasks = [
         # === 1월 5일 (일) - 해커톤 시작 (완료) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "해커톤 팀 역할 분담", "date": date(base_year, base_month, 5), "estimated_minute": 30, "is_done": True, "priority": "high", "category": "대외활동"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "해커톤 팀 역할 분담", "date": date(base_year, base_month, 5), "estimated_minute": 30, "is_done": True, "priority": "high", "category": "대외활동", "tip": "각자 강점 기반으로 분담하세요!"},
         
         # === 1월 6일 (월) (완료) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "프로젝트 초기 설정", "date": date(base_year, base_month, 6), "estimated_minute": 60, "is_done": True, "priority": "high", "category": "과제"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "프로젝트 초기 설정", "date": date(base_year, base_month, 6), "estimated_minute": 60, "is_done": True, "priority": "high", "category": "과제", "tip": "README 먼저 작성하면 방향이 명확해져요"},
         
         # === 1월 8일 (수) (완료) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "DB 스키마 설계", "date": date(base_year, base_month, 8), "estimated_minute": 90, "is_done": True, "priority": "high", "category": "과제"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "DB 스키마 설계", "date": date(base_year, base_month, 8), "estimated_minute": 90, "is_done": True, "priority": "high", "category": "과제", "tip": "ERD 먼저 그려보면 실수 줄어요!"},
         
         # === 1월 10일 (금) (완료) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "API 개발 완료", "date": date(base_year, base_month, 10), "estimated_minute": 180, "is_done": True, "priority": "high", "category": "과제"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "API 개발 완료", "date": date(base_year, base_month, 10), "estimated_minute": 180, "is_done": True, "priority": "high", "category": "과제", "tip": "Swagger 문서화도 함께 하세요"},
         
         # === 1월 12일 (일) (완료) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "UI 컴포넌트 개발", "date": date(base_year, base_month, 12), "estimated_minute": 120, "is_done": True, "priority": "medium", "category": "과제"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "UI 컴포넌트 개발", "date": date(base_year, base_month, 12), "estimated_minute": 120, "is_done": True, "priority": "medium", "category": "과제", "tip": "재사용 가능한 컴포넌트로 만드세요"},
         
         # === 1월 13일 (월) (완료) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "AI 챗봇 연동", "date": date(base_year, base_month, 13), "estimated_minute": 150, "is_done": True, "priority": "high", "category": "과제"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "AI 챗봇 연동", "date": date(base_year, base_month, 13), "estimated_minute": 150, "is_done": True, "priority": "high", "category": "과제", "tip": "에러 핸들링 꼼꼼히 하세요"},
         
         # === 1월 14일 (화) - 오늘 (진행 중) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "DB 정규화 복습", "date": date(base_year, base_month, 14), "estimated_minute": 60, "is_done": False, "priority": "high", "category": "시험"},
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "버그 수정", "date": date(base_year, base_month, 14), "estimated_minute": 60, "is_done": False, "priority": "medium", "category": "과제"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "DB 정규화 복습", "date": date(base_year, base_month, 14), "estimated_minute": 60, "is_done": False, "priority": "high", "category": "시험", "tip": "1NF~3NF 개념 정리가 핵심!"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "버그 수정", "date": date(base_year, base_month, 14), "estimated_minute": 60, "is_done": False, "priority": "medium", "category": "과제", "tip": "콘솔 로그로 원인 추적하세요"},
         
         # === 1월 15일 (수) ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "발표 자료 준비", "date": date(base_year, base_month, 15), "estimated_minute": 120, "is_done": False, "priority": "high", "category": "팀프로젝트"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "발표 자료 준비", "date": date(base_year, base_month, 15), "estimated_minute": 120, "is_done": False, "priority": "high", "category": "팀프로젝트", "tip": "슬라이드당 1분 기준으로 준비"},
         
         # === 1월 16일 (목) - 발표일 ===
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "🔥 해커톤 데모 시연", "date": date(base_year, base_month, 16), "estimated_minute": 90, "is_done": False, "priority": "high", "category": "대외활동"},
-        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "발표 대본 리허설", "date": date(base_year, base_month, 16), "estimated_minute": 30, "is_done": False, "priority": "high", "category": "대외활동"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "🔥 해커톤 데모 시연", "date": date(base_year, base_month, 16), "estimated_minute": 90, "is_done": False, "priority": "high", "category": "대외활동", "tip": "시연 중 예외 상황 대비하세요!"},
+        {"sub_task_id": str(uuid.uuid4()), "user_id": TEST_USER_ID, "schedule_id": None, "title": "발표 대본 리허설", "date": date(base_year, base_month, 16), "estimated_minute": 30, "is_done": False, "priority": "high", "category": "대외활동", "tip": "타이머 켜고 연습하세요"},
     ]
     
     return sub_tasks
