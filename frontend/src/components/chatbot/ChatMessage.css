@@ -453,9 +453,44 @@
   color: #6b7280;
 }
 
+.chat-message__action-status--partial {
+  background: #fffbeb;
+  color: #d97706;
+}
+
 .chat-message__action-status--error {
   background: #ffeae8;
   color: #f04438;
+}
+
+/* 처리 현황 요약 */
+.chat-message__action-summary {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.chat-message__summary-confirmed {
+  color: #22c55e;
+}
+
+.chat-message__summary-cancelled {
+  color: #ef4444;
+}
+
+/* 완료된 일정 항목 */
+.chat-message__schedule-item--completed {
+  opacity: 0.6;
+}
+
+/* 취소됨 배지 */
+.chat-message__action-status-badge--cancelled {
+  background: #fee2e2;
+  color: #ef4444;
 }
 
 /* 강의 목록 스타일 */

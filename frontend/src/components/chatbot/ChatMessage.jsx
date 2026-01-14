@@ -166,60 +166,98 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
             </div>
           )}
           
-          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 */}
-          {!isUser && message.imageAnalysis && message.actions && message.actions.length > 0 && !message.actionCompleted && (
-            <div className="chat-message__image-analysis">
-              <div className="chat-message__analysis-header">
-                📷 시간표에서 {message.actions.length}개의 일정을 찾았어요!
+          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 (imageAnalysis가 있을 때) */}
+          {!isUser && message.imageAnalysis && message.actions && message.actions.length > 0 && !message.actionCompleted && (() => {
+            // 완료/취소되지 않은 pending 액션 수 계산
+            const pendingCount = message.actions.filter((_, idx) => !completedActions[idx]).length;
+            const confirmedCount = Object.values(completedActions).filter(v => v === 'confirmed').length;
+            const cancelledCount = Object.values(completedActions).filter(v => v === 'cancelled').length;
+            
+            return (
+              <div className="chat-message__image-analysis">
+                <div className="chat-message__analysis-header">
+                  📷 이미지에서 {message.actions.length}건의 일정을 발견했어요!
+                </div>
+                <div className="chat-message__analysis-content">
+                  <ul className="chat-message__schedule-list">
+                    {message.actions.slice(0, 5).map((action, idx) => {
+                      const isCompleted = completedActions[idx];
+                      const statusBadge = isCompleted === 'confirmed' ? ' ✅' : isCompleted === 'cancelled' ? ' ❌' : '';
+                      
+                      // LECTURES 타겟인 경우 payload가 배열임
+                      if (action.target === 'LECTURES' && Array.isArray(action.payload)) {
+                        return action.payload.slice(0, 3).map((lecture, lectureIdx) => (
+                          <li key={`${idx}-${lectureIdx}`}>
+                            <strong>{lecture.title}</strong>
+                            <span className="chat-message__schedule-time">
+                              {' - '}{lecture.startTime} ~ {lecture.endTime}
+                            </span>
+                          </li>
+                        ));
+                      }
+                      
+                      const startTime = action.payload?.start_at || action.payload?.start_time;
+                      const endTime = action.payload?.end_at || action.payload?.end_time;
+                      return (
+                      <li key={idx} className={isCompleted ? 'chat-message__schedule-item--completed' : ''}>
+                        <strong>{action.payload?.title}{statusBadge}</strong>
+                        {(startTime || endTime) && (
+                          <span className="chat-message__schedule-time">
+                            {startTime ? (
+                              <>{' - '}{formatDate(startTime, 'M/D HH:mm')}
+                              {endTime && ` ~ ${formatDate(endTime, 'HH:mm')}`}</>
+                            ) : (
+                              <>{' - '}마감: {formatDate(endTime, 'M/D HH:mm')}</>
+                            )}
+                          </span>
+                        )}
+                      </li>
+                    );})}
+                    {message.actions.length > 5 && (
+                      <li className="chat-message__more-items">...외 {message.actions.length - 5}개</li>
+                    )}
+                  </ul>
+                </div>
+                
+                {/* 처리 현황 표시 */}
+                {(confirmedCount > 0 || cancelledCount > 0) && (
+                  <div className="chat-message__action-summary">
+                    {confirmedCount > 0 && <span className="chat-message__summary-confirmed">✅ {confirmedCount}개 추가됨</span>}
+                    {cancelledCount > 0 && <span className="chat-message__summary-cancelled">❌ {cancelledCount}개 취소됨</span>}
+                  </div>
+                )}
+                
+                {/* 남은 액션이 있을 때만 버튼 표시 */}
+                {pendingCount > 0 && (
+                  <div className="chat-message__bulk-actions">
+                    <button 
+                      type="button" 
+                      className="chat-message__action-btn chat-message__action-btn--confirm-all"
+                      onClick={() => {
+                        // 아직 처리되지 않은 일정만 추가
+                        message.actions.forEach((action, idx) => {
+                          if (!completedActions[idx]) {
+                            handleConfirmAction(action, idx);
+                          }
+                        });
+                      }}
+                      disabled={message.actionLoading}
+                    >
+                      {message.actionLoading ? '추가 중...' : `✓ ${pendingCount}개 일정 추가`}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="chat-message__action-btn chat-message__action-btn--cancel"
+                      onClick={handleCancelAll}
+                      disabled={message.actionLoading}
+                    >
+                      ✕ 전체 취소
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="chat-message__analysis-content">
-                <ul className="chat-message__schedule-list">
-                  {message.actions.slice(0, 5).map((action, idx) => {
-                    const startTime = action.payload?.start_at || action.payload?.start_time;
-                    const endTime = action.payload?.end_at || action.payload?.end_time;
-                    return (
-                    <li key={idx}>
-                      <strong>{action.payload?.title}</strong>
-                      {(startTime || endTime) && (
-                        <span className="chat-message__schedule-time">
-                          {startTime ? (
-                            <>{' - '}{formatDate(startTime, 'M/D HH:mm')}
-                            {endTime && ` ~ ${formatDate(endTime, 'HH:mm')}`}</>
-                          ) : (
-                            <>{' - '}마감: {formatDate(endTime, 'M/D HH:mm')}</>
-                          )}
-                        </span>
-                      )}
-                    </li>
-                  );})}
-                  {message.actions.length > 5 && (
-                    <li className="chat-message__more-items">...외 {message.actions.length - 5}개</li>
-                  )}
-                </ul>
-              </div>
-              <div className="chat-message__bulk-actions">
-                <button 
-                  type="button" 
-                  className="chat-message__action-btn chat-message__action-btn--confirm-all"
-                  onClick={() => {
-                    // 모든 일정 한 번에 추가
-                    message.actions.forEach((action, idx) => handleConfirmAction(action, idx));
-                  }}
-                  disabled={message.actionLoading}
-                >
-                  {message.actionLoading ? '추가 중...' : `✓ ${message.actions.length}개 일정 모두 추가`}
-                </button>
-                <button 
-                  type="button" 
-                  className="chat-message__action-btn chat-message__action-btn--cancel"
-                  onClick={handleCancelAll}
-                  disabled={message.actionLoading}
-                >
-                  ✕ 취소
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
           
           {/* AI 추론 이유 표시 */}
           {!isUser && message.reasoning && (
@@ -267,80 +305,107 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
           )}
           
           {/* 파싱된 액션 표시 (이미지 분석이 아닌 일반 채팅의 경우) */}
-          {!isUser && hasActions && !hasAllCompleted && !message.imageAnalysis && (
-            <div className="chat-message__parsed-actions">
-              {message.actions.map((action, index) => {
-                const typeInfo = getActionTypeLabel(action);
-                const isCompleted = completedActions[index];
-                const isLoading = message.loadingActions?.[index];
-                
-                // 이미 완료된 액션은 완료 상태로 표시
-                if (isCompleted) {
+          {!isUser && hasActions && !hasAllCompleted && !message.imageAnalysis && (() => {
+            const confirmedCount = Object.values(completedActions).filter(v => v === 'confirmed').length;
+            const cancelledCount = Object.values(completedActions).filter(v => v === 'cancelled').length;
+            
+            return (
+              <div className="chat-message__parsed-actions">
+                {message.actions.map((action, index) => {
+                  const typeInfo = getActionTypeLabel(action);
+                  const isCompleted = completedActions[index];
+                  const isLoading = message.loadingActions?.[index];
+                  
+                  // 이미 완료된 액션은 완료 상태로 표시
+                  if (isCompleted) {
+                    return (
+                      <div key={index} className="chat-message__action-card chat-message__action-card--completed">
+                        <div className="chat-message__action-header">
+                          <span className="chat-message__action-type">
+                            {typeInfo.icon} {typeInfo.label}
+                          </span>
+                          <span className={`chat-message__action-status-badge ${isCompleted === 'cancelled' ? 'chat-message__action-status-badge--cancelled' : 'chat-message__action-status-badge--success'}`}>
+                            {isCompleted === 'cancelled' ? '❌ 취소됨' : '✅ 추가됨'}
+                          </span>
+                        </div>
+                        <div className="chat-message__action-details">
+                          {action.payload?.title}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
                   return (
-                    <div key={index} className="chat-message__action-card chat-message__action-card--completed">
-                      <div className="chat-message__action-header">
-                        <span className="chat-message__action-type">
-                          {typeInfo.icon} {typeInfo.label}
-                        </span>
-                        <span className="chat-message__action-status-badge chat-message__action-status-badge--success">
-                          {isCompleted === 'cancelled' ? '취소됨' : '✅ 완료'}
-                        </span>
-                      </div>
-                      <div className="chat-message__action-details">
-                        {action.payload?.title}
-                      </div>
+                  <div key={index} className="chat-message__action-card">
+                    <div className="chat-message__action-header">
+                      <span className="chat-message__action-type">
+                        {typeInfo.icon} {typeInfo.label}
+                      </span>
+                      <span className="chat-message__action-op">
+                        {action.op === 'CREATE' ? '추가' : action.op === 'UPDATE' ? '수정' : '삭제'}
+                      </span>
                     </div>
-                  );
-                }
+                    <div className="chat-message__action-details">
+                      {formatActionPayload(action)}
+                    </div>
+                    <div className="chat-message__action-buttons">
+                      <button 
+                        type="button" 
+                        className="chat-message__action-btn chat-message__action-btn--confirm"
+                        onClick={() => handleConfirmAction(action, index)}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? '처리중...' : '✓ 확인'}
+                      </button>
+                      <button 
+                        type="button" 
+                        className="chat-message__action-btn chat-message__action-btn--cancel"
+                        onClick={() => handleCancelAction(index)}
+                        disabled={isLoading}
+                      >
+                        ✕ 취소
+                      </button>
+                    </div>
+                  </div>
+                );})}
                 
-                return (
-                <div key={index} className="chat-message__action-card">
-                  <div className="chat-message__action-header">
-                    <span className="chat-message__action-type">
-                      {typeInfo.icon} {typeInfo.label}
-                    </span>
-                    <span className="chat-message__action-op">
-                      {action.op === 'CREATE' ? '추가' : action.op === 'UPDATE' ? '수정' : '삭제'}
-                    </span>
+                {/* 처리 현황 요약 (일부 처리된 경우) */}
+                {(confirmedCount > 0 || cancelledCount > 0) && pendingActions.length > 0 && (
+                  <div className="chat-message__action-summary">
+                    {confirmedCount > 0 && <span className="chat-message__summary-confirmed">✅ {confirmedCount}개 추가됨</span>}
+                    {cancelledCount > 0 && <span className="chat-message__summary-cancelled">❌ {cancelledCount}개 취소됨</span>}
                   </div>
-                  <div className="chat-message__action-details">
-                    {formatActionPayload(action)}
-                  </div>
-                  <div className="chat-message__action-buttons">
+                )}
+                
+                {/* 2개 이상일 때만 일괄 처리 버튼 표시 */}
+                {pendingActions.length >= 2 && (
+                  <div className="chat-message__bulk-actions">
                     <button 
                       type="button" 
-                      className="chat-message__action-btn chat-message__action-btn--confirm"
-                      onClick={() => handleConfirmAction(action, index)}
-                      disabled={isLoading}
+                      className="chat-message__action-btn chat-message__action-btn--confirm-all"
+                      onClick={() => {
+                        // 아직 처리되지 않은 일정만 추가
+                        message.actions.forEach((action, idx) => {
+                          if (!completedActions[idx]) {
+                            handleConfirmAction(action, idx);
+                          }
+                        });
+                      }}
                     >
-                      {isLoading ? '처리중...' : '✓ 확인'}
+                      ✓ {pendingActions.length}개 일정 추가
                     </button>
                     <button 
                       type="button" 
-                      className="chat-message__action-btn chat-message__action-btn--cancel"
-                      onClick={() => handleCancelAction(index)}
-                      disabled={isLoading}
+                      className="chat-message__action-btn chat-message__action-btn--cancel-all"
+                      onClick={handleCancelAll}
                     >
-                      ✕ 취소
+                      ✕ 전체 취소
                     </button>
                   </div>
-                </div>
-              );})}
-              
-              {/* 여러 개일 때 전체 취소 버튼 */}
-              {pendingActions.length > 1 && (
-                <div className="chat-message__bulk-actions">
-                  <button 
-                    type="button" 
-                    className="chat-message__action-btn chat-message__action-btn--cancel-all"
-                    onClick={handleCancelAll}
-                  >
-                    ✕ 모두 취소
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
           
           {/* 누락된 필드 표시 */}
           {!isUser && message.missingFields && message.missingFields.length > 0 && (
@@ -376,23 +441,42 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
           )}
           
           {/* 액션 완료 표시 */}
-          {message.actionCompleted && (
-            <div className="chat-message__action-status">
-              {message.actionCompleted === 'confirmed' && !message.actionError ? (
-                <span className="chat-message__action-status--success">
-                  ✅ 성공적으로 처리되었습니다!
-                </span>
-              ) : message.actionCompleted === 'cancelled' ? (
-                <span className="chat-message__action-status--cancelled">
-                  취소되었습니다.
-                </span>
-              ) : (
-                <span className="chat-message__action-status--error">
-                  ✗ {message.actionError || '처리 중 오류가 발생했습니다'}
-                </span>
-              )}
-            </div>
-          )}
+          {message.actionCompleted && (() => {
+            const confirmedCount = Object.values(completedActions).filter(v => v === 'confirmed').length;
+            const cancelledCount = Object.values(completedActions).filter(v => v === 'cancelled').length;
+            const totalActions = message.actions?.length || 0;
+            
+            // 부분 처리된 경우 (일부 확인, 일부 취소)
+            if (message.actionCompleted === 'partial' || (confirmedCount > 0 && cancelledCount > 0)) {
+              return (
+                <div className="chat-message__action-status">
+                  <span className="chat-message__action-status--partial">
+                    {confirmedCount > 0 && `✅ ${confirmedCount}개 추가`}
+                    {confirmedCount > 0 && cancelledCount > 0 && ', '}
+                    {cancelledCount > 0 && `❌ ${cancelledCount}개 취소`}
+                  </span>
+                </div>
+              );
+            }
+            
+            return (
+              <div className="chat-message__action-status">
+                {message.actionCompleted === 'confirmed' && !message.actionError ? (
+                  <span className="chat-message__action-status--success">
+                    ✅ {totalActions > 1 ? `${totalActions}개 항목이 ` : ''}성공적으로 처리되었습니다!
+                  </span>
+                ) : message.actionCompleted === 'cancelled' ? (
+                  <span className="chat-message__action-status--cancelled">
+                    ❌ {totalActions > 1 ? `${totalActions}개 항목이 ` : ''}취소되었습니다.
+                  </span>
+                ) : (
+                  <span className="chat-message__action-status--error">
+                    ✗ {message.actionError || '처리 중 오류가 발생했습니다'}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <span className="chat-message__time">
           {formatDate(message.timestamp, 'HH:mm')}
