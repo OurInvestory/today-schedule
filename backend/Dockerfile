@@ -2,10 +2,13 @@ FROM python:3.11.9-slim
 
 WORKDIR /app
 
+# 시스템 패키지 설치 (MySQL, OCR용 OpenCV 의존성)
 RUN apt-get update && apt-get install -y \
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

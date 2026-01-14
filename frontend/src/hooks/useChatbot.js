@@ -593,39 +593,45 @@ export const useChatbot = () => {
       };
       setMessages(prev => [...prev, cancelMessage]);
     } else if (actionIndex !== null) {
-      // 개별 액션 취소
-      let actionTitle = '';
-      setMessages(prev => prev.map(msg => {
-        if (msg.id !== messageId) return msg;
+      // 개별 액션 취소 - 먼저 제목을 찾고 나서 상태 업데이트
+      setMessages(prev => {
+        // 취소된 액션의 제목 찾기
+        const targetMsg = prev.find(msg => msg.id === messageId);
+        const actionTitle = targetMsg?.actions?.[actionIndex]?.payload?.title || 
+                           targetMsg?.actions?.[actionIndex]?.payload?.name || 
+                           '항목';
         
-        // 취소된 액션의 제목 저장
-        actionTitle = msg.actions?.[actionIndex]?.payload?.title || '항목';
+        // 메시지 업데이트
+        const updatedMessages = prev.map(msg => {
+          if (msg.id !== messageId) return msg;
+          
+          const newCompletedActions = { 
+            ...msg.completedActions, 
+            [actionIndex]: 'cancelled' 
+          };
+          
+          // 모든 액션이 완료되었는지 확인
+          const totalActions = msg.actions?.length || 0;
+          const completedCount = Object.keys(newCompletedActions).length;
+          const allCompleted = completedCount === totalActions;
+          
+          return { 
+            ...msg, 
+            completedActions: newCompletedActions,
+            actionCompleted: allCompleted ? 'partial' : msg.actionCompleted
+          };
+        });
         
-        const newCompletedActions = { 
-          ...msg.completedActions, 
-          [actionIndex]: 'cancelled' 
+        // 취소 메시지 추가
+        const cancelMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: `'${actionTitle}' 항목이 취소되었습니다.`,
+          timestamp: new Date().toISOString(),
         };
         
-        // 모든 액션이 완료되었는지 확인
-        const totalActions = msg.actions?.length || 0;
-        const completedCount = Object.keys(newCompletedActions).length;
-        const allCompleted = completedCount === totalActions;
-        
-        return { 
-          ...msg, 
-          completedActions: newCompletedActions,
-          actionCompleted: allCompleted ? 'partial' : msg.actionCompleted
-        };
-      }));
-      
-      // 개별 취소 메시지 추가
-      const cancelMessage = {
-        id: Date.now(),
-        role: 'assistant',
-        content: `'${actionTitle}' 항목이 취소되었습니다.`,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, cancelMessage]);
+        return [...updatedMessages, cancelMessage];
+      });
     } else {
       // 전체 취소 (기존 로직, messageId만 전달된 경우)
       setMessages(prev => prev.map(msg => 
