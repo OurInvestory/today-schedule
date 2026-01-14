@@ -70,12 +70,14 @@ export const useTimetable = () => {
       
       const response = await getLectures(from, to);
       
-      if (response.status === 200 && response.data) {
-        // data가 문자열인 경우 파싱
-        const lectureData = typeof response.data === 'string' 
-          ? JSON.parse(response.data) 
-          : response.data;
+      // getLectures는 response.data를 반환하므로 직접 사용
+      // response 형식: { status: 200, data: [...], message: '...' }
+      if (response && response.status === 200) {
+        const lectureData = response.data || [];
         setLectures(Array.isArray(lectureData) ? lectureData : []);
+      } else if (Array.isArray(response)) {
+        // 직접 배열이 반환된 경우
+        setLectures(response);
       } else {
         setLectures([]);
       }
