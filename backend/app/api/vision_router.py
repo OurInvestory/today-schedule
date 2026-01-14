@@ -369,6 +369,47 @@ OUTPUT ONLY VALID JSON. DO NOT ADD EXPLANATIONS.
     parsed.actions = filtered_actions
     return parsed
 
+
+def convert_to_lecture_format(parsed: AIChatParsed) -> list:
+    """
+    Vision 결과를 Lecture API 형식으로 변환
+    - 병합하지 않고 각 수업을 개별 레코드로 반환
+    - 요일별로 시간이 다를 수 있으므로 분리 유지
+    """
+    lectures = []
+    
+    for action in parsed.actions:
+        payload = action.payload
+        title = payload.get('title', '')
+        start_at = payload.get('start_at', '')
+        end_at = payload.get('end_at', '')
+        
+        if not title or not start_at or not end_at:
+            continue
+        
+        # "Unknown Class" 필터링
+        if "Unknown" in title:
+            continue
+        
+        try:
+            start_dt = datetime.fromisoformat(start_at.replace("Z", "+00:00"))
+            end_dt = datetime.fromisoformat(end_at.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        
+        start_time = start_dt.strftime("%H:%M")
+        end_time = end_dt.strftime("%H:%M")
+        weekday = start_dt.weekday()  # 0(월) ~ 6(일)
+        
+        lectures.append({
+            "title": title,
+            "start_time": start_time,
+            "end_time": end_time,
+            "week": weekday  # 단일 값 (0~6)
+        })
+    
+    return lectures
+
 def process_poster_mode(ocr_result) -> AIChatParsed:
     """ [모드 2] 포스터 처리 로직 (Text Dump + Text Model) """
     # 1. 단순 텍스트 나열 (문맥 보존)
@@ -495,12 +536,16 @@ async def analyze_image_schedule(
         image_type = detect_image_type(ocr_result)
         
         # 3. 타입별 처리 로직 완전 분리
+        lectures_data = None
         if image_type == 'schedule':
             ai_parsed_result = process_schedule_mode(ocr_result)
+            # Lecture 형식으로 변환 (같은 수업 요일 병합)
+            lectures_data = convert_to_lecture_format(ai_parsed_result)
         else:
             ai_parsed_result = process_poster_mode(ocr_result)
             
         action_cnt = len(ai_parsed_result.actions)
+        lecture_cnt = len(lectures_data) if lectures_data else 0
         
         # 개선된 assistant_message 생성 (sub-task 개수 표시)
         if action_cnt > 0:
@@ -517,13 +562,15 @@ async def analyze_image_schedule(
                 else:
                     assistant_msg = f"[POSTER] 분석 완료: {action_cnt}건의 주요 일정을 확인했습니다."
             else:
-                assistant_msg = f"[{image_type.upper()}] 분석 완료: {action_cnt}건의 일정을 발견했습니다."
+                # 시간표: lectures 개수 기준으로 메시지 생성
+                assistant_msg = f"[SCHEDULE] 분석 완료: {lecture_cnt}건의 강의를 발견했습니다."
         else:
             assistant_msg = "일정을 찾지 못했습니다."
 
         return APIResponse(status=200, message="Success", data=ChatResponseData(
             parsed_result=ai_parsed_result,
-            assistant_message=assistant_msg
+            assistant_message=assistant_msg,
+            lectures=lectures_data
         ))
 
     except Exception as e:

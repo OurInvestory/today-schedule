@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import './ChatInput.css';
 
-const ChatInput = ({ 
-  onSend, 
-  disabled = false, 
+const ChatInput = ({
+  onSend,
+  disabled = false,
   placeholder = '메시지를 입력하세요...',
   onFileUpload,
+  hasFiles = false, // 파일이 선택되어 있는지 여부
 }) => {
   const [value, setValue] = useState('');
 
+  // 텍스트가 있거나 파일이 있으면 전송 가능
+  const canSend = value.trim() || hasFiles;
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (value.trim() && !disabled) {
+    if (canSend && !disabled) {
       onSend(value.trim());
       setValue('');
     }
@@ -53,14 +57,16 @@ const ChatInput = ({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={
+          hasFiles ? '이미지와 함께 보낼 메시지 (선택사항)' : placeholder
+        }
         disabled={disabled}
         rows={1}
       />
       <button
         type="submit"
         className="chat-input__button"
-        disabled={disabled || !value.trim()}
+        disabled={disabled || !canSend}
         aria-label="전송"
       >
         <svg

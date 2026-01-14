@@ -1,11 +1,18 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage } from '../services/aiService';
+import {
+  sendChatMessage,
+  getChatHistory,
+  createScheduleFromAI,
+  createSubTaskFromAI,
+  analyzeTimetableImage,
+  saveLectures,
+} from '../services/aiService';
 
 // 첫 인사 메시지
 const getGreetingMessage = () => {
   const hour = new Date().getHours();
   let greeting = '안녕하세요!';
-  
+
   if (hour >= 5 && hour < 12) {
     greeting = '좋은 아침이에요! ☀️';
   } else if (hour >= 12 && hour < 18) {
@@ -13,7 +20,7 @@ const getGreetingMessage = () => {
   } else {
     greeting = '좋은 저녁이에요! 🌙';
   }
-  
+
   return {
     id: 'greeting',
     role: 'assistant',
@@ -33,7 +40,7 @@ export const useChatbot = () => {
 
   // 챗봇 열기/닫기
   const toggleChatbot = useCallback(() => {
-    setIsOpen(prev => !prev);
+    setIsOpen((prev) => !prev);
   }, []);
 
   const openChatbot = useCallback(() => {
@@ -59,8 +66,10 @@ export const useChatbot = () => {
 
     // 이미지 파일 분석
     let imageAnalysisResult = null;
-    const imageFiles = files ? Array.from(files).filter(f => f.type.startsWith('image/')) : [];
-    
+    const imageFiles = files
+      ? Array.from(files).filter((f) => f.type.startsWith('image/'))
+      : [];
+
     if (imageFiles.length > 0) {
       try {
         // 첫 번째 이미지 분석 (시간표 감지)
@@ -71,20 +80,22 @@ export const useChatbot = () => {
     }
 
     // 파일 정보 생성 (미리보기 URL 포함)
-    const fileInfo = files ? Array.from(files).map(f => {
-      const info = { 
-        name: f.name, 
-        type: f.type, 
-        size: f.size 
-      };
-      
-      // 이미지 파일인 경우 미리보기 URL 추가
-      if (f.type.startsWith('image/')) {
-        info.preview = URL.createObjectURL(f);
-      }
-      
-      return info;
-    }) : null;
+    const fileInfo = files
+      ? Array.from(files).map((f) => {
+          const info = {
+            name: f.name,
+            type: f.type,
+            size: f.size,
+          };
+
+          // 이미지 파일인 경우 미리보기 URL 추가
+          if (f.type.startsWith('image/')) {
+            info.preview = URL.createObjectURL(f);
+          }
+
+          return info;
+        })
+      : null;
 
     // 사용자 메시지 추가
     const userMessage = {
@@ -95,44 +106,68 @@ export const useChatbot = () => {
       files: fileInfo,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
     setError(null);
 
     try {
       // 이미지 파일이 있으면 이미지 분석 결과를 사용
       if (imageAnalysisResult && imageAnalysisResult.success) {
+        // lectures가 있으면 확인/취소 액션 추가
+        const lectures = imageAnalysisResult.lectures || [];
+        const actions =
+          lectures.length > 0
+            ? [
+                {
+                  op: 'CREATE',
+                  target: 'LECTURES',
+                  payload: lectures,
+                  description: `${lectures.length}개의 강의를 시간표에 추가합니다.`,
+                },
+              ]
+            : [];
+
         const newAssistantMessage = {
           id: Date.now() + 1,
           role: 'assistant',
-          content: imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸',
+          content:
+            imageAnalysisResult.message || '이미지 분석을 완료했어요! 📸',
           timestamp: new Date().toISOString(),
           parsedResult: imageAnalysisResult.parsedResult,
-          actions: imageAnalysisResult.parsedResult?.actions || [],
+          actions: actions,
           imageAnalysis: imageAnalysisResult,
+          lectures: lectures,
         };
-        setMessages(prev => [...prev, newAssistantMessage]);
+        setMessages((prev) => [...prev, newAssistantMessage]);
         setLoading(false);
         return;
       }
 
       // 일반 텍스트 메시지 처리
-      const response = await sendChatMessage(text, null, selectedScheduleId, {}, null);
-      
+      const response = await sendChatMessage(
+        text,
+        null,
+        selectedScheduleId,
+        {},
+        null
+      );
+
       // axios 응답 구조: response.data가 API 응답 본문
       // API 응답 구조: { status, message, data: { parsedResult, assistantMessage } }
       const apiResponse = response.data;
       console.log('API Response:', apiResponse); // 디버깅용
-      
+
       // data가 없거나 오류인 경우 처리
       if (!apiResponse || apiResponse.status !== 200) {
         throw new Error(apiResponse?.message || '서버 응답 오류');
       }
-      
+
       const responseData = apiResponse.data || {};
-      const parsedResult = responseData.parsed_result || responseData.parsedResult;
-      const assistantMessage = responseData.assistant_message || responseData.assistantMessage;
-      
+      const parsedResult =
+        responseData.parsed_result || responseData.parsedResult;
+      const assistantMessage =
+        responseData.assistant_message || responseData.assistantMessage;
+
       // 응답 메시지 추가
       const newAssistantMessage = {
         id: Date.now() + 1,
@@ -142,11 +177,12 @@ export const useChatbot = () => {
         parsedResult: parsedResult,
         actions: parsedResult?.actions || [],
         reasoning: parsedResult?.reasoning,
-        missingFields: parsedResult?.missingFields || parsedResult?.missing_fields || [],
+        missingFields:
+          parsedResult?.missingFields || parsedResult?.missing_fields || [],
       };
 
-      setMessages(prev => [...prev, newAssistantMessage]);
-      
+      setMessages((prev) => [...prev, newAssistantMessage]);
+
       // 대화 ID 저장
       if (apiResponse.conversationId) {
         setConversationId(apiResponse.conversationId);
@@ -154,7 +190,7 @@ export const useChatbot = () => {
     } catch (err) {
       setError(err.message || '메시지 전송에 실패했습니다.');
       console.error('Failed to send message:', err);
-      
+
       // 에러 메시지 추가
       const errorMessage = {
         id: Date.now() + 1,
@@ -163,8 +199,8 @@ export const useChatbot = () => {
         timestamp: new Date().toISOString(),
         isError: true,
       };
-      
-      setMessages(prev => [...prev, errorMessage]);
+
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -196,15 +232,17 @@ export const useChatbot = () => {
 
   // 인터랙티브 액션 확인 (일정/할 일 생성)
   const confirmAction = useCallback(async (messageId, action) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, actionCompleted: 'confirmed', actionLoading: true }
-        : msg
-    ));
-    
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, actionCompleted: 'confirmed', actionLoading: true }
+          : msg
+      )
+    );
+
     try {
       let result;
-      
+
       // 액션 타입에 따라 처리
       if (action.op === 'CREATE') {
         if (action.target === 'SCHEDULE') {
@@ -213,65 +251,78 @@ export const useChatbot = () => {
         } else if (action.target === 'SUB_TASK') {
           // 할 일 생성
           result = await createSubTaskFromAI(action.scheduleId, action.payload);
+        } else if (action.target === 'LECTURES') {
+          // 강의 목록 저장 (시간표)
+          result = await saveLectures(action.payload);
         }
       }
-      
+
       // 성공 메시지 업데이트
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, actionLoading: false, actionResult: result }
-          : msg
-      ));
-      
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, actionLoading: false, actionResult: result }
+            : msg
+        )
+      );
+
       // 확인 메시지 추가
+      const getConfirmText = () => {
+        if (action.target === 'SCHEDULE') return '일정이';
+        if (action.target === 'LECTURES') return '시간표가';
+        return '할 일이';
+      };
       const confirmMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: `${action.target === 'SCHEDULE' ? '일정이' : '할 일이'} 성공적으로 추가되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.`,
+        content: `${getConfirmText()} 성공적으로 추가되었습니다! ✅ 다른 도움이 필요하시면 말씀해주세요.`,
         timestamp: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, confirmMessage]);
-      
+      setMessages((prev) => [...prev, confirmMessage]);
+
       // 페이지 새로고침을 위한 이벤트 발생
       window.dispatchEvent(new CustomEvent('scheduleUpdated'));
-      
     } catch (err) {
       console.error('Action confirmation failed:', err);
-      
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, actionLoading: false, actionError: err.message }
-          : msg
-      ));
-      
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, actionLoading: false, actionError: err.message }
+            : msg
+        )
+      );
+
       // 에러 메시지 추가
       const errorMessage = {
         id: Date.now(),
         role: 'assistant',
-        content: '죄송합니다. 일정 추가 중 오류가 발생했습니다. 다시 시도해주세요.',
+        content:
+          '죄송합니다. 일정 추가 중 오류가 발생했습니다. 다시 시도해주세요.',
         timestamp: new Date().toISOString(),
         isError: true,
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     }
   }, []);
 
   // 인터랙티브 액션 취소
   const cancelAction = useCallback((messageId) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, actionCompleted: 'cancelled' }
-        : msg
-    ));
-    
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId ? { ...msg, actionCompleted: 'cancelled' } : msg
+      )
+    );
+
     // 취소 메시지 추가
     const cancelMessage = {
       id: Date.now(),
       role: 'assistant',
-      content: '알겠습니다. 취소되었습니다. 다른 도움이 필요하시면 말씀해주세요.',
+      content:
+        '알겠습니다. 취소되었습니다. 다른 도움이 필요하시면 말씀해주세요.',
       timestamp: new Date().toISOString(),
     };
-    setMessages(prev => [...prev, cancelMessage]);
+    setMessages((prev) => [...prev, cancelMessage]);
   }, []);
 
   // 메시지 자동 스크롤

@@ -34,19 +34,35 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
     if (!payload) return '';
 
     const parts = [];
-    
+
     if (target === 'SCHEDULE') {
       if (payload.title) parts.push(`제목: ${payload.title}`);
       if (payload.start_time && payload.end_time) {
-        parts.push(`시간: ${formatDate(payload.start_time, 'M월 D일 HH:mm')} ~ ${formatDate(payload.end_time, 'HH:mm')}`);
+        parts.push(
+          `시간: ${formatDate(
+            payload.start_time,
+            'M월 D일 HH:mm'
+          )} ~ ${formatDate(payload.end_time, 'HH:mm')}`
+        );
       }
-      if (payload.category) parts.push(`카테고리: ${CATEGORY_LABELS[payload.category] || payload.category}`);
+      if (payload.category)
+        parts.push(
+          `카테고리: ${CATEGORY_LABELS[payload.category] || payload.category}`
+        );
       if (payload.location) parts.push(`위치: ${payload.location}`);
     } else if (target === 'SUB_TASK') {
       if (payload.title) parts.push(`할 일: ${payload.title}`);
-      if (payload.due_date) parts.push(`마감: ${formatDate(payload.due_date, 'M월 D일 HH:mm')}`);
+      if (payload.due_date)
+        parts.push(`마감: ${formatDate(payload.due_date, 'M월 D일 HH:mm')}`);
       if (payload.priority) parts.push(`우선순위: ${payload.priority}`);
-      if (payload.category) parts.push(`카테고리: ${CATEGORY_LABELS[payload.category] || payload.category}`);
+      if (payload.category)
+        parts.push(
+          `카테고리: ${CATEGORY_LABELS[payload.category] || payload.category}`
+        );
+    } else if (target === 'LECTURES') {
+      if (Array.isArray(payload)) {
+        return action.description || `${payload.length}개의 강의`;
+      }
     }
 
     return parts.join(', ');
@@ -68,7 +84,7 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
       <div className="chat-message__content">
         <div className="chat-message__bubble">
           {message.content}
-          
+
           {/* 첨부된 파일 표시 (사용자 메시지) */}
           {isUser && message.files && message.files.length > 0 && (
             <div className="chat-message__attached-files">
@@ -92,16 +108,21 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
               ))}
             </div>
           )}
-          
+
           {/* AI 이미지 분석 결과 */}
           {!isUser && message.imageAnalysis && (
             <div className="chat-message__image-analysis">
-              <div className="chat-message__analysis-header">📊 이미지 분석 결과</div>
+              <div className="chat-message__analysis-header">
+                📊 이미지 분석 결과
+              </div>
               <div className="chat-message__analysis-content">
-                {message.imageAnalysis.schedules && message.imageAnalysis.schedules.length > 0 ? (
+                {message.imageAnalysis.schedules &&
+                message.imageAnalysis.schedules.length > 0 ? (
                   <ul className="chat-message__schedule-list">
                     {message.imageAnalysis.schedules.map((schedule, idx) => (
-                      <li key={idx}>{schedule.title} - {schedule.time}</li>
+                      <li key={idx}>
+                        {schedule.title} - {schedule.time}
+                      </li>
                     ))}
                   </ul>
                 ) : (
@@ -110,15 +131,17 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
               </div>
             </div>
           )}
-          
+
           {/* AI 추론 이유 표시 */}
           {!isUser && message.reasoning && (
             <div className="chat-message__reasoning">
               <div className="chat-message__reasoning-icon">💡</div>
-              <div className="chat-message__reasoning-text">{message.reasoning}</div>
+              <div className="chat-message__reasoning-text">
+                {message.reasoning}
+              </div>
             </div>
           )}
-          
+
           {/* 파싱된 액션 표시 */}
           {!isUser && hasActions && !message.actionCompleted && (
             <div className="chat-message__parsed-actions">
@@ -126,26 +149,50 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
                 <div key={index} className="chat-message__action-card">
                   <div className="chat-message__action-header">
                     <span className="chat-message__action-type">
-                      {action.target === 'SCHEDULE' ? '📅 일정' : '✓ 할 일'}
+                      {action.target === 'SCHEDULE'
+                        ? '📅 일정'
+                        : action.target === 'LECTURES'
+                        ? '📚 시간표'
+                        : '✓ 할 일'}
                     </span>
                     <span className="chat-message__action-op">
-                      {action.op === 'CREATE' ? '추가' : action.op === 'UPDATE' ? '수정' : '삭제'}
+                      {action.op === 'CREATE'
+                        ? '추가'
+                        : action.op === 'UPDATE'
+                        ? '수정'
+                        : '삭제'}
                     </span>
                   </div>
                   <div className="chat-message__action-details">
                     {formatActionPayload(action)}
                   </div>
+                  {/* LECTURES인 경우 강의 목록 표시 */}
+                  {action.target === 'LECTURES' &&
+                    Array.isArray(action.payload) && (
+                      <div className="chat-message__lectures-list">
+                        <ul>
+                          {action.payload.map((lecture, idx) => (
+                            <li key={idx}>
+                              {lecture.title}
+                              <span className="chat-message__lecture-time">
+                                {lecture.startTime} - {lecture.endTime}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   <div className="chat-message__action-buttons">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="chat-message__action-btn chat-message__action-btn--confirm"
                       onClick={() => handleConfirmAction(action)}
                       disabled={message.actionLoading}
                     >
                       {message.actionLoading ? '처리중...' : '✓ 확인'}
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="chat-message__action-btn chat-message__action-btn--cancel"
                       onClick={handleCancel}
                       disabled={message.actionLoading}
@@ -157,21 +204,27 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
               ))}
             </div>
           )}
-          
+
           {/* 누락된 필드 표시 */}
-          {!isUser && message.missingFields && message.missingFields.length > 0 && (
-            <div className="chat-message__missing-fields">
-              <div className="chat-message__missing-fields-title">추가 정보가 필요해요:</div>
-              <ul className="chat-message__missing-fields-list">
-                {message.missingFields.map((field, index) => (
-                  <li key={index}>
-                    {typeof field === 'string' ? field : (field.question || field.field || '정보 필요')}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
+          {!isUser &&
+            message.missingFields &&
+            message.missingFields.length > 0 && (
+              <div className="chat-message__missing-fields">
+                <div className="chat-message__missing-fields-title">
+                  추가 정보가 필요해요:
+                </div>
+                <ul className="chat-message__missing-fields-list">
+                  {message.missingFields.map((field, index) => (
+                    <li key={index}>
+                      {typeof field === 'string'
+                        ? field
+                        : field.question || field.field || '정보 필요'}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
           {/* 액션 완료 표시 */}
           {message.actionCompleted && (
             <div className="chat-message__action-status">
@@ -181,7 +234,9 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
                 </span>
               ) : (
                 <span className="chat-message__action-status--error">
-                  ✗ {message.actionResult?.message || '처리 중 오류가 발생했습니다'}
+                  ✗{' '}
+                  {message.actionResult?.message ||
+                    '처리 중 오류가 발생했습니다'}
                 </span>
               )}
             </div>
