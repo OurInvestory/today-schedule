@@ -5,7 +5,7 @@ from app.models.user import User
 from app.db.database import engine, Base, db_session
 from app.db.seed_data import seed_database
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
-from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router
+from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -60,6 +60,7 @@ app.include_router(lecture_router.router)
 app.include_router(sub_task_router.router)
 app.include_router(calendar_router.router)
 app.include_router(vision_router.router, prefix="/api", tags=["Vision"])
+app.include_router(notification_router.router)
 
 
 # 서버 확인 테스트 용도 (추후 삭제 예정)
