@@ -173,8 +173,10 @@
   white-space: nowrap;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   transition: background-color var(--transition-base);
+  text-align: center;
 }
 
 .date-cell__event-bar:hover {

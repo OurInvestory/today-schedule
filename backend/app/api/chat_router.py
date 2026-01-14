@@ -143,147 +143,145 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
 
 [Rules]
 1. Intent Classification:
-   - "SCHEDULE_MUTATION": When the user wants to Create, Update, or Delete a schedule.
+   - "SCHEDULE_MUTATION": When the user wants to Create, Update, or Delete a schedule or task.
    - "SCHEDULE_QUERY": When user asks to VIEW/SHOW schedules. (e.g., "보여줘", "알려줘", "뭐야", "있어?")
-   - "CLARIFY": If essential info (Subject/Time) is missing for CREATE, or if the target is unclear.
+   - "PRIORITY_QUERY": When user asks about high priority or recommended tasks. (e.g., "우선순위 높은", "추천해줘", "뭐부터 해야 해")
+   - "CLARIFY": If essential info is missing OR if clarification is needed (e.g., for notification - which schedule?).
 
-2. Determine 'op' (Operation):
-   - "CREATE": Default. (e.g., "Add", "Schedule", "New")
+2. Type Classification (EVENT vs TASK):
+   - "EVENT": Has a specific START TIME (e.g., "3시에 회의", "오후 5시 미팅"). Use 'start_at'.
+   - "TASK": Has a DEADLINE with "~까지" or "마감" (e.g., "6시까지 보고서", "내일까지 과제"). Use 'end_at'. Goes to sub_task.
+
+3. Determine 'op' (Operation):
+   - "CREATE": Default. (e.g., "Add", "Schedule", "New", "추가해줘")
    - "UPDATE": When user wants to change time, title, or details. (e.g., "Delay", "Move", "Change", "Reschedule")
    - "DELETE": When user wants to remove. (e.g., "Cancel", "Delete", "Remove")
 
-3. Payload Construction (Mandatory for CREATE/UPDATE):
+4. Determine 'target':
+   - "SCHEDULE": For EVENTs with specific time (회의, 미팅, 수업). Creates a Schedule.
+   - "SUB_TASK": For TASKs with deadline (~까지, 해야 해). Creates a SubTask/Todo.
+   - "NOTIFICATION": For alarm/reminder settings.
+
+5. Time Parsing (CRITICAL):
+   - Default assumption: If just a number (e.g., "3시", "5시"), assume PM (오후) unless context suggests otherwise.
+   - "3시에 회의" → start_at: 15:00 (3 PM), type: EVENT, target: SCHEDULE
+   - "6시까지 보고서" → end_at: 18:00 (6 PM), type: TASK, target: SUB_TASK
+   - Multiple items: Parse each item separately into actions array.
+
+6. Payload Construction:
    - "importance_score" (int, 1-10): 
       * 10: Final exams, major certification tests.
       * 7-9: Midterms, major assignments, critical team projects.
       * 4-6: Quizzes, regular assignments, meetings.
       * 1-3: Personal tasks, hobbies, routine activities.
-   - "estimated_minute" (int): Estimated total workload (e.g., Exam Study: 600-1200, Homework: 60-180, Meetings: 60).
+   - "estimated_minute" (int): Estimated time (Meeting: 60, Report: 90, Study: 120).
    - "category" (string): Must be one of [수업, 과제, 시험, 공모전, 대외활동, 기타].
-   - "target": "SCHEDULE" (default) or "NOTIFICATION".
-   - "CREATE": Must include 'title', 'importance_score', 'estimated_minute', 'category' AND ('start_at' OR 'end_at').
-   - "UPDATE": Must include 'title' (to identify target) AND specific fields to change.
+   - For EVENTs (target: SCHEDULE): MUST have 'start_at' AND 'end_at' (1 hour default if only start given).
+   - For TASKs (target: SUB_TASK): MUST have 'end_at' (deadline), 'date' (YYYY-MM-DD), 'priority' (high/medium/low).
    - "DELETE": Must include 'title'.
    
-4. Output Format:
-   - "CLARIFY": Save partial info to 'preserved_info'. Fill 'missingFields'.
-   - "SCHEDULE_MUTATION": Fill 'actions' list.
+7. Output Format:
+   - "CLARIFY": Save partial info to 'preserved_info'. Fill 'missingFields' with {{ "field": "...", "question": "..." }}.
+   - "SCHEDULE_MUTATION": Fill 'actions' list. EACH item is a separate action.
+   - "PRIORITY_QUERY": Set "preserved_info.query_type" to "high_priority".
 
-5. Date Calculation:
-   - Always calculate relative dates (e.g., "tomorrow", "next Friday") into exact ISO8601 timestamps based on [Current Environment] date.
+8. Date Calculation:
+   - Always calculate relative dates into exact ISO8601 timestamps based on [Current Environment] date.
+   - "내일" = Today + 1 day
+   - "오늘" = Today
 
-6. Sub-task Auto-Generation (SMART FEATURE):
-   - IF the intent is "CREATE" AND Category is one of ['시험', '과제', '공모전', '대외활동']:
-   - YOU MUST generate 3 to 5 'Sub-tasks' (Preparation steps) leading up to the deadline.
-   - Sub-task Payload:
-     * title: "[준비] {{Original Title}} - {{Step Description}}"
-     * end_at: D-1, D-2, D-3... days before the main event.
-     * estimated_minute: 60-180 (reasonable study time).
-     * category: Same as parent or '공부'.
-     * tip: "Short, practical advice for this step (Korean, Max 20 chars)"
-     
-7. Notification Settings:
-   - IF user asks to set/change alarm/reminder: Set actions 'target' to "NOTIFICATION".
-   - Payload must include:
-     * schedule_title: Target schedule name.
-     * minutes_before: Minutes before the event (e.g., 10, 30, 60, 1440=1day). 0 if 'at time'.
-     * notification_msg: Custom message (optional).
+9. Notification Clarification:
+   - IF user asks to set alarm but DOESN'T specify which schedule (e.g., "회의 10분 전에 알림"):
+   - MUST return CLARIFY intent asking which specific schedule.
+   - preserved_info should contain: minutes_before, notification_msg (if any).
+   - missingFields: [{{ "field": "schedule_title", "question": "어떤 일정에 대한 알림을 설정할까요?" }}]
 
-8. Schedule Query:
-   - IF intent is "SCHEDULE_QUERY", set "preserved_info.query_range" to one of:
-     * "today": 오늘
-     * "tomorrow": 내일
-     * "this_week": 이번 주
-     * "next_week": 다음 주
+10. Sub-task for Exams/Assignments:
+   - IF creating 시험/과제/공모전: Generate 2-3 preparation sub-tasks with 'target': 'SUB_TASK'.
 
 [Examples]
 ---
-# Note: In these examples, the Reference Date is fixed to 2024-05-20 (Monday).
-# The model must calculate the target date based on the user's input relative to the [Current Environment] date provided in the real prompt.
+# Example 1: Multiple EVENTs with specific times
+User: "내일 3시에 회의, 5시에 미팅 추가해줘"
+Context: Today is 2026-01-14, Tomorrow is 2026-01-15.
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "EVENT",
+  "actions": [
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "회의", "start_at": "2026-01-15T15:00:00+09:00", "end_at": "2026-01-15T16:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}} }},
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "미팅", "start_at": "2026-01-15T17:00:00+09:00", "end_at": "2026-01-15T18:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}} }}
+  ]
+}}
 
-# Example 1: Create w/ Sub-tasks (Exam)
-User: "다음주 월요일 알고리즘 시험 일정 추가해줘"
-Context: Reference Date is 2024-05-20 (Mon). "Next Mon" is 2024-05-27.
+# Example 2: TASK with deadline (~까지) -> SubTask
+User: "오늘 6시까지 보고서 작성해야 해"
+Context: Today is 2026-01-14.
 JSON: {{
   "intent": "SCHEDULE_MUTATION",
   "type": "TASK",
   "actions": [
-    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "알고리즘 시험", "end_at": "2024-05-27T10:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
-    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 개념 정리", "end_at": "2024-05-24T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "tip": "핵심 개념 위주로 1회독"}} }},
-    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 기출 풀이", "end_at": "2024-05-25T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "tip": "타이머 켜고 실전처럼 풀기"}} }},
-    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 최종 복습", "end_at": "2024-05-26T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험", "tip": "틀린 문제 위주로 재점검"}} }}
+    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "보고서 작성", "date": "2026-01-14", "end_at": "2026-01-14T18:00:00+09:00", "importance_score": 7, "estimated_minute": 90, "category": "과제", "priority": "high"}} }}
   ]
 }}
 
-# Example 2: Update (Change Time) - Relative Date Calculation
-User: "운영체제 과제 마감 하루 미뤄줘"
-Context: Reference Date is 2024-05-20 (Monday)
+# Example 3: Notification without specifying schedule -> CLARIFY
+User: "회의 10분 전에 알림 예약해줘"
 JSON: {{
-  "intent": "SCHEDULE_MUTATION",
+  "intent": "CLARIFY",
   "type": "TASK",
-  "actions": [ {{ 
-    "op": "UPDATE", 
-    "target": "SCHEDULE",
-    "payload": {{ "title": "운영체제 과제", "end_at": "2026-05-21T23:59:00+09:00" }} 
-  }} ]
+  "actions": [],
+  "preserved_info": {{ "minutes_before": 10, "notification_msg": "회의 10분 전입니다!" }},
+  "missingFields": [{{ "field": "schedule_title", "question": "어떤 회의에 대한 알림을 설정할까요? 일정 목록에서 선택하거나 이름을 알려주세요." }}]
 }}
 
-# Example 3: Notification Setting (NEW)
-User: "자료구조 과제 알림 1시간 전으로 설정해줘"
-Context: Reference Date is 2024-05-20 (Monday)
-JSON: {{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "TASK",
-  "actions": [ {{ 
-    "op": "UPDATE", 
-    "target": "NOTIFICATION",
-    "payload": {{ "schedule_title": "자료구조 과제", "minutes_before": 60, "notification_msg": "자료구조 과제 마감 1시간 전입니다!" }} 
-  }} ]
-}}
-
-
-# Example 3: Delete (Cancel) - No Date Calculation needed
-User: "캡스톤 회의 취소해"
-Context: Reference Date is 2026-05-20 (Monday)
+# Example 4: Notification with specific schedule
+User: "캡스톤 회의 10분 전에 알림 설정해줘"
 JSON: {{
   "intent": "SCHEDULE_MUTATION",
   "type": "EVENT",
-  "actions": [ {{ "op": "DELETE", "payload": {{ "title": "캡스톤 회의" }} }} ]
+  "actions": [
+    {{ "op": "UPDATE", "target": "NOTIFICATION", "payload": {{ "schedule_title": "캡스톤 회의", "minutes_before": 10, "notification_msg": "캡스톤 회의 10분 전입니다!" }} }}
+  ]
 }}
 
-# Example 4: Context Merging (Create Task) - Merging preserved info
-User: "자료구조"
-Context: {{ 
-  "intent": "CLARIFY", 
-  "missingFields": ["title"], 
-  "preserved_info": {{ "end_at": "2026-05-20T14:00:00+09:00" }}, 
-  "type": "TASK" 
+# Example 5: Priority Query
+User: "우선순위 높은 일정 추천해줘"
+JSON: {{
+  "intent": "PRIORITY_QUERY",
+  "type": "TASK",
+  "actions": [],
+  "preserved_info": {{ "query_type": "high_priority" }}
 }}
+
+# Example 6: Exam with sub-tasks
+User: "다음주 월요일 알고리즘 시험 추가해줘"
+Context: Today is 2026-01-14 (Tue). Next Mon is 2026-01-19.
 JSON: {{
   "intent": "SCHEDULE_MUTATION",
   "type": "TASK",
-  "actions": [ {{ 
-      "op": "CREATE", 
-      "payload": {{ "title": "자료구조", "end_at": "2026-05-20T14:00:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "과제"}} 
-  }} ]
+  "actions": [
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "알고리즘 시험", "start_at": "2026-01-19T10:00:00+09:00", "end_at": "2026-01-19T12:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
+    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "알고리즘 시험 - 개념 정리", "date": "2026-01-16", "end_at": "2026-01-16T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "priority": "high", "tip": "핵심 개념 위주로 1회독"}} }},
+    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "알고리즘 시험 - 기출 풀이", "date": "2026-01-17", "end_at": "2026-01-17T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "priority": "high", "tip": "타이머 켜고 실전처럼"}} }},
+    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "알고리즘 시험 - 최종 복습", "date": "2026-01-18", "end_at": "2026-01-18T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험", "priority": "high", "tip": "틀린 문제 위주 재점검"}} }}
+  ]
 }}
 
-# Example 5: Schedule Query (View)
+# Example 7: Delete
+User: "캡스톤 회의 취소해"
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "EVENT",
+  "actions": [ {{ "op": "DELETE", "target": "SCHEDULE", "payload": {{ "title": "캡스톤 회의" }} }} ]
+}}
+
+# Example 8: Schedule Query (View)
 User: "오늘 일정 보여줘"
 JSON: {{
   "intent": "SCHEDULE_QUERY",
   "type": "TASK",
   "actions": [],
   "preserved_info": {{ "query_range": "today" }}
-}}
-
-# Example 6: Schedule Query (This Week)
-User: "이번 주 할 일 뭐야"
-JSON: {{
-  "intent": "SCHEDULE_QUERY",
-  "type": "TASK",
-  "actions": [],
-  "preserved_info": {{ "query_range": "this_week" }}
 }}
 
 ---
@@ -327,16 +325,35 @@ JSON Output:
                 elif op_type == "UPDATE":
                     assistant_msg = "일정을 변경할까요?"
                 else: # CREATE
-                    # 서브태스크(준비 일정) 감지 로직
-                    sub_task_count = sum(1 for a in actions if "[준비]" in a.payload.get('title', ''))
-                    main_task_count = action_cnt - sub_task_count
+                    # 일정과 할 일 분리해서 카운트
+                    schedule_count = sum(1 for a in actions if getattr(a, 'target', 'SCHEDULE') == 'SCHEDULE')
+                    sub_task_count = sum(1 for a in actions if getattr(a, 'target', 'SCHEDULE') == 'SUB_TASK')
                     
-                    if sub_task_count > 0:
-                        assistant_msg = f"준비 과정 {sub_task_count}건을 함께 등록할까요?"
+                    if schedule_count > 0 and sub_task_count > 0:
+                        assistant_msg = f"일정 {schedule_count}건과 할 일 {sub_task_count}건을 등록할까요?"
+                    elif sub_task_count > 0:
+                        assistant_msg = f"할 일 {sub_task_count}건을 등록할까요?"
                     else:
-                        assistant_msg = f"{action_cnt}건의 일정을 등록할까요?"
+                        assistant_msg = f"일정 {schedule_count}건을 등록할까요?"
             else:
                 assistant_msg = "처리할 일정이 없습니다."
+        
+        elif ai_parsed_result.intent == "PRIORITY_QUERY":
+            # 우선순위 높은 일정 조회
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = now + timedelta(days=14)  # 2주 이내 일정
+            
+            schedules = get_schedules_for_period(db, start_date, end_date)
+            
+            # priority_score 기준으로 정렬 (높은 순)
+            high_priority = [s for s in schedules if s.priority_score and s.priority_score >= 7]
+            high_priority.sort(key=lambda x: x.priority_score or 0, reverse=True)
+            
+            if high_priority:
+                schedule_text = format_schedules_for_display(high_priority[:5])  # 상위 5개
+                assistant_msg = f"우선순위가 높은 일정이에요! 🔥\n\n{schedule_text}\n\n총 {len(high_priority)}건의 중요 일정이 있어요."
+            else:
+                assistant_msg = "현재 우선순위가 높은 일정이 없어요. 🎉 여유롭게 하루를 보내세요!"
         
         elif ai_parsed_result.intent == "SCHEDULE_QUERY":
             # 일정 조회 처리

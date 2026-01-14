@@ -114,7 +114,11 @@ export const getSubTasksBySchedule = async (scheduleId) => {
     const to = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().split('T')[0];
     
     const allTasks = await getSubTasks(from, to);
-    return allTasks.filter(task => task.scheduleId === scheduleId);
+    // schedule_id와 scheduleId 둘 다 비교 (문자열 변환 포함)
+    return allTasks.filter(task => 
+      String(task.scheduleId) === String(scheduleId) || 
+      String(task.schedule_id) === String(scheduleId)
+    );
   } catch (error) {
     console.error('Failed to fetch sub-tasks by schedule:', error);
     throw error;

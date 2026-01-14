@@ -1,6 +1,72 @@
 import api from './api';
 import { API_ENDPOINTS } from '../utils/constants';
 
+// Google OAuth 상태 저장 키
+const GOOGLE_AUTH_KEY = 'google_calendar_auth';
+
+/**
+ * Google OAuth 인증 상태 가져오기
+ */
+export const getGoogleAuthStatus = () => {
+  try {
+    const stored = localStorage.getItem(GOOGLE_AUTH_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return { connected: false, email: null, expiresAt: null };
+  } catch (error) {
+    console.error('Error getting Google auth status:', error);
+    return { connected: false, email: null, expiresAt: null };
+  }
+};
+
+/**
+ * Google OAuth 인증 상태 저장
+ */
+export const saveGoogleAuthStatus = (status) => {
+  try {
+    localStorage.setItem(GOOGLE_AUTH_KEY, JSON.stringify(status));
+  } catch (error) {
+    console.error('Error saving Google auth status:', error);
+  }
+};
+
+/**
+ * Google OAuth 연결 해제
+ */
+export const disconnectGoogleCalendar = () => {
+  localStorage.removeItem(GOOGLE_AUTH_KEY);
+  return { connected: false, email: null };
+};
+
+/**
+ * Google OAuth 인증 시작 (팝업 방식)
+ * 백엔드에 OAuth URL 요청 후 팝업 열기
+ */
+export const initiateGoogleAuth = async () => {
+  try {
+    // 백엔드에서 OAuth URL 가져오기 (구현되어 있다면)
+    // const response = await api.get('/api/calendar/auth-url');
+    // const authUrl = response.data.url;
+    
+    // 임시: 직접 구현된 OAuth 플로우가 없으므로 모의 연결 처리
+    // 실제 구현시 Google OAuth 팝업 열기
+    const mockEmail = `user${Date.now().toString().slice(-4)}@gmail.com`;
+    const authStatus = {
+      connected: true,
+      email: mockEmail,
+      expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+      connectedAt: new Date().toISOString(),
+    };
+    
+    saveGoogleAuthStatus(authStatus);
+    return authStatus;
+  } catch (error) {
+    console.error('Failed to initiate Google auth:', error);
+    throw error;
+  }
+};
+
 /**
  * Google Calendar 동기화
  */

@@ -1,0 +1,152 @@
+// 간단한 국제화 (i18n) 유틸리티
+
+const translations = {
+  ko: {
+    // 설정 페이지
+    settings: '설정',
+    profile: '프로필',
+    manageInfo: '내 정보 관리',
+    accountConnection: '계정 연결',
+    notConnected: '연결되지 않음',
+    general: '일반',
+    language: '언어',
+    languageDesc: '앱에서 사용할 언어를 선택합니다',
+    theme: '화면 테마',
+    themeDesc: '앱의 테마를 선택합니다',
+    lightMode: '화이트 모드',
+    darkMode: '다크 모드',
+    systemTheme: '시스템 설정',
+    notifications: '알림',
+    pushNotification: '푸시 알림 허용',
+    pushNotificationDesc: '새로운 일정과 알림을 받습니다',
+    notificationSound: '알림음',
+    notificationSoundDesc: '알림 시 소리를 재생합니다',
+    vibration: '진동',
+    vibrationDesc: '알림 시 진동을 사용합니다',
+    doNotDisturb: '방해 금지 모드',
+    doNotDisturbDesc: '설정한 시간에는 알림을 받지 않습니다',
+    doNotDisturbStart: '방해 금지 시작 시간',
+    doNotDisturbEnd: '방해 금지 종료 시간',
+    deadlineAlert: '마감 전 알림',
+    deadlineAlertDesc: '할 일 마감 전에 알림을 받습니다',
+    deadlineAlertTime: '마감 전 알림 시간',
+    deadlineAlertTimeDesc: '마감 몇 분 전에 알림을 받을지 설정',
+    dailyBriefing: 'AI 데일리 브리핑',
+    dailyBriefingDesc: '매일 아침 AI가 일정을 정리해서 알려줍니다',
+    briefingTime: '브리핑 시간',
+    briefingTimeDesc: '매일 이 시간에 일정 요약을 받습니다',
+    privacy: '개인정보',
+    autoLock: '자동 잠금',
+    autoLockDesc: '일정 시간 후 자동으로 잠급니다',
+    analyticsData: '사용 분석 데이터',
+    analyticsDataDesc: '앱 개선을 위한 익명 데이터 수집',
+    errorReport: '오류 보고서',
+    errorReportDesc: '앱 오류 발생 시 자동으로 보고합니다',
+    appInfo: '앱 정보',
+    version: '버전',
+    developer: '개발자',
+    license: '라이선스',
+    view: '보기',
+    clearCache: '캐시 삭제',
+    logout: '로그아웃',
+    deleteAccount: '계정 삭제',
+    cancel: '취소',
+    confirm: '확인',
+    delete: '삭제',
+    logoutConfirm: '정말 로그아웃 하시겠습니까?',
+    deleteAccountWarning: '⚠️ 계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n정말 삭제하시겠습니까?',
+    cacheCleared: '캐시가 삭제되었습니다. 📦',
+    loggedOut: '로그아웃되었습니다. 👋',
+    accountDeleted: '계정이 삭제되었습니다. 이용해 주셔서 감사합니다. 🙏',
+    loading: '설정을 불러오는 중...',
+    minute: '분',
+    hour: '시간',
+    day: '일',
+    before: '전',
+    notUsed: '사용 안함',
+  },
+  en: {
+    // Settings page
+    settings: 'Settings',
+    profile: 'Profile',
+    manageInfo: 'Manage Info',
+    accountConnection: 'Connected Accounts',
+    notConnected: 'Not connected',
+    general: 'General',
+    language: 'Language',
+    languageDesc: 'Select the app language',
+    theme: 'Theme',
+    themeDesc: 'Select the app theme',
+    lightMode: 'Light Mode',
+    darkMode: 'Dark Mode',
+    systemTheme: 'System Default',
+    notifications: 'Notifications',
+    pushNotification: 'Push Notifications',
+    pushNotificationDesc: 'Receive schedule and reminder notifications',
+    notificationSound: 'Notification Sound',
+    notificationSoundDesc: 'Play sound when notified',
+    vibration: 'Vibration',
+    vibrationDesc: 'Vibrate when notified',
+    doNotDisturb: 'Do Not Disturb',
+    doNotDisturbDesc: 'Mute notifications during set hours',
+    doNotDisturbStart: 'Do Not Disturb Start Time',
+    doNotDisturbEnd: 'Do Not Disturb End Time',
+    deadlineAlert: 'Deadline Alerts',
+    deadlineAlertDesc: 'Get notified before task deadlines',
+    deadlineAlertTime: 'Deadline Alert Time',
+    deadlineAlertTimeDesc: 'Set how early to be notified',
+    dailyBriefing: 'AI Daily Briefing',
+    dailyBriefingDesc: 'AI summarizes your daily schedule each morning',
+    briefingTime: 'Briefing Time',
+    briefingTimeDesc: 'Receive daily summary at this time',
+    privacy: 'Privacy',
+    autoLock: 'Auto Lock',
+    autoLockDesc: 'Lock app after inactivity',
+    analyticsData: 'Analytics Data',
+    analyticsDataDesc: 'Share anonymous usage data for improvement',
+    errorReport: 'Error Reports',
+    errorReportDesc: 'Automatically send error reports',
+    appInfo: 'App Info',
+    version: 'Version',
+    developer: 'Developer',
+    license: 'License',
+    view: 'View',
+    clearCache: 'Clear Cache',
+    logout: 'Logout',
+    deleteAccount: 'Delete Account',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    delete: 'Delete',
+    logoutConfirm: 'Are you sure you want to logout?',
+    deleteAccountWarning: '⚠️ Deleting your account will permanently remove all data.\nAre you sure?',
+    cacheCleared: 'Cache cleared successfully. 📦',
+    loggedOut: 'You have been logged out. 👋',
+    accountDeleted: 'Account deleted. Thank you for using our app. 🙏',
+    loading: 'Loading settings...',
+    minute: 'min',
+    hour: 'hour',
+    day: 'day',
+    before: 'before',
+    notUsed: 'Not used',
+  }
+};
+
+// 현재 언어 가져오기
+export const getCurrentLanguage = () => {
+  return localStorage.getItem('app-language') || 'ko';
+};
+
+// 번역 가져오기
+export const t = (key) => {
+  const lang = getCurrentLanguage();
+  return translations[lang]?.[key] || translations['ko']?.[key] || key;
+};
+
+// 언어 변경
+export const setLanguage = (lang) => {
+  localStorage.setItem('app-language', lang);
+  // 페이지 새로고침 없이 적용하려면 상태 관리 필요
+  window.dispatchEvent(new CustomEvent('languageChange', { detail: lang }));
+};
+
+export default translations;

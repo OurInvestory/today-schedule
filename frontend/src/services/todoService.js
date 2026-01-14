@@ -63,12 +63,15 @@ const getPriorityLabel = (score) => {
 
 /**
  * Fetch all todos from the backend.
+ * @param {Object} options - 조회 옵션
+ * @param {string} options.from - 시작 날짜 (YYYY-MM-DD)
+ * @param {string} options.to - 종료 날짜 (YYYY-MM-DD)
  */
-export const fetchTodos = async () => {
+export const fetchTodos = async (options = {}) => {
   try {
     const today = new Date();
-    const from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const to = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    const from = options.from || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const to = options.to || new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
     const response = await api.get('/api/sub-tasks', {
       params: { from, to },
@@ -88,7 +91,7 @@ export const fetchTodos = async () => {
         completed: todo.is_done === true, // is_done 필드를 completed로 매핑
         estimatedMinute: todo.estimated_minute,
         scheduleId: todo.schedule_id,
-        aiReason: todo.ai_reason,
+        tip: todo.tip,
         category: todo.category || 'other', // 카테고리 없으면 기타
         priority, // 계산된 우선순위 레이블
         priorityScore, // 우선순위 점수 (1-10)
@@ -175,7 +178,8 @@ export const deleteTodo = async (id) => {
  * Todo 목록 조회
  */
 export const getTodos = async (params = {}) => {
-  let todos = await fetchTodos();
+  // from/to가 있으면 fetchTodos에 전달
+  let todos = await fetchTodos({ from: params.from, to: params.to });
 
   // 필터 적용
   if (params.date) {
@@ -250,23 +254,17 @@ export const toggleTodoComplete = async (id, completed, todoData) => {
 };
 
 /**
- * 오늘의 할 일 조회 (AI 우선순위 기반)
- * - 마감일이 지나지 않은 미완료 할 일
- * - 시작일이 오늘 이전인 할 일 (시작일이 없으면 포함)
- * - 우선순위 점수로 정렬 (useTodo에서 처리)
+ * 오늘의 할 일 조회
+ * - 오늘 날짜에 해당하는 할 일만 표시
  */
 export const getTodayTodos = async () => {
   const today = new Date().toISOString().split('T')[0];
   const allTodos = await fetchTodos();
 
   return allTodos.filter(todo => {
-    const startDate = todo.startDate;
-    const dueDate = todo.dueDate;
-
-    const canStart = !startDate || startDate <= today;
-    const isRelevant = !dueDate || dueDate >= today || !todo.completed;
-
-    return canStart && (isRelevant || !todo.completed);
+    // 오늘 날짜와 정확히 일치하는 할일만 표시
+    const todoDate = todo.dueDate ? todo.dueDate.split('T')[0] : null;
+    return todoDate === today;
   });
 };
 

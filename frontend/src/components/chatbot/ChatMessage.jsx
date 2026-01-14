@@ -3,7 +3,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { CATEGORY_LABELS } from '../../utils/constants';
 import './ChatMessage.css';
 
-const ChatMessage = ({ message, onConfirm, onCancel }) => {
+const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
   const isUser = message.role === 'user';
   const isError = message.isError;
   const hasActions = message.actions && message.actions.length > 0;
@@ -35,14 +35,23 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
 
     const parts = [];
     
-    if (target === 'SCHEDULE') {
+    // target이 있으면 사용, 없으면 payload.type으로 판단
+    const actionTarget = target || (payload.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
+    
+    if (actionTarget === 'SCHEDULE' || payload.type === 'EVENT' || payload.type === 'TASK') {
       if (payload.title) parts.push(`제목: ${payload.title}`);
-      if (payload.start_time && payload.end_time) {
-        parts.push(`시간: ${formatDate(payload.start_time, 'M월 D일 HH:mm')} ~ ${formatDate(payload.end_time, 'HH:mm')}`);
+      // start_at/end_at 또는 start_time/end_time 처리
+      const startTime = payload.start_at || payload.start_time;
+      const endTime = payload.end_at || payload.end_time;
+      if (startTime && endTime) {
+        parts.push(`시간: ${formatDate(startTime, 'M월 D일 HH:mm')} ~ ${formatDate(endTime, 'HH:mm')}`);
+      } else if (endTime) {
+        parts.push(`마감: ${formatDate(endTime, 'M월 D일 HH:mm')}`);
       }
       if (payload.category) parts.push(`카테고리: ${CATEGORY_LABELS[payload.category] || payload.category}`);
       if (payload.location) parts.push(`위치: ${payload.location}`);
-    } else if (target === 'SUB_TASK') {
+      if (payload.importance_score) parts.push(`중요도: ${payload.importance_score}/10`);
+    } else if (actionTarget === 'SUB_TASK') {
       if (payload.title) parts.push(`할 일: ${payload.title}`);
       if (payload.due_date) parts.push(`마감: ${formatDate(payload.due_date, 'M월 D일 HH:mm')}`);
       if (payload.priority) parts.push(`우선순위: ${payload.priority}`);
@@ -50,6 +59,32 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
     }
 
     return parts.join(', ');
+  };
+
+  // 액션 타입 아이콘/라벨 결정
+  const getActionTypeLabel = (action) => {
+    const target = action.target || (action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
+    const payloadType = action.payload?.type;
+    
+    if (target === 'SUB_TASK' || payloadType === 'TASK') {
+      return { icon: '✓', label: '할 일' };
+    }
+    return { icon: '📅', label: '일정' };
+  };
+
+  // 마크다운 스타일 볼드 텍스트 처리 (**text** -> <strong>text</strong>)
+  const formatMessageContent = (content) => {
+    if (!content) return null;
+    
+    // **text** 패턴을 찾아서 <strong>으로 변환
+    const parts = content.split(/(\*\*[^*]+\*\*)/g);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
   };
 
   return (
@@ -67,7 +102,20 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
       </div>
       <div className="chat-message__content">
         <div className="chat-message__bubble">
-          {message.content}
+          {formatMessageContent(message.content)}
+          
+          {/* 에러 메시지일 때 재시도 버튼 표시 */}
+          {isError && onRetry && (
+            <div className="chat-message__error-actions">
+              <button 
+                type="button" 
+                className="chat-message__retry-btn"
+                onClick={onRetry}
+              >
+                🔄 다시 시도
+              </button>
+            </div>
+          )}
           
           {/* 첨부된 파일 표시 (사용자 메시지) */}
           {isUser && message.files && message.files.length > 0 && (
@@ -93,20 +141,57 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
             </div>
           )}
           
-          {/* AI 이미지 분석 결과 */}
-          {!isUser && message.imageAnalysis && (
+          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 */}
+          {!isUser && message.imageAnalysis && message.actions && message.actions.length > 0 && !message.actionCompleted && (
             <div className="chat-message__image-analysis">
-              <div className="chat-message__analysis-header">📊 이미지 분석 결과</div>
+              <div className="chat-message__analysis-header">
+                📷 시간표에서 {message.actions.length}개의 일정을 찾았어요!
+              </div>
               <div className="chat-message__analysis-content">
-                {message.imageAnalysis.schedules && message.imageAnalysis.schedules.length > 0 ? (
-                  <ul className="chat-message__schedule-list">
-                    {message.imageAnalysis.schedules.map((schedule, idx) => (
-                      <li key={idx}>{schedule.title} - {schedule.time}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>{message.imageAnalysis.message}</p>
-                )}
+                <ul className="chat-message__schedule-list">
+                  {message.actions.slice(0, 5).map((action, idx) => {
+                    const startTime = action.payload?.start_at || action.payload?.start_time;
+                    const endTime = action.payload?.end_at || action.payload?.end_time;
+                    return (
+                    <li key={idx}>
+                      <strong>{action.payload?.title}</strong>
+                      {(startTime || endTime) && (
+                        <span className="chat-message__schedule-time">
+                          {startTime ? (
+                            <>{' - '}{formatDate(startTime, 'M/D HH:mm')}
+                            {endTime && ` ~ ${formatDate(endTime, 'HH:mm')}`}</>
+                          ) : (
+                            <>{' - '}마감: {formatDate(endTime, 'M/D HH:mm')}</>
+                          )}
+                        </span>
+                      )}
+                    </li>
+                  );})}
+                  {message.actions.length > 5 && (
+                    <li className="chat-message__more-items">...외 {message.actions.length - 5}개</li>
+                  )}
+                </ul>
+              </div>
+              <div className="chat-message__bulk-actions">
+                <button 
+                  type="button" 
+                  className="chat-message__action-btn chat-message__action-btn--confirm-all"
+                  onClick={() => {
+                    // 모든 일정 한 번에 추가
+                    message.actions.forEach(action => handleConfirmAction(action));
+                  }}
+                  disabled={message.actionLoading}
+                >
+                  {message.actionLoading ? '추가 중...' : `✓ ${message.actions.length}개 일정 모두 추가`}
+                </button>
+                <button 
+                  type="button" 
+                  className="chat-message__action-btn chat-message__action-btn--cancel"
+                  onClick={handleCancel}
+                  disabled={message.actionLoading}
+                >
+                  ✕ 취소
+                </button>
               </div>
             </div>
           )}
@@ -119,14 +204,53 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
             </div>
           )}
           
-          {/* 파싱된 액션 표시 */}
-          {!isUser && hasActions && !message.actionCompleted && (
+          {/* 알림 예약 요청 표시 */}
+          {!isUser && message.parsedResult?.intent === 'NOTIFICATION_REQUEST' && !message.actionCompleted && (
             <div className="chat-message__parsed-actions">
-              {message.actions.map((action, index) => (
+              <div className="chat-message__action-card">
+                <div className="chat-message__action-header">
+                  <span className="chat-message__action-type">🔔 알림 예약</span>
+                </div>
+                <div className="chat-message__action-details">
+                  {message.parsedResult.preserved_info?.target_title && 
+                    `대상: ${message.parsedResult.preserved_info.target_title}`}
+                  {message.parsedResult.preserved_info?.minutes_before && 
+                    `, ${message.parsedResult.preserved_info.minutes_before}분 전`}
+                  {message.parsedResult.preserved_info?.reminder_time && 
+                    `, 예약 시간: ${new Date(message.parsedResult.preserved_info.reminder_time).toLocaleString('ko-KR')}`}
+                </div>
+                <div className="chat-message__action-buttons">
+                  <button 
+                    type="button" 
+                    className="chat-message__action-btn chat-message__action-btn--confirm"
+                    onClick={() => onConfirm && onConfirm(message.id, null, message.parsedResult)}
+                    disabled={message.actionLoading}
+                  >
+                    {message.actionLoading ? '처리중...' : '✓ 예약'}
+                  </button>
+                  <button 
+                    type="button" 
+                    className="chat-message__action-btn chat-message__action-btn--cancel"
+                    onClick={handleCancel}
+                    disabled={message.actionLoading}
+                  >
+                    ✕ 취소
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* 파싱된 액션 표시 (이미지 분석이 아닌 일반 채팅의 경우) */}
+          {!isUser && hasActions && !message.actionCompleted && !message.imageAnalysis && (
+            <div className="chat-message__parsed-actions">
+              {message.actions.map((action, index) => {
+                const typeInfo = getActionTypeLabel(action);
+                return (
                 <div key={index} className="chat-message__action-card">
                   <div className="chat-message__action-header">
                     <span className="chat-message__action-type">
-                      {action.target === 'SCHEDULE' ? '📅 일정' : '✓ 할 일'}
+                      {typeInfo.icon} {typeInfo.label}
                     </span>
                     <span className="chat-message__action-op">
                       {action.op === 'CREATE' ? '추가' : action.op === 'UPDATE' ? '수정' : '삭제'}
@@ -154,7 +278,7 @@ const ChatMessage = ({ message, onConfirm, onCancel }) => {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
           

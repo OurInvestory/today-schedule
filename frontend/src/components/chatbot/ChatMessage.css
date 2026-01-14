@@ -44,6 +44,13 @@
   font-size: var(--font-size-sm);
   line-height: 1.5;
   word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* 마크다운 스타일 볼드 텍스트 */
+.chat-message__bubble strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 /* 첨부된 파일 표시 */
@@ -110,10 +117,53 @@
 .chat-message__schedule-list li {
   padding: 6px 0;
   border-bottom: 1px solid #e5e8eb;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
 }
 
 .chat-message__schedule-list li:last-child {
   border-bottom: none;
+}
+
+.chat-message__schedule-time {
+  color: #8b95a1;
+  font-size: 12px;
+}
+
+.chat-message__more-items {
+  color: #8b95a1;
+  font-style: italic;
+}
+
+.chat-message__bulk-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chat-message__action-btn--confirm-all {
+  background-color: #3182f6;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex: 1;
+}
+
+.chat-message__action-btn--confirm-all:hover {
+  background-color: #1b64da;
+}
+
+.chat-message__action-btn--confirm-all:disabled {
+  background-color: #b0c4de;
+  cursor: not-allowed;
 }
 
 .chat-message--user .chat-message__bubble {
@@ -131,6 +181,32 @@
 .chat-message--error .chat-message__bubble {
   background-color: var(--color-priority-high-bg);
   color: var(--color-priority-high-text);
+}
+
+/* 에러 메시지 재시도 버튼 */
+.chat-message__error-actions {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.chat-message__retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-primary-500);
+  background-color: transparent;
+  border: 1px solid var(--color-primary-500);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.chat-message__retry-btn:hover {
+  background-color: var(--color-primary-50);
 }
 
 .chat-message__time {

@@ -7,8 +7,10 @@ import ChatbotWindow from '../components/chatbot/ChatbotWindow';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import Input from '../components/common/Input';
+import SearchableSelect from '../components/common/SearchableSelect';
 import { useTodo } from '../hooks/useTodo';
 import { useChatbot } from '../hooks/useChatbot';
+import { useCalendar } from '../hooks/useCalendar';
 import { formatDate } from '../utils/dateUtils';
 import { calculatePriority } from '../utils/priorityUtils';
 import { CATEGORY_LABELS } from '../utils/constants';
@@ -27,10 +29,14 @@ const Home = ({ isFullCalendarMode = false }) => {
     importance: 5,
     estimatedTime: 1,
     estimatedMinute: 60,
+    scheduleId: '', // 일정 ID 필수
   });
 
   const { todos, loading, toggleComplete, addTodo, editTodo, removeTodo, updateFilter, filter } =
     useTodo({ date: 'today' });
+
+  // 일정 목록 가져오기 (할일 추가 시 일정 선택용)
+  const { events: schedules } = useCalendar();
 
   const {
     isOpen: isChatOpen,
@@ -42,6 +48,8 @@ const Home = ({ isFullCalendarMode = false }) => {
     confirmAction,
     cancelAction,
     clearMessages,
+    retryLastMessage,
+    lastUserMessage,
   } = useChatbot();
 
   const handleDateSelect = (date) => {
@@ -51,6 +59,12 @@ const Home = ({ isFullCalendarMode = false }) => {
 
   const handleAddTodo = async () => {
     try {
+      // 일정 선택 필수 확인
+      if (!newTodo.scheduleId) {
+        alert('할 일을 추가하려면 일정을 선택해야 합니다.');
+        return;
+      }
+      
       // 우선순위 자동 계산
       const priority = calculatePriority(newTodo.date, newTodo.estimatedMinute);
       
@@ -67,6 +81,7 @@ const Home = ({ isFullCalendarMode = false }) => {
         importance: 5,
         estimatedTime: 1,
         estimatedMinute: 60,
+        scheduleId: '',
       });
     } catch (error) {
       console.error('Failed to add todo:', error);
@@ -152,7 +167,7 @@ const Home = ({ isFullCalendarMode = false }) => {
                 const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
                 const day = String(selectedDate.getDate()).padStart(2, '0');
                 const dateStr = `${year}-${month}-${day}`;
-                setNewTodo(prev => ({ ...prev, date: dateStr }));
+                setNewTodo(prev => ({ ...prev, date: dateStr, scheduleId: '' }));
                 setIsAddModalOpen(true);
               }}
               emptyMessage="할 일이 없습니다. 새로운 할 일을 추가해보세요!"
@@ -175,6 +190,8 @@ const Home = ({ isFullCalendarMode = false }) => {
         onConfirmAction={confirmAction}
         onCancelAction={cancelAction}
         onClearHistory={clearMessages}
+        onRetry={retryLastMessage}
+        canRetry={!!lastUserMessage}
       />
 
       {/* Add Todo Modal */}
@@ -192,6 +209,27 @@ const Home = ({ isFullCalendarMode = false }) => {
         }
       >
         <div className="add-todo-form">
+          <div className="add-todo-form__group">
+            <label className="add-todo-form__label">소속 일정 * (필수)</label>
+            <SearchableSelect
+              options={schedules}
+              value={newTodo.scheduleId}
+              onChange={(schedule) => {
+                setNewTodo({ 
+                  ...newTodo, 
+                  scheduleId: schedule.id,
+                  // 선택한 일정의 카테고리를 자동 설정
+                  category: schedule.category || newTodo.category,
+                });
+              }}
+              placeholder="일정을 검색하거나 선택하세요"
+              searchPlaceholder="일정 검색..."
+              formatOption={(schedule) => schedule.title}
+              formatDate={formatDate}
+              required
+            />
+            <small className="add-todo-form__hint">할 일은 반드시 일정에 소속되어야 합니다.</small>
+          </div>
           <Input
             label="제목"
             required

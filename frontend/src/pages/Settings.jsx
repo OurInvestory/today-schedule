@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNotificationSettings, updateNotificationSettings } from '../services/notificationService';
+import { getGoogleAuthStatus, initiateGoogleAuth, disconnectGoogleCalendar } from '../services/calendarService';
+import { t, getCurrentLanguage } from '../utils/i18n';
 import './Settings.css';
 
 // 테마 적용 함수
@@ -23,14 +25,38 @@ const getInitialTheme = () => {
   return saved || 'light';
 };
 
+// 캐시 크기 계산 함수
+const calculateCacheSize = () => {
+  let totalSize = 0;
+  for (let key in localStorage) {
+    if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
+      totalSize += localStorage.getItem(key).length * 2; // UTF-16 = 2 bytes per char
+    }
+  }
+  return totalSize;
+};
+
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
 const Settings = () => {
   const navigate = useNavigate();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [cacheSize, setCacheSize] = useState(0);
   const [settings, setSettings] = useState({
     pushNotification: true,
     notificationSound: true,
     vibration: true,
     doNotDisturb: false,
+    doNotDisturbStart: '22:00',
+    doNotDisturbEnd: '08:00',
     dailySummary: true,
     dailySummaryTime: '08:00',
     deadlineAlert: true,
@@ -43,18 +69,49 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
 
   const [connectedAccounts, setConnectedAccounts] = useState({
-    google: { connected: true, email: 'student@gmail.com' },
-    kakao: { connected: false },
-    naver: { connected: false },
+    google: { connected: false, email: null },
+    kakao: { connected: false, email: null },
+    naver: { connected: false, email: null },
   });
+  
+  // 언어 변경 시 리렌더링을 위한 상태
+  const [, setCurrentLang] = useState(getCurrentLanguage());
 
   useEffect(() => {
     fetchSettings();
+    
+    // 캐시 크기 계산
+    setCacheSize(calculateCacheSize());
+    
+    // Google 인증 상태 로드
+    const googleAuth = getGoogleAuthStatus();
+    setConnectedAccounts(prev => ({
+      ...prev,
+      google: { connected: googleAuth.connected, email: googleAuth.email },
+    }));
+    
+    // 카카오/네이버 연결 상태 로드
+    const kakaoAuth = localStorage.getItem('kakao-auth-status');
+    const naverAuth = localStorage.getItem('naver-auth-status');
+    if (kakaoAuth) {
+      const parsed = JSON.parse(kakaoAuth);
+      setConnectedAccounts(prev => ({ ...prev, kakao: parsed }));
+    }
+    if (naverAuth) {
+      const parsed = JSON.parse(naverAuth);
+      setConnectedAccounts(prev => ({ ...prev, naver: parsed }));
+    }
     
     // 초기 테마 적용
     const initialTheme = getInitialTheme();
     setSettings(prev => ({ ...prev, theme: initialTheme }));
     applyTheme(initialTheme);
+    
+    // 언어 변경 이벤트 리스너
+    const handleLanguageChange = (e) => {
+      setCurrentLang(e.detail);
+    };
+    window.addEventListener('languageChange', handleLanguageChange);
     
     // 시스템 테마 변경 감지
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -66,7 +123,10 @@ const Settings = () => {
     };
     
     mediaQuery.addEventListener('change', handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    return () => {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+      window.removeEventListener('languageChange', handleLanguageChange);
+    };
   }, []);
 
   const fetchSettings = async () => {
@@ -115,14 +175,124 @@ const Settings = () => {
     }
   }, []);
 
-  const handleAccountToggle = (provider) => {
-    setConnectedAccounts(prev => ({
-      ...prev,
-      [provider]: {
-        ...prev[provider],
-        connected: !prev[provider].connected,
-      },
-    }));
+  const handleAccountToggle = async (provider) => {
+    if (provider === 'google') {
+      if (connectedAccounts.google.connected) {
+        // 연결 해제
+        disconnectGoogleCalendar();
+        setConnectedAccounts(prev => ({
+          ...prev,
+          google: { connected: false, email: null },
+        }));
+      } else {
+        // 연결 시도
+        try {
+          const authStatus = await initiateGoogleAuth();
+          setConnectedAccounts(prev => ({
+            ...prev,
+            google: { connected: authStatus.connected, email: authStatus.email },
+          }));
+        } catch (error) {
+          console.error('Google auth failed:', error);
+          alert('Google 계정 연결에 실패했습니다.');
+        }
+      }
+    } else if (provider === 'kakao') {
+      if (connectedAccounts.kakao.connected) {
+        // 연결 해제
+        localStorage.removeItem('kakao-auth-status');
+        setConnectedAccounts(prev => ({
+          ...prev,
+          kakao: { connected: false, email: null },
+        }));
+      } else {
+        // 모의 연결 (실제로는 카카오 OAuth 필요)
+        const mockEmail = 'user@kakao.com';
+        const authData = { connected: true, email: mockEmail };
+        localStorage.setItem('kakao-auth-status', JSON.stringify(authData));
+        setConnectedAccounts(prev => ({
+          ...prev,
+          kakao: authData,
+        }));
+      }
+    } else if (provider === 'naver') {
+      if (connectedAccounts.naver.connected) {
+        // 연결 해제
+        localStorage.removeItem('naver-auth-status');
+        setConnectedAccounts(prev => ({
+          ...prev,
+          naver: { connected: false, email: null },
+        }));
+      } else {
+        // 모의 연결 (실제로는 네이버 OAuth 필요)
+        const mockEmail = 'user@naver.com';
+        const authData = { connected: true, email: mockEmail };
+        localStorage.setItem('naver-auth-status', JSON.stringify(authData));
+        setConnectedAccounts(prev => ({
+          ...prev,
+          naver: authData,
+        }));
+      }
+    }
+  };
+
+  // 캐시 삭제 핸들러
+  const handleClearCache = () => {
+    // 테마와 언어 설정은 보존
+    const theme = localStorage.getItem('app-theme');
+    const language = localStorage.getItem('app-language');
+    const notificationSettings = localStorage.getItem('notification-settings');
+    
+    // 캐시 데이터만 삭제 (설정 외 데이터)
+    const keysToRemove = [];
+    for (let key in localStorage) {
+      if (Object.prototype.hasOwnProperty.call(localStorage, key) && 
+          !key.includes('theme') && 
+          !key.includes('language') && 
+          !key.includes('notification-settings') &&
+          !key.includes('google-auth')) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
+    // 설정 복원
+    if (theme) localStorage.setItem('app-theme', theme);
+    if (language) localStorage.setItem('app-language', language);
+    if (notificationSettings) localStorage.setItem('notification-settings', notificationSettings);
+    
+    setCacheSize(calculateCacheSize());
+    alert('캐시가 삭제되었습니다. 📦');
+  };
+
+  // 로그아웃 핸들러
+  const handleLogout = () => {
+    // 모든 인증 관련 데이터 삭제
+    localStorage.removeItem('google-auth-status');
+    localStorage.removeItem('auth-token');
+    localStorage.removeItem('user-data');
+    
+    // 연결된 계정 상태 초기화
+    setConnectedAccounts({
+      google: { connected: false, email: null },
+      kakao: { connected: false },
+      naver: { connected: false },
+    });
+    
+    setShowLogoutModal(false);
+    alert('로그아웃되었습니다. 👋');
+    navigate('/');
+  };
+
+  // 계정 삭제 핸들러
+  const handleDeleteAccount = () => {
+    // 모든 localStorage 데이터 삭제
+    localStorage.clear();
+    
+    setShowDeleteAccountModal(false);
+    alert('계정이 삭제되었습니다. 이용해 주셔서 감사합니다. 🙏');
+    navigate('/');
   };
 
   const ToggleSwitch = ({ checked, onChange }) => (
@@ -199,7 +369,7 @@ const Settings = () => {
                 <div className="account-item__text">
                   <span className="account-item__name">Google 계정</span>
                   <span className="account-item__status">
-                    {connectedAccounts.google.connected ? connectedAccounts.google.email : '연결되지 않음'}
+                    {connectedAccounts.google.connected ? connectedAccounts.google.email : t('notConnected')}
                   </span>
                 </div>
               </div>
@@ -218,7 +388,9 @@ const Settings = () => {
                 </div>
                 <div className="account-item__text">
                   <span className="account-item__name">카카오톡</span>
-                  <span className="account-item__status">연결되지 않음</span>
+                  <span className="account-item__status">
+                    {connectedAccounts.kakao.connected ? connectedAccounts.kakao.email : t('notConnected')}
+                  </span>
                 </div>
               </div>
               <ToggleSwitch
@@ -236,7 +408,9 @@ const Settings = () => {
                 </div>
                 <div className="account-item__text">
                   <span className="account-item__name">네이버</span>
-                  <span className="account-item__status">연결되지 않음</span>
+                  <span className="account-item__status">
+                    {connectedAccounts.naver.connected ? connectedAccounts.naver.email : t('notConnected')}
+                  </span>
                 </div>
               </div>
               <ToggleSwitch
@@ -336,6 +510,33 @@ const Settings = () => {
                 onChange={() => handleToggle('doNotDisturb')}
               />
             </div>
+
+            {settings.doNotDisturb && (
+              <>
+                <div className="settings-item settings-item--sub">
+                  <div className="settings-item__text">
+                    <span className="settings-item__label">{t('doNotDisturbStart')}</span>
+                  </div>
+                  <input
+                    type="time"
+                    className="settings-item__time-input"
+                    value={settings.doNotDisturbStart || '22:00'}
+                    onChange={(e) => handleSelectChange('doNotDisturbStart', e.target.value)}
+                  />
+                </div>
+                <div className="settings-item settings-item--sub">
+                  <div className="settings-item__text">
+                    <span className="settings-item__label">{t('doNotDisturbEnd')}</span>
+                  </div>
+                  <input
+                    type="time"
+                    className="settings-item__time-input"
+                    value={settings.doNotDisturbEnd || '08:00'}
+                    onChange={(e) => handleSelectChange('doNotDisturbEnd', e.target.value)}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="settings-item">
               <div className="settings-item__text">
@@ -464,12 +665,78 @@ const Settings = () => {
         {/* 기타 버튼들 */}
         <section className="settings__section">
           <div className="settings__actions">
-            <button className="settings__action-btn">캐시 삭제</button>
-            <button className="settings__action-btn settings__action-btn--danger">로그아웃</button>
-            <button className="settings__action-btn settings__action-btn--danger">계정 삭제</button>
+            <button className="settings__action-btn" onClick={handleClearCache}>
+              캐시 삭제
+              <span className="settings__action-info">({formatBytes(cacheSize)})</span>
+            </button>
+            <button className="settings__action-btn settings__action-btn--danger" onClick={() => setShowLogoutModal(true)}>
+              로그아웃
+            </button>
+            <button className="settings__action-btn settings__action-btn--danger" onClick={() => setShowDeleteAccountModal(true)}>
+              계정 삭제
+            </button>
           </div>
         </section>
       </div>
+
+      {/* 로그아웃 확인 모달 */}
+      {showLogoutModal && (
+        <div className="license-modal__overlay" onClick={() => setShowLogoutModal(false)}>
+          <div className="license-modal license-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="license-modal__header">
+              <h2 className="license-modal__title">로그아웃</h2>
+              <button className="license-modal__close" onClick={() => setShowLogoutModal(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="license-modal__content">
+              <p className="confirm-modal__message">정말 로그아웃 하시겠습니까?</p>
+              <div className="confirm-modal__buttons">
+                <button className="confirm-modal__btn confirm-modal__btn--cancel" onClick={() => setShowLogoutModal(false)}>
+                  취소
+                </button>
+                <button className="confirm-modal__btn confirm-modal__btn--confirm" onClick={handleLogout}>
+                  로그아웃
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 계정 삭제 확인 모달 */}
+      {showDeleteAccountModal && (
+        <div className="license-modal__overlay" onClick={() => setShowDeleteAccountModal(false)}>
+          <div className="license-modal license-modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="license-modal__header">
+              <h2 className="license-modal__title">계정 삭제</h2>
+              <button className="license-modal__close" onClick={() => setShowDeleteAccountModal(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="license-modal__content">
+              <p className="confirm-modal__message">
+                ⚠️ 계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.<br/>
+                정말 삭제하시겠습니까?
+              </p>
+              <div className="confirm-modal__buttons">
+                <button className="confirm-modal__btn confirm-modal__btn--cancel" onClick={() => setShowDeleteAccountModal(false)}>
+                  취소
+                </button>
+                <button className="confirm-modal__btn confirm-modal__btn--danger" onClick={handleDeleteAccount}>
+                  삭제
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 라이선스 모달 */}
       {showLicenseModal && (
