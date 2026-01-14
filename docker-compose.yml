@@ -31,6 +31,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: five-schedule-frontend
+    profiles:
+      - full
     ports:
       - "5173:5173"
     volumes:

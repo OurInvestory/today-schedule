@@ -195,36 +195,43 @@ export const useChatbot = () => {
         let actions = imageAnalysisResult.actions || imageAnalysisResult.parsedResult?.actions || [];
         const lectures = imageAnalysisResult.lectures || [];
         
-        // lectures가 있으면 SCHEDULE 액션들 대신 lectures 기반 일정 추가 UI 표시
-        // 백엔드 응답의 parsedResult.actions에 일정 데이터가 있음
+        // lectures가 있으면 LECTURES 타겟 액션으로 변환
+        // 백엔드의 convert_to_lecture_format 결과를 사용
         
         // 이미지 분석 결과로 일정/할 일 추출 성공
         let displayMessage = '이미지를 분석했지만 일정을 찾지 못했어요. 📸';
         
-        // actions가 있으면 일정 추가 UI를 표시하기 위한 메시지 구성
-        if (actions.length > 0) {
-          // 강의(LECTURES 타겟), 일정(SCHEDULE 타겟), 할 일(SUB_TASK 타겟) 카운트
-          const lecturesAction = actions.find(a => a.target === 'LECTURES');
-          const lectureCount = lecturesAction 
-            ? (Array.isArray(lecturesAction.payload) ? lecturesAction.payload.length : 1) 
-            : 0;
+        // lectures 배열이 있으면 강의 추가 UI 표시
+        if (lectures && lectures.length > 0) {
+          // lectures를 LECTURES 타겟 액션으로 변환
+          const lecturesAction = {
+            op: 'CREATE',
+            target: 'LECTURES',
+            payload: lectures
+          };
+          // 기존 actions에 lectures 액션 추가 (중복 방지)
+          const hasLecturesAction = actions.some(a => a.target === 'LECTURES');
+          if (!hasLecturesAction) {
+            actions = [lecturesAction, ...actions.filter(a => a.payload?.type !== 'EVENT')];
+          }
           
-          // SCHEDULE 타겟인 액션 (일정으로 추가될 항목들)
-          const scheduleActions = actions.filter(a => a.target === 'SCHEDULE' || (a.payload?.type === 'EVENT' && a.target !== 'LECTURES'));
-          const scheduleCount = scheduleActions.length;
-          
+          displayMessage = `이미지에서 강의 ${lectures.length}개를 발견했어요! 📸\n시간표에 추가할까요?`;
+        } else if (actions.length > 0) {
+          // lectures가 없으면 기존 actions 기반으로 카운트
           // SUB_TASK 타겟인 액션 (할 일로 추가될 항목들)
           const taskActions = actions.filter(a => a.target === 'SUB_TASK' || a.payload?.type === 'TASK');
           const taskCount = taskActions.length;
           
-          const totalCount = lectureCount + scheduleCount + taskCount;
+          // SCHEDULE 타겟인 액션 (일정으로 추가될 항목들)
+          const scheduleActions = actions.filter(a => a.target === 'SCHEDULE' || (a.payload?.type === 'EVENT'));
+          const scheduleCount = scheduleActions.length;
+          
           const parts = [];
-          if (lectureCount > 0) parts.push(`강의 ${lectureCount}개`);
           if (scheduleCount > 0) parts.push(`일정 ${scheduleCount}개`);
           if (taskCount > 0) parts.push(`할 일 ${taskCount}개`);
           
           if (parts.length > 0) {
-            displayMessage = `이미지에서 ${parts.join(', ')}를 발견했어요! 📸\n시간표에 추가할까요?`;
+            displayMessage = `이미지에서 ${parts.join(', ')}를 발견했어요! 📸\n추가할까요?`;
           }
         }
         

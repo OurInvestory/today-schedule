@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# Dependencies (will be installed in container)
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test
+coverage/
+
+# Documentation
+*.md
+
+# Build outputs
+dist/
