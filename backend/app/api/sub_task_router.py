@@ -3,6 +3,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import List, Union
 from datetime import date, datetime
+import os
+import re
+
+from dotenv import load_dotenv
+from ibm_watsonx_ai.foundation_models import ModelInference
+from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
+from ibm_watsonx_ai.foundation_models.utils.enums import DecodingMethods
 
 from app.db.database import get_db
 from app.models.sub_task import SubTask
@@ -11,8 +18,15 @@ from app.schemas.sub_task import SaveSubTaskRequest, UpdateSubTaskRequest, SubTa
 from app.schemas.common import ResponseDTO
 import random
 
+load_dotenv()
 
 router = APIRouter(prefix="/api/sub-tasks", tags=["SubTask"])
+
+# --- Watsonx 설정 ---
+WATSONX_API_KEY = os.getenv("WATSONX_API_KEY")
+WATSONX_URL = os.getenv("WATSONX_URL")
+WATSONX_PROJECT_ID = os.getenv("WATSONX_PROJECT_ID")
+WATSONX_MODEL_ID = os.getenv("WATSONX_MODEL_ID", "meta-llama/llama-3-3-70b-instruct")
 
 # 응원 문구 15개 (AI 연동이 안 될 때 랜덤 표시)
 ENCOURAGEMENT_TIPS = [
@@ -37,6 +51,57 @@ def get_random_encouragement():
     """랜덤 응원 문구 반환"""
     return random.choice(ENCOURAGEMENT_TIPS)
 
+def generate_ai_tip(title: str, category: str = None) -> str:
+    """AI를 사용하여 할 일에 대한 실용적인 팁 생성"""
+    try:
+        if not WATSONX_API_KEY or not WATSONX_PROJECT_ID:
+            return get_random_encouragement()
+        
+        credentials = {
+            "url": WATSONX_URL,
+            "apikey": WATSONX_API_KEY
+        }
+        
+        generate_params = {
+            GenParams.DECODING_METHOD: DecodingMethods.GREEDY,
+            GenParams.MAX_NEW_TOKENS: 50,
+            GenParams.MIN_NEW_TOKENS: 5,
+            GenParams.TEMPERATURE: 0.7,
+            GenParams.STOP_SEQUENCES: ["\n", ".", "!"]
+        }
+        
+        model = ModelInference(
+            model_id=WATSONX_MODEL_ID,
+            params=generate_params,
+            credentials=credentials,
+            project_id=WATSONX_PROJECT_ID
+        )
+        
+        category_hint = f" (카테고리: {category})" if category else ""
+        prompt = f"""당신은 학업 일정 관리 AI입니다. 할 일에 대해 짧고 실용적인 팁을 한 줄로 제공하세요.
+
+할 일: {title}{category_hint}
+
+팁 (15자 이내, 이모지 포함):"""
+        
+        response = model.generate_text(prompt=prompt)
+        tip = response.strip()
+        
+        # 응답이 너무 길면 자르기
+        if len(tip) > 30:
+            tip = tip[:27] + "..."
+        
+        # 이모지가 없으면 추가
+        if not any(ord(c) > 127 for c in tip[:2]):
+            emojis = ["💡", "✨", "📝", "🎯", "⭐"]
+            tip = random.choice(emojis) + " " + tip
+        
+        return tip if tip else get_random_encouragement()
+        
+    except Exception as e:
+        print(f"AI tip 생성 실패: {e}")
+        return get_random_encouragement()
+
 
 # 할 일 저장
 @router.post("", response_model=ResponseDTO)
@@ -50,6 +115,12 @@ def create_sub_tasks(
 
     try:
         for item in items:
+            # tip이 없으면 AI가 생성
+            tip = item.tip if hasattr(item, 'tip') and item.tip else None
+            if not tip:
+                category = item.category if hasattr(item, 'category') else 'other'
+                tip = generate_ai_tip(item.title, category)
+            
             new_task = SubTask(
                 schedule_id=item.schedule_id,
                 user_id=test_user_id,
@@ -60,7 +131,7 @@ def create_sub_tasks(
                 update_text=None,
                 priority=item.priority if hasattr(item, 'priority') else 'medium',
                 category=item.category if hasattr(item, 'category') else 'other',
-                tip=item.tip if hasattr(item, 'tip') else None
+                tip=tip
             )
             db.add(new_task)
             saved_items.append(new_task)
