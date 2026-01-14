@@ -55,32 +55,6 @@ def get_watson_model():
         project_id=WATSONX_PROJECT_ID
     )
 
-def extract_json_from_text(text: str) -> str:
-    """
-    텍스트에서 첫 번째 JSON 객체만 정확하게 추출합니다.
-    """
-    try:
-        text = text.split("User Input:")[0]
-
-        text = re.sub(r"```json\s*", "", text)
-        text = re.sub(r"```", "", text)
-        
-        start_index = text.find('{')
-        if start_index != -1:
-            brace_count = 0
-            for i, char in enumerate(text[start_index:], start=start_index):
-                if char == '{':
-                    brace_count += 1
-                elif char == '}':
-                    brace_count -= 1
-                    
-                if brace_count == 0:
-                    return text[start_index : i+1]
-        
-        return text.strip()
-    except Exception:
-        return text.strip()
-
 def get_schedules_for_period(db: Session, start_date: datetime, end_date: datetime) -> list:
     """지정된 기간의 일정을 조회합니다."""
     test_user_id = "7822a162-788d-4f36-9366-c956a68393e1"
@@ -107,6 +81,32 @@ def format_schedules_for_display(schedules: list) -> str:
     
     return "\n".join(result)
 
+def extract_json_from_text(text: str) -> str:
+    """
+    텍스트에서 첫 번째 JSON 객체만 정확하게 추출합니다.
+    """
+    try:
+        text = text.split("User Input:")[0]
+
+        text = re.sub(r"```json\s*", "", text)
+        text = re.sub(r"```", "", text)
+        
+        start_index = text.find('{')
+        if start_index != -1:
+            brace_count = 0
+            for i, char in enumerate(text[start_index:], start=start_index):
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    
+                if brace_count == 0:
+                    return text[start_index : i+1]
+        
+        return text.strip()
+    except Exception:
+        return text.strip()
+
 @router.post("/chat", response_model=APIResponse, response_model_exclude_none=True)
 async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
     try:
@@ -129,111 +129,167 @@ INSTRUCTION:
         else:
             context_section = "\n[Previous Conversation History]\nNone (New conversation start)"
 
-        system_prompt = f"""You are a Korean schedule assistant AI. Output ONLY valid JSON.
+        system_prompt = f"""You are a smart academic scheduler AI.
+Your ONLY task is to analyze the input and output valid JSON.
+DO NOT provide any explanations, intro text, or markdown formatting. Just the JSON.
 
-[Today]: {current_date_str}
-[Timezone]: {req.timezone}
+[Current Environment]
+- Today: {current_date_str}
+- Timezone: {req.timezone}
+- Selected Schedule ID: {req.selected_schedule_id or "None"} 
+(If 'Selected Schedule ID' exists, the user's command likely applies to this specific schedule.)
+
 {context_section}
 
-####################
-# INTENT DETECTION #
-####################
+[Rules]
+1. Intent Classification:
+   - "SCHEDULE_MUTATION": When the user wants to Create, Update, or Delete a schedule.
+   - "SCHEDULE_QUERY": When user asks to VIEW/SHOW schedules. (e.g., "보여줘", "알려줘", "뭐야", "있어?")
+   - "CLARIFY": If essential info (Subject/Time) is missing for CREATE, or if the target is unclear.
 
-CRITICAL RULE: Check for action keywords FIRST before anything else!
+2. Determine 'op' (Operation):
+   - "CREATE": Default. (e.g., "Add", "Schedule", "New")
+   - "UPDATE": When user wants to change time, title, or details. (e.g., "Delay", "Move", "Change", "Reschedule")
+   - "DELETE": When user wants to remove. (e.g., "Cancel", "Delete", "Remove")
 
-STEP 1 - Scan for these EXACT Korean words:
-  ★ 추가, 등록 → intent="SCHEDULE_MUTATION", op="CREATE"
-  ★ 미뤄, 옮겨, 바꿔, 변경, 연기 → intent="SCHEDULE_MUTATION", op="UPDATE"  
-  ★ 취소, 삭제, 제거 → intent="SCHEDULE_MUTATION", op="DELETE"
+3. Payload Construction (Mandatory for CREATE/UPDATE):
+   - "importance_score" (int, 1-10): 
+      * 10: Final exams, major certification tests.
+      * 7-9: Midterms, major assignments, critical team projects.
+      * 4-6: Quizzes, regular assignments, meetings.
+      * 1-3: Personal tasks, hobbies, routine activities.
+   - "estimated_minute" (int): Estimated total workload (e.g., Exam Study: 600-1200, Homework: 60-180, Meetings: 60).
+   - "category" (string): Must be one of [수업, 과제, 시험, 공모전, 대외활동, 기타].
+   - "target": "SCHEDULE" (default) or "NOTIFICATION".
+   - "CREATE": Must include 'title', 'importance_score', 'estimated_minute', 'category' AND ('start_at' OR 'end_at').
+   - "UPDATE": Must include 'title' (to identify target) AND specific fields to change.
+   - "DELETE": Must include 'title'.
+   
+4. Output Format:
+   - "CLARIFY": Save partial info to 'preserved_info'. Fill 'missingFields'.
+   - "SCHEDULE_MUTATION": Fill 'actions' list.
 
-STEP 2 - Only if NO action words above:
-  ★ 보여줘, 알려줘, 뭐야, 있어 → intent="SCHEDULE_QUERY"
+5. Date Calculation:
+   - Always calculate relative dates (e.g., "tomorrow", "next Friday") into exact ISO8601 timestamps based on [Current Environment] date.
 
-####################
-# CRITICAL EXAMPLES#
-####################
+6. Sub-task Auto-Generation (SMART FEATURE):
+   - IF the intent is "CREATE" AND Category is one of ['시험', '과제', '공모전', '대외활동']:
+   - YOU MUST generate 3 to 5 'Sub-tasks' (Preparation steps) leading up to the deadline.
+   - Sub-task Payload:
+     * title: "[준비] {{Original Title}} - {{Step Description}}"
+     * end_at: D-1, D-2, D-3... days before the main event.
+     * estimated_minute: 60-180 (reasonable study time).
+     * category: Same as parent or '공부'.
+     * tip: "Short, practical advice for this step (Korean, Max 20 chars)"
+     
+7. Notification Settings:
+   - IF user asks to set/change alarm/reminder: Set actions 'target' to "NOTIFICATION".
+   - Payload must include:
+     * schedule_title: Target schedule name.
+     * minutes_before: Minutes before the event (e.g., 10, 30, 60, 1440=1day). 0 if 'at time'.
+     * notification_msg: Custom message (optional).
 
-★ "미뤄줘" found → MUST be UPDATE:
-Input: "캡스톤 회의 다음주로 미뤄줘"  
-Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"UPDATE","payload":{{"title":"캡스톤 회의","end_at":"..."}}}}]}}
+8. Schedule Query:
+   - IF intent is "SCHEDULE_QUERY", set "preserved_info.query_range" to one of:
+     * "today": 오늘
+     * "tomorrow": 내일
+     * "this_week": 이번 주
+     * "next_week": 다음 주
 
-★ "취소" found → MUST be DELETE:
-Input: "알고리즘 시험 취소해"
-Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"DELETE","payload":{{"title":"알고리즘 시험"}}}}]}}
+[Examples]
+---
+# Note: In these examples, the Reference Date is fixed to 2024-05-20 (Monday).
+# The model must calculate the target date based on the user's input relative to the [Current Environment] date provided in the real prompt.
 
-★ "추가" found → MUST be CREATE:
-Input: "내일 3시 회의 추가해줘"
-Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"CREATE","payload":{{"title":"회의","end_at":"...","importance_score":5,"estimated_minute":60,"category":"기타"}}}}]}}
+# Example 1: Create w/ Sub-tasks (Exam)
+User: "다음주 월요일 알고리즘 시험 일정 추가해줘"
+Context: Reference Date is 2024-05-20 (Mon). "Next Mon" is 2024-05-27.
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "TASK",
+  "actions": [
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "알고리즘 시험", "end_at": "2024-05-27T10:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 개념 정리", "end_at": "2024-05-24T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "tip": "핵심 개념 위주로 1회독"}} }},
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 기출 풀이", "end_at": "2024-05-25T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "tip": "타이머 켜고 실전처럼 풀기"}} }},
+    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "[준비] 알고리즘 시험 - 최종 복습", "end_at": "2024-05-26T23:59:00+09:00", "importance_score": 9, "estimated_minute": 120, "category": "시험", "tip": "틀린 문제 위주로 재점검"}} }}
+  ]
+}}
 
-★ Only "보여줘" found → QUERY:
-Input: "오늘 할 일 보여줘"
-Output: {{"intent":"SCHEDULE_QUERY","preserved_info":{{"query_range":"today"}}}}
+# Example 2: Update (Change Time) - Relative Date Calculation
+User: "운영체제 과제 마감 하루 미뤄줘"
+Context: Reference Date is 2024-05-20 (Monday)
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "TASK",
+  "actions": [ {{ 
+    "op": "UPDATE", 
+    "target": "SCHEDULE",
+    "payload": {{ "title": "운영체제 과제", "end_at": "2026-05-21T23:59:00+09:00" }} 
+  }} ]
+}}
 
-####################
-# KEYWORD TABLE    #
-####################
+# Example 3: Notification Setting (NEW)
+User: "자료구조 과제 알림 1시간 전으로 설정해줘"
+Context: Reference Date is 2024-05-20 (Monday)
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "TASK",
+  "actions": [ {{ 
+    "op": "UPDATE", 
+    "target": "NOTIFICATION",
+    "payload": {{ "schedule_title": "자료구조 과제", "minutes_before": 60, "notification_msg": "자료구조 과제 마감 1시간 전입니다!" }} 
+  }} ]
+}}
 
-| User Input | Keyword | Intent | op |
-|------------|---------|--------|-----|
-| "회의 추가해줘" | 추가 | SCHEDULE_MUTATION | CREATE |
-| "회의 미뤄줘" | 미뤄 | SCHEDULE_MUTATION | UPDATE |
-| "회의 취소해" | 취소 | SCHEDULE_MUTATION | DELETE |
-| "일정 보여줘" | 보여줘 | SCHEDULE_QUERY | - |
-| "알고리즘 시험 취소해" | "취소" (DELETE) | SCHEDULE_MUTATION |
-| "오늘 할 일 보여줘" | "보여줘" (QUERY only) | SCHEDULE_QUERY |
-| "이번 주 일정 알려줘" | "알려줘" (QUERY only) | SCHEDULE_QUERY |
 
-####################
-# OPERATION RULES  #
-####################
+# Example 3: Delete (Cancel) - No Date Calculation needed
+User: "캡스톤 회의 취소해"
+Context: Reference Date is 2026-05-20 (Monday)
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "EVENT",
+  "actions": [ {{ "op": "DELETE", "payload": {{ "title": "캡스톤 회의" }} }} ]
+}}
 
-For SCHEDULE_MUTATION, set "op":
-- "CREATE": 추가, 등록, 넣어, 잡아, 만들어
-- "UPDATE": 미뤄, 옮겨, 바꿔, 변경, 수정, 연기  
-- "DELETE": 취소, 삭제, 제거, 빼
+# Example 4: Context Merging (Create Task) - Merging preserved info
+User: "자료구조"
+Context: {{ 
+  "intent": "CLARIFY", 
+  "missingFields": ["title"], 
+  "preserved_info": {{ "end_at": "2026-05-20T14:00:00+09:00" }}, 
+  "type": "TASK" 
+}}
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "TASK",
+  "actions": [ {{ 
+      "op": "CREATE", 
+      "payload": {{ "title": "자료구조", "end_at": "2026-05-20T14:00:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "과제"}} 
+  }} ]
+}}
 
-For SCHEDULE_QUERY, set "preserved_info.query_range":
-- "today": 오늘
-- "tomorrow": 내일
-- "this_week": 이번 주
-- "next_week": 다음 주
+# Example 5: Schedule Query (View)
+User: "오늘 일정 보여줘"
+JSON: {{
+  "intent": "SCHEDULE_QUERY",
+  "type": "TASK",
+  "actions": [],
+  "preserved_info": {{ "query_range": "today" }}
+}}
 
-####################
-# PAYLOAD FIELDS   #
-####################
+# Example 6: Schedule Query (This Week)
+User: "이번 주 할 일 뭐야"
+JSON: {{
+  "intent": "SCHEDULE_QUERY",
+  "type": "TASK",
+  "actions": [],
+  "preserved_info": {{ "query_range": "this_week" }}
+}}
 
-CREATE payload requires:
-- title (string): Event name
-- end_at (ISO8601): Calculate from [Today] + relative date
-- importance_score (1-10): 10=시험, 7-9=과제, 4-6=회의, 1-3=개인
-- estimated_minute (int): 60-180 for meetings, 120+ for exams
-- category: One of [수업, 과제, 시험, 공모전, 대외활동, 기타]
+---
 
-DELETE payload requires:
-- title (string): Target schedule name
-
-####################
-# JSON EXAMPLES    #
-####################
-
-Example 1 - QUERY (keyword: "보여줘"):
-Input: "오늘 할 일 보여줘"
-{{"intent": "SCHEDULE_QUERY", "type": "TASK", "actions": [], "preserved_info": {{"query_range": "today"}}}}
-
-Example 2 - CREATE (keyword: "추가"):
-Input: "내일 오후 3시 회의 추가해줘"
-{{"intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [{{"op": "CREATE", "payload": {{"title": "회의", "end_at": "2024-05-21T15:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}}}}]}}
-
-Example 3 - UPDATE (keyword: "미뤄"):
-Input: "캡스톤 회의 다음주로 미뤄줘"
-{{"intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [{{"op": "UPDATE", "payload": {{"title": "캡스톤 회의", "end_at": "2024-05-28T10:00:00+09:00"}}}}]}}
-
-Example 4 - DELETE (keyword: "취소"):
-Input: "알고리즘 시험 취소해"
-{{"intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [{{"op": "DELETE", "payload": {{"title": "알고리즘 시험"}}}}]}}
-
-Now analyze this input and output ONLY the JSON:
 User Input: {req.text}
+JSON Output:
 """
         
         generated_response = model.generate_text(prompt=system_prompt)
@@ -245,10 +301,47 @@ User Input: {req.text}
         # 메시지 생성 로직
         assistant_msg = "일정을 확인했습니다."
         
-        if ai_parsed_result.intent == "SCHEDULE_QUERY":
+        if ai_parsed_result.intent == "CLARIFY":
+            if ai_parsed_result.missingFields:
+                # missingFields 구조가 바뀌었을 수 있으므로 안전하게 처리
+                field_info = ai_parsed_result.missingFields[0]
+                # Pydantic 모델 or Dict 처리
+                if isinstance(field_info, dict):
+                    assistant_msg = field_info.get('question', "정보가 부족합니다.")
+                else: 
+                    assistant_msg = getattr(field_info, 'question', "정보가 부족합니다.")
+            else:
+                assistant_msg = "정보가 부족합니다. 조금 더 자세히 말씀해 주세요."
+                
+        elif ai_parsed_result.intent == "SCHEDULE_MUTATION":
+            actions = ai_parsed_result.actions
+            action_cnt = len(actions)
+            if action_cnt > 0:
+                op_type = actions[0].op
+                target_type = getattr(actions[0], 'target', 'SCHEDULE')
+
+                if target_type == "NOTIFICATION":
+                     assistant_msg = "알림 설정을 변경할까요?"
+                elif op_type == "DELETE":
+                    assistant_msg = "해당 일정을 취소할까요?"
+                elif op_type == "UPDATE":
+                    assistant_msg = "일정을 변경할까요?"
+                else: # CREATE
+                    # 서브태스크(준비 일정) 감지 로직
+                    sub_task_count = sum(1 for a in actions if "[준비]" in a.payload.get('title', ''))
+                    main_task_count = action_cnt - sub_task_count
+                    
+                    if sub_task_count > 0:
+                        assistant_msg = f"준비 과정 {sub_task_count}건을 함께 등록할까요?"
+                    else:
+                        assistant_msg = f"{action_cnt}건의 일정을 등록할까요?"
+            else:
+                assistant_msg = "처리할 일정이 없습니다."
+        
+        elif ai_parsed_result.intent == "SCHEDULE_QUERY":
             # 일정 조회 처리
-            query_range = ai_parsed_result.preserved_info.get("query_range", "today")
-            filter_type = ai_parsed_result.preserved_info.get("filter", None)
+            preserved = ai_parsed_result.preserved_info or {}
+            query_range = preserved.get("query_range", "today")
             
             # 날짜 범위 계산
             if query_range == "today":
@@ -261,7 +354,6 @@ User Input: {req.text}
                 end_date = tomorrow.replace(hour=23, minute=59, second=59)
                 period_text = "내일"
             elif query_range == "this_week":
-                # 이번 주 월요일 ~ 일요일
                 start_date = now - timedelta(days=now.weekday())
                 start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
                 end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
@@ -279,47 +371,11 @@ User Input: {req.text}
             # DB에서 일정 조회
             schedules = get_schedules_for_period(db, start_date, end_date)
             
-            # 필터 적용 (우선순위 높은 일정)
-            if filter_type == "high_priority":
-                schedules = [s for s in schedules if s.importance_score and s.importance_score >= 7]
-            
             if schedules:
                 schedule_text = format_schedules_for_display(schedules)
                 assistant_msg = f"{period_text} 일정이에요! 📅\n\n{schedule_text}\n\n총 {len(schedules)}건의 일정이 있어요."
             else:
                 assistant_msg = f"{period_text}은 등록된 일정이 없어요. 🎉 여유로운 하루 보내세요!"
-        
-        elif ai_parsed_result.intent == "CLARIFY":
-            if ai_parsed_result.missingFields:
-                field_info = ai_parsed_result.missingFields[0]
-                if isinstance(field_info, dict):
-                    assistant_msg = field_info.get('question', "정보가 부족해요. 조금 더 자세히 알려주세요!")
-                else: 
-                    assistant_msg = getattr(field_info, 'question', "정보가 부족해요. 조금 더 자세히 알려주세요!")
-            else:
-                assistant_msg = "정보가 부족해요. 조금 더 자세히 말씀해 주시겠어요? 😊"
-                
-        elif ai_parsed_result.intent == "SCHEDULE_MUTATION":
-            actions = ai_parsed_result.actions
-            action_cnt = len(actions)
-            if action_cnt > 0:
-                op_type = actions[0].op
-                first_title = actions[0].payload.get('title', '일정')
-                
-                if op_type == "DELETE":
-                    assistant_msg = f"'{first_title}' 일정을 취소할까요? 🗑️"
-                elif op_type == "UPDATE":
-                    assistant_msg = f"'{first_title}' 일정을 변경할까요? ✏️"
-                else: # CREATE
-                    sub_task_count = sum(1 for a in actions if "[준비]" in a.payload.get('title', ''))
-                    main_task_count = action_cnt - sub_task_count
-                    
-                    if sub_task_count > 0:
-                        assistant_msg = f"'{first_title}' 일정과 준비 과정 {sub_task_count}건을 함께 등록할까요? 📝"
-                    else:
-                        assistant_msg = f"'{first_title}' 일정을 등록할까요? 📝"
-            else:
-                assistant_msg = "처리할 일정이 없어요."
 
         response_data = ChatResponseData(
             parsed_result=ai_parsed_result,

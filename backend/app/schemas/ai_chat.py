@@ -12,7 +12,7 @@ class MissingField(BaseModel):
 # 2) Action item
 class Action(BaseModel):
     op: Literal["CREATE", "UPDATE", "DELETE"]
-    target: Literal["SCHEDULE"] = "SCHEDULE"
+    target: str = "SCHEDULE"
     schedule_id: Optional[str] = Field(None, alias="scheduleId") # JSON: scheduleId
     payload: Dict[str, Any] = Field(default_factory=dict)
 

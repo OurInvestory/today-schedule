@@ -104,8 +104,8 @@ def delete_sub_task(sub_task_id: str, db: Session = Depends(get_db)):
 # 할 일 조회
 @router.get("", response_model=ResponseDTO)
 def get_sub_tasks(
-    from_date: date = Query(..., alias="from", example="2026-06-01"),
-    to_date: date = Query(..., alias="to", example="2026-06-30"),
+    from_date: date = Query(..., alias="from", examples=["2026-06-01"]),
+    to_date: date = Query(..., alias="to", examples=["2026-06-30"]),
     db: Session = Depends(get_db)
 ):
     try:
