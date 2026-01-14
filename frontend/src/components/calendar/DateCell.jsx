@@ -61,26 +61,26 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
 
     const allItems = [];
 
-    // 표시 순서: 완료한 할일(초록) > 미완료 할일(노란) > 일정(파랑) > 구글 일정(빨강)
+    // 표시 순서: 일정(파랑) > 구글 일정(빨강) > 미완료 할일(노란) > 완료한 할일(초록)
     
-    // 1. 완료한 할일 (초록색)
-    completedTodos.forEach(todo => {
-      allItems.push({ type: 'todo', data: todo });
-    });
-
-    // 2. 미완료 할일 (노란색)
-    pendingTodos.forEach(todo => {
-      allItems.push({ type: 'todo', data: todo });
-    });
-
-    // 3. 일반 일정 (파란색)
+    // 1. 일반 일정 (파란색)
     regularEvents.forEach(event => {
       allItems.push({ type: 'event', data: event });
     });
 
-    // 4. 구글 캘린더 일정 (빨간색)
+    // 2. 구글 캘린더 일정 (빨간색)
     googleEvents.forEach(event => {
       allItems.push({ type: 'event', data: event });
+    });
+
+    // 3. 미완료 할일 (노란색)
+    pendingTodos.forEach(todo => {
+      allItems.push({ type: 'todo', data: todo });
+    });
+
+    // 4. 완료한 할일 (초록색)
+    completedTodos.forEach(todo => {
+      allItems.push({ type: 'todo', data: todo });
     });
 
     // 모바일과 PC에서 다른 줄 수 제한
