@@ -25,14 +25,13 @@ export const useCalendar = () => {
       setError(null);
       const schedules = await getMonthlyEvents(year, month + 1); // month는 0-based이므로 +1
 
-      // schedule 타입이고 시간이 있는 일정만 필터링
+      // 일정 필터링 (event, task, schedule 타입 모두 포함, google 제외)
       const schedulesOnly = schedules.filter(item => {
-        // type이 'schedule'이거나 type이 없는 경우 (기본값)
-        const isSchedule = !item.type || item.type === 'schedule';
-        // start_at 또는 startDate에 시간이 포함되어 있는지 확인
-        const hasTime = (item.start_at && item.start_at.includes('T')) || 
-                       (item.startDate && typeof item.startDate === 'string' && item.startDate.includes('T'));
-        return isSchedule && hasTime;
+        // type이 'event', 'task', 'schedule' 또는 type이 없는 경우
+        const isScheduleType = !item.type || ['event', 'task', 'schedule'].includes(item.type);
+        // source가 'google'이 아닌 것만 (구글 일정은 별도 처리)
+        const isManual = !item.source || item.source === 'manual';
+        return isScheduleType && isManual;
       });
 
       console.log('가져온 일정 목록:', schedulesOnly);
@@ -108,11 +107,19 @@ export const useCalendar = () => {
   // 특정 날짜의 이벤트 가져오기
   const getEventsForDate = useCallback((date) => {
     return events.filter(event => {
-      const eventDate = new Date(event.date);
+      // startDate, date, start_at 순서로 날짜 추출
+      const dateStr = event.startDate || event.date || event.start_at || event.end_at;
+      if (!dateStr) return false;
+      
+      // 날짜 문자열에서 날짜 부분만 추출 (YYYY-MM-DD)
+      const datePart = typeof dateStr === 'string' ? dateStr.split('T')[0] : null;
+      if (!datePart) return false;
+      
+      const [yearStr, monthStr, dayStr] = datePart.split('-');
       return (
-        eventDate.getFullYear() === date.getFullYear() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getDate() === date.getDate()
+        parseInt(yearStr) === date.getFullYear() &&
+        parseInt(monthStr) === date.getMonth() + 1 &&
+        parseInt(dayStr) === date.getDate()
       );
     });
   }, [events]);

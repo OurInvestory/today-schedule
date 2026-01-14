@@ -35,14 +35,23 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
 
     const parts = [];
     
-    if (target === 'SCHEDULE') {
+    // target이 있으면 사용, 없으면 payload.type으로 판단
+    const actionTarget = target || (payload.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
+    
+    if (actionTarget === 'SCHEDULE' || payload.type === 'EVENT' || payload.type === 'TASK') {
       if (payload.title) parts.push(`제목: ${payload.title}`);
-      if (payload.start_time && payload.end_time) {
-        parts.push(`시간: ${formatDate(payload.start_time, 'M월 D일 HH:mm')} ~ ${formatDate(payload.end_time, 'HH:mm')}`);
+      // start_at/end_at 또는 start_time/end_time 처리
+      const startTime = payload.start_at || payload.start_time;
+      const endTime = payload.end_at || payload.end_time;
+      if (startTime && endTime) {
+        parts.push(`시간: ${formatDate(startTime, 'M월 D일 HH:mm')} ~ ${formatDate(endTime, 'HH:mm')}`);
+      } else if (endTime) {
+        parts.push(`마감: ${formatDate(endTime, 'M월 D일 HH:mm')}`);
       }
       if (payload.category) parts.push(`카테고리: ${CATEGORY_LABELS[payload.category] || payload.category}`);
       if (payload.location) parts.push(`위치: ${payload.location}`);
-    } else if (target === 'SUB_TASK') {
+      if (payload.importance_score) parts.push(`중요도: ${payload.importance_score}/10`);
+    } else if (actionTarget === 'SUB_TASK') {
       if (payload.title) parts.push(`할 일: ${payload.title}`);
       if (payload.due_date) parts.push(`마감: ${formatDate(payload.due_date, 'M월 D일 HH:mm')}`);
       if (payload.priority) parts.push(`우선순위: ${payload.priority}`);
@@ -50,6 +59,17 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
     }
 
     return parts.join(', ');
+  };
+
+  // 액션 타입 아이콘/라벨 결정
+  const getActionTypeLabel = (action) => {
+    const target = action.target || (action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
+    const payloadType = action.payload?.type;
+    
+    if (target === 'SUB_TASK' || payloadType === 'TASK') {
+      return { icon: '✓', label: '할 일' };
+    }
+    return { icon: '📅', label: '일정' };
   };
 
   // 마크다운 스타일 볼드 텍스트 처리 (**text** -> <strong>text</strong>)
@@ -187,11 +207,13 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
           {/* 파싱된 액션 표시 */}
           {!isUser && hasActions && !message.actionCompleted && (
             <div className="chat-message__parsed-actions">
-              {message.actions.map((action, index) => (
+              {message.actions.map((action, index) => {
+                const typeInfo = getActionTypeLabel(action);
+                return (
                 <div key={index} className="chat-message__action-card">
                   <div className="chat-message__action-header">
                     <span className="chat-message__action-type">
-                      {action.target === 'SCHEDULE' ? '📅 일정' : '✓ 할 일'}
+                      {typeInfo.icon} {typeInfo.label}
                     </span>
                     <span className="chat-message__action-op">
                       {action.op === 'CREATE' ? '추가' : action.op === 'UPDATE' ? '수정' : '삭제'}
@@ -219,7 +241,7 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
           

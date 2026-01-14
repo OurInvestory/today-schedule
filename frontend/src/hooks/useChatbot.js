@@ -351,14 +351,17 @@ export const useChatbot = () => {
         }
       }
       // 액션 타입에 따라 처리
-      else if (action?.op === 'CREATE') {
-        if (action.target === 'SCHEDULE') {
+      // target이 없으면 payload.type으로 판단 (이미지 분석 결과)
+      const actionTarget = action?.target || (action?.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
+      
+      if (action?.op === 'CREATE') {
+        if (actionTarget === 'SCHEDULE' || action?.payload?.type === 'EVENT') {
           // 일정 생성
           const response = await createScheduleFromAI(action.payload);
           // axios 응답에서 data 추출
           result = response?.data || response;
           confirmContent = '일정이 성공적으로 추가되었습니다! ✅';
-        } else if (action.target === 'SUB_TASK') {
+        } else if (actionTarget === 'SUB_TASK' || action?.payload?.type === 'TASK') {
           // 할 일 생성
           const response = await createSubTaskFromAI(action.scheduleId, action.payload);
           result = response?.data || response;
