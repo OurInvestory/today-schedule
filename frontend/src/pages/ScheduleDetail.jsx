@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getScheduleById, updateCalendarEvent, deleteCalendarEvent } from '../services/calendarService';
 import { getSubTasksBySchedule, createSubTask, updateSubTask, deleteSubTask } from '../services/subTaskService';
-import { calculatePriority } from '../utils/priorityUtils';
 import { CATEGORY_LABELS } from '../utils/constants';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
@@ -72,10 +71,10 @@ const ScheduleDetail = () => {
     };
     
     fetchSchedule();
-  }, [id]);
+  }, [id, fetchSubTasks]);
 
   // 할 일 목록 조회
-  const fetchSubTasks = async () => {
+  const fetchSubTasks = useCallback(async () => {
     try {
       const tasks = await getSubTasksBySchedule(id);
       console.log('조회된 할 일 목록:', tasks);
@@ -83,7 +82,7 @@ const ScheduleDetail = () => {
     } catch (err) {
       console.error('할 일 목록 조회 실패:', err);
     }
-  };
+  }, [id]);
 
   // 할 일 추가
   const handleAddSubTask = async () => {
@@ -99,9 +98,6 @@ const ScheduleDetail = () => {
     try {
       // schedule의 category를 사용 (없으면 사용자 선택값)
       const category = schedule?.category || newSubTask.category;
-      
-      // 우선순위 자동 계산
-      const priority = calculatePriority(newSubTask.date, newSubTask.estimatedMinute);
       
       await createSubTask({
         scheduleId: id,
