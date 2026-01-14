@@ -4,10 +4,13 @@ import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
 import './TodoItem.css';
 
-// AI 이유 자동 생성 함수
-const generateAIReason = (todo) => {
+// AI 이유 생성 함수 - 백엔드에서 받은 ai_reason 우선, 없으면 자동 생성
+const getAIReason = (todo) => {
+  // 백엔드에서 받은 ai_reason이 있으면 우선 사용 (AI 꿀팁)
+  if (todo.ai_reason) return todo.ai_reason;
   if (todo.aiReason) return todo.aiReason;
   
+  // 백엔드 ai_reason이 없으면 마감일 기반으로 자동 생성
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const dueDate = new Date(todo.dueDate);
@@ -17,29 +20,29 @@ const generateAIReason = (todo) => {
   
   // 마감일 기반 이유
   if (daysUntil < 0) {
-    return '이미 마감일이 지났습니다. 서둘러 처리하세요!';
+    return '⏰ 이미 마감일이 지났습니다. 서둘러 처리하세요!';
   } else if (daysUntil === 0) {
-    return '오늘이 마감일입니다. 우선적으로 처리하세요!';
+    return '🔥 오늘이 마감일입니다. 우선적으로 처리하세요!';
   } else if (daysUntil === 1) {
     if (estimatedHours >= 2) {
-      return '내일 마감이고 소요 시간이 길어요. 지금 시작하세요!';
+      return '⚡ 내일 마감이고 소요 시간이 길어요. 지금 시작하세요!';
     }
-    return '내일까지 완료해야 합니다. 서둡러 준비하세요!';
+    return '📌 내일까지 완료해야 합니다. 서둘러 준비하세요!';
   } else if (daysUntil <= 3) {
     if (estimatedHours >= 3) {
-      return `${daysUntil}일 후 마감이지만 소요 시간이 길어요. 미리 시작하는 게 좋아요.`;
+      return `💡 ${daysUntil}일 후 마감이지만 소요 시간이 길어요. 미리 시작하는 게 좋아요.`;
     }
-    return `${daysUntil}일 후 마감입니다. 여유를 가지고 처리하세요.`;
+    return `✅ ${daysUntil}일 후 마감입니다. 여유를 가지고 처리하세요.`;
   } else if (daysUntil <= 7) {
     if (estimatedHours >= 5) {
-      return `${daysUntil}일 후 마감. 소요 시간을 고려해 계획을 세우세요.`;
+      return `📊 ${daysUntil}일 후 마감. 소요 시간을 고려해 계획을 세우세요.`;
     }
-    return `${daysUntil}일의 여유가 있어요. 계획적으로 진행하세요.`;
+    return `📆 ${daysUntil}일의 여유가 있어요. 계획적으로 진행하세요.`;
   } else {
     if (estimatedHours >= 10) {
-      return `장기 프로젝트네요. 단계별로 나눠서 진행하는 것을 추천해요.`;
+      return `🎯 장기 프로젝트네요. 단계별로 나눠서 진행하는 것을 추천해요.`;
     }
-    return `${daysUntil}일 후 마감. 충분한 시간을 활용하세요.`;
+    return `🌟 ${daysUntil}일 후 마감. 충분한 시간을 활용하세요.`;
   }
 };
 
@@ -51,8 +54,8 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
   const startXRef = useRef(0);
   const currentXRef = useRef(0);
 
-  // AI 이유 자동 생성
-  const aiReason = useMemo(() => generateAIReason(todo), [todo]);
+  // AI 이유 (백엔드 ai_reason 우선, 없으면 자동 생성)
+  const aiReason = useMemo(() => getAIReason(todo), [todo]);
 
   const handleCheckboxChange = (e) => {
     e.stopPropagation();

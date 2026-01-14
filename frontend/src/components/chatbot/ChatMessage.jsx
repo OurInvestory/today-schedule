@@ -141,20 +141,50 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
             </div>
           )}
           
-          {/* AI 이미지 분석 결과 */}
-          {!isUser && message.imageAnalysis && (
+          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 */}
+          {!isUser && message.imageAnalysis && message.actions && message.actions.length > 0 && !message.actionCompleted && (
             <div className="chat-message__image-analysis">
-              <div className="chat-message__analysis-header">📊 이미지 분석 결과</div>
+              <div className="chat-message__analysis-header">
+                📷 시간표에서 {message.actions.length}개의 일정을 찾았어요!
+              </div>
               <div className="chat-message__analysis-content">
-                {message.imageAnalysis.schedules && message.imageAnalysis.schedules.length > 0 ? (
-                  <ul className="chat-message__schedule-list">
-                    {message.imageAnalysis.schedules.map((schedule, idx) => (
-                      <li key={idx}>{schedule.title} - {schedule.time}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>{message.imageAnalysis.message}</p>
-                )}
+                <ul className="chat-message__schedule-list">
+                  {message.actions.slice(0, 5).map((action, idx) => (
+                    <li key={idx}>
+                      <strong>{action.payload?.title}</strong>
+                      {action.payload?.start_at && (
+                        <span className="chat-message__schedule-time">
+                          {' - '}{formatDate(action.payload.start_at, 'M/D HH:mm')}
+                          {action.payload?.end_at && ` ~ ${formatDate(action.payload.end_at, 'HH:mm')}`}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                  {message.actions.length > 5 && (
+                    <li className="chat-message__more-items">...외 {message.actions.length - 5}개</li>
+                  )}
+                </ul>
+              </div>
+              <div className="chat-message__bulk-actions">
+                <button 
+                  type="button" 
+                  className="chat-message__action-btn chat-message__action-btn--confirm-all"
+                  onClick={() => {
+                    // 모든 일정 한 번에 추가
+                    message.actions.forEach(action => handleConfirmAction(action));
+                  }}
+                  disabled={message.actionLoading}
+                >
+                  {message.actionLoading ? '추가 중...' : `✓ ${message.actions.length}개 일정 모두 추가`}
+                </button>
+                <button 
+                  type="button" 
+                  className="chat-message__action-btn chat-message__action-btn--cancel"
+                  onClick={handleCancel}
+                  disabled={message.actionLoading}
+                >
+                  ✕ 취소
+                </button>
               </div>
             </div>
           )}
@@ -204,8 +234,8 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
             </div>
           )}
           
-          {/* 파싱된 액션 표시 */}
-          {!isUser && hasActions && !message.actionCompleted && (
+          {/* 파싱된 액션 표시 (이미지 분석이 아닌 일반 채팅의 경우) */}
+          {!isUser && hasActions && !message.actionCompleted && !message.imageAnalysis && (
             <div className="chat-message__parsed-actions">
               {message.actions.map((action, index) => {
                 const typeInfo = getActionTypeLabel(action);

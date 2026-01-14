@@ -8,7 +8,8 @@ class ErrorBoundary extends Component {
     this.state = { hasError: false, error: null, errorInfo: null };
   }
 
-  static getDerivedStateFromError(error) {
+  // eslint-disable-next-line no-unused-vars
+  static getDerivedStateFromError(_error) {
     return { hasError: true };
   }
 
@@ -65,7 +66,7 @@ class ErrorBoundary extends Component {
               </Button>
               <Button onClick={this.handleReset}>🏠 홈으로 가기</Button>
             </div>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="error-boundary__details">
                 <summary>개발자 정보</summary>
                 <pre>

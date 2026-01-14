@@ -117,10 +117,53 @@
 .chat-message__schedule-list li {
   padding: 6px 0;
   border-bottom: 1px solid #e5e8eb;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
 }
 
 .chat-message__schedule-list li:last-child {
   border-bottom: none;
+}
+
+.chat-message__schedule-time {
+  color: #8b95a1;
+  font-size: 12px;
+}
+
+.chat-message__more-items {
+  color: #8b95a1;
+  font-style: italic;
+}
+
+.chat-message__bulk-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chat-message__action-btn--confirm-all {
+  background-color: #3182f6;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex: 1;
+}
+
+.chat-message__action-btn--confirm-all:hover {
+  background-color: #1b64da;
+}
+
+.chat-message__action-btn--confirm-all:disabled {
+  background-color: #b0c4de;
+  cursor: not-allowed;
 }
 
 .chat-message--user .chat-message__bubble {

@@ -1,8 +1,6 @@
-import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ToastContext } from '../../context/ToastContext';
 import './Toast.css';
-
-// Toast Context
-const ToastContext = createContext(null);
 
 // Toast 타입별 아이콘
 const getToastIcon = (type) => {
@@ -133,15 +131,6 @@ export const ToastProvider = ({ children }) => {
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </ToastContext.Provider>
   );
-};
-
-// useToast hook
-export const useToast = () => {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
 };
 
 export default ToastProvider;
