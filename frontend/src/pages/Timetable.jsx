@@ -455,17 +455,6 @@ const Timetable = () => {
           ))}
         </div>
       </div>
-      
-      {/* 빈 시간표 안내 */}
-      {hours.length > 0 && displayDays.every(day => getLecturesForDay(day).length === 0) && (
-        <div className="timetable__empty">
-          <div className="timetable__empty-icon">📚</div>
-          <p className="timetable__empty-text">등록된 강의가 없습니다</p>
-          <button className="timetable__empty-btn" onClick={handleOpenAddModal}>
-            강의 추가하기
-          </button>
-        </div>
-      )}
 
       {/* 강의 추가 모달 */}
       <Modal
