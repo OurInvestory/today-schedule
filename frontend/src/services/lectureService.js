@@ -107,10 +107,9 @@ export const getLectureColor = (title) => {
 
 /**
  * 강의 텍스트 색상 (배경 기반)
- * @param {string} bgColor - 배경 HSL 색상
  * @returns {string} - 텍스트 색상
  */
-export const getLectureTextColor = (bgColor) => {
+export const getLectureTextColor = () => {
   // 파스텔 배경이므로 어두운 텍스트 사용
   return 'hsl(0, 0%, 25%)';
 };

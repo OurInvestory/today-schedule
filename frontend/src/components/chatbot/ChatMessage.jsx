@@ -51,6 +51,14 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
     // target이 있으면 사용, 없으면 payload.type으로 판단
     const actionTarget = target || (payload.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
     
+    // LECTURES (시간표 강의 일괄 추가)
+    if (actionTarget === 'LECTURES') {
+      const lectures = Array.isArray(payload) ? payload : [payload];
+      const titles = lectures.slice(0, 3).map(l => l.title).join(', ');
+      const moreText = lectures.length > 3 ? ` 외 ${lectures.length - 3}개` : '';
+      return `${titles}${moreText}`;
+    }
+    
     if (actionTarget === 'SCHEDULE' || payload.type === 'EVENT' || payload.type === 'TASK') {
       if (payload.title) parts.push(`제목: ${payload.title}`);
       // start_at/end_at 또는 start_time/end_time 처리
@@ -79,6 +87,10 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
     const target = action.target || (action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
     const payloadType = action.payload?.type;
     
+    if (target === 'LECTURES') {
+      const count = Array.isArray(action.payload) ? action.payload.length : 1;
+      return { icon: '📚', label: `강의 ${count}개` };
+    }
     if (target === 'SUB_TASK' || payloadType === 'TASK') {
       return { icon: '✓', label: '할 일' };
     }

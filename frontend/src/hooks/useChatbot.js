@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage, createLectureFromAI } from '../services/aiService';
+import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage, createLectureFromAI, saveLectures } from '../services/aiService';
 import { scheduleReminder, scheduleReminderForSchedule } from '../services/notificationService';
 
 // localStorage 키
@@ -196,15 +196,22 @@ export const useChatbot = () => {
         
         // actions가 있으면 일정 추가 UI를 표시하기 위한 메시지 구성
         if (actions.length > 0) {
-          // 일정, 할 일 카운트
+          // 강의, 일정, 할 일 카운트
+          const lecturesAction = actions.find(a => a.target === 'LECTURES');
+          const lectureCount = lecturesAction 
+            ? (Array.isArray(lecturesAction.payload) ? lecturesAction.payload.length : 1) 
+            : 0;
           const scheduleCount = actions.filter(a => a.target === 'SCHEDULE' || a.payload?.type === 'EVENT').length;
           const taskCount = actions.filter(a => a.target === 'SUB_TASK' || a.payload?.type === 'TASK').length;
           
           const parts = [];
+          if (lectureCount > 0) parts.push(`강의 ${lectureCount}개`);
           if (scheduleCount > 0) parts.push(`일정 ${scheduleCount}개`);
           if (taskCount > 0) parts.push(`할 일 ${taskCount}개`);
           
-          displayMessage = `이미지에서 ${parts.join(', ')}를 발견했어요! 📸\n추가할 항목을 선택해주세요.`;
+          if (parts.length > 0) {
+            displayMessage = `이미지에서 ${parts.join(', ')}를 발견했어요! 📸\n추가할 항목을 선택해주세요.`;
+          }
         }
         
         const newAssistantMessage = {
@@ -399,7 +406,13 @@ export const useChatbot = () => {
         (payloadType === 'TASK' ? 'SUB_TASK' : 'SCHEDULE');
       
       if (action?.op === 'CREATE') {
-        if (actionTarget === 'SCHEDULE' || payloadType === 'EVENT') {
+        if (actionTarget === 'LECTURES') {
+          // 시간표 강의 일괄 생성
+          const lecturesPayload = Array.isArray(action.payload) ? action.payload : [action.payload];
+          const response = await saveLectures(lecturesPayload);
+          result = response?.data || response;
+          confirmContent = `${lecturesPayload.length}개의 강의가 시간표에 추가되었습니다! 📚`;
+        } else if (actionTarget === 'SCHEDULE' || payloadType === 'EVENT') {
           // 일정 생성
           const response = await createScheduleFromAI(action.payload);
           // axios 응답에서 data 추출
