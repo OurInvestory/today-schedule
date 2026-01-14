@@ -159,10 +159,22 @@ export const analyzeTimetableImage = async (imageFile) => {
       timeout: 60000, // 이미지 분석은 시간이 걸릴 수 있음
     });
     
+    const data = response.data?.data;
+    const parsedResult = data?.parsed_result || data?.parsedResult;
+    const assistantMessage = data?.assistant_message || data?.assistantMessage || '이미지 분석 완료';
+    const actions = parsedResult?.actions || [];
+    
+    // 사용자에게 보여줄 메시지 생성
+    let displayMessage = assistantMessage;
+    if (actions.length > 0) {
+      displayMessage += `\n\n📋 ${actions.length}개의 일정을 발견했습니다. 추가하시겠습니까?`;
+    }
+    
     return {
       success: true,
-      message: response.data?.data?.assistantMessage || '이미지 분석 완료',
-      parsedResult: response.data?.data?.parsedResult,
+      message: displayMessage,
+      parsedResult: parsedResult,
+      actions: actions,
       imagePreview: URL.createObjectURL(imageFile),
     };
   } catch (error) {

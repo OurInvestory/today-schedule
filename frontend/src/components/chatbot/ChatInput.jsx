@@ -6,12 +6,14 @@ const ChatInput = ({
   disabled = false, 
   placeholder = '메시지를 입력하세요...',
   onFileUpload,
+  hasFiles = false, // 파일이 선택되어 있는지 여부
 }) => {
   const [value, setValue] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (value.trim() && !disabled) {
+    // 텍스트가 있거나, 파일이 있으면 전송 가능
+    if ((value.trim() || hasFiles) && !disabled) {
       onSend(value.trim());
       setValue('');
     }
@@ -53,14 +55,14 @@ const ChatInput = ({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={hasFiles ? '이미지 분석을 요청하세요...' : placeholder}
         disabled={disabled}
         rows={1}
       />
       <button
         type="submit"
         className="chat-input__button"
-        disabled={disabled || !value.trim()}
+        disabled={disabled || (!value.trim() && !hasFiles)}
         aria-label="전송"
       >
         <svg

@@ -337,6 +337,7 @@ const ChatbotWindow = ({
         onSend={handleSendWithFiles} 
         disabled={loading}
         onFileUpload={handleFileUpload}
+        hasFiles={selectedFiles.length > 0}
       />
       
       {/* 숨겨진 파일 입력 */}
