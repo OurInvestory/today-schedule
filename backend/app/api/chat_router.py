@@ -170,7 +170,7 @@ Output: {{"intent":"SCHEDULE_QUERY","preserved_info":{{"query_range":"tomorrow"}
 
 ★ "추가" found → MUST be CREATE:
 Input: "내일 3시 회의 추가해줘"
-Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"CREATE","payload":{{"title":"회의","end_at":"...","importance_score":5,"estimated_minute":60,"category":"기타"}}}}]}}
+Output: {{"intent":"SCHEDULE_MUTATION","actions":[{{"op":"CREATE","payload":{{"title":"회의","start_at":"...","end_at":"...","importance_score":5,"estimated_minute":60,"category":"기타"}}}}]}}
 
 ★ "미뤄줘" found → MUST be UPDATE:
 Input: "캡스톤 회의 다음주로 미뤄줘"  
@@ -222,10 +222,13 @@ For SCHEDULE_QUERY, set "preserved_info.query_range":
 
 CREATE payload requires:
 - title (string): Event name
-- end_at (ISO8601): Calculate from [Today] + relative date
+- start_at (ISO8601): When the event starts. Calculate from [Today] + relative date/time.
+- end_at (ISO8601): When the event ends. If duration not specified, default to start_at + 1 hour.
 - importance_score (1-10): 10=시험, 7-9=과제, 4-6=회의, 1-3=개인
 - estimated_minute (int): 60-180 for meetings, 120+ for exams
 - category: One of [수업, 과제, 시험, 공모전, 대외활동, 기타]
+
+IMPORTANT: Always include BOTH start_at and end_at for CREATE operations!
 
 DELETE payload requires:
 - title (string): Target schedule name
@@ -259,7 +262,7 @@ Input: "오늘 할 일 보여줘"
 
 Example 2 - CREATE (keyword: "추가"):
 Input: "내일 오후 3시 회의 추가해줘"
-{{"intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [{{"op": "CREATE", "payload": {{"title": "회의", "end_at": "2024-05-21T15:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}}}}]}}
+{{"intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [{{"op": "CREATE", "payload": {{"title": "회의", "start_at": "2024-05-21T15:00:00+09:00", "end_at": "2024-05-21T16:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}}}}]}}
 
 Example 3 - UPDATE (keyword: "미뤄"):
 Input: "캡스톤 회의 다음주로 미뤄줘"

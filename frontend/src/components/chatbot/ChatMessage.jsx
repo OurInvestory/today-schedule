@@ -149,17 +149,24 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry }) => {
               </div>
               <div className="chat-message__analysis-content">
                 <ul className="chat-message__schedule-list">
-                  {message.actions.slice(0, 5).map((action, idx) => (
+                  {message.actions.slice(0, 5).map((action, idx) => {
+                    const startTime = action.payload?.start_at || action.payload?.start_time;
+                    const endTime = action.payload?.end_at || action.payload?.end_time;
+                    return (
                     <li key={idx}>
                       <strong>{action.payload?.title}</strong>
-                      {action.payload?.start_at && (
+                      {(startTime || endTime) && (
                         <span className="chat-message__schedule-time">
-                          {' - '}{formatDate(action.payload.start_at, 'M/D HH:mm')}
-                          {action.payload?.end_at && ` ~ ${formatDate(action.payload.end_at, 'HH:mm')}`}
+                          {startTime ? (
+                            <>{' - '}{formatDate(startTime, 'M/D HH:mm')}
+                            {endTime && ` ~ ${formatDate(endTime, 'HH:mm')}`}</>
+                          ) : (
+                            <>{' - '}마감: {formatDate(endTime, 'M/D HH:mm')}</>
+                          )}
                         </span>
                       )}
                     </li>
-                  ))}
+                  );})}
                   {message.actions.length > 5 && (
                     <li className="chat-message__more-items">...외 {message.actions.length - 5}개</li>
                   )}
