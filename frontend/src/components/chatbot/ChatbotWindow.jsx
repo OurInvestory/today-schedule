@@ -7,7 +7,7 @@ import './ChatbotWindow.css';
 // 추천 질문 목록 (5개)
 const suggestedQuestions = [
   { id: 1, text: '내일 3시에 회의, 5시에 미팅 추가해줘', icon: '📅' },
-  { id: 2, text: '오늘 저녁까지 보고서 작성 할 일 추가', icon: '✅' },
+  { id: 2, text: '오늘 6시까지 보고서 작성 추가해줘', icon: '✅' },
   { id: 3, text: '회의 10분 전에 알림 예약해줘', icon: '🔔' },
   { id: 4, text: '시간표 사진에 있는 강의 추가해줘', icon: '📸' },
   { id: 5, text: '우선순위 높은 일정 추천해줘', icon: '🎯' },
@@ -265,6 +265,7 @@ const ChatbotWindow = ({
             onConfirmSingle={(messageId, action, actionIndex) => 
               onConfirmAction(messageId, action, null, actionIndex)
             }
+            onChoiceSelect={(choice) => onSendMessage(choice)}
             onRetry={message.isError && index === messages.length - 1 && canRetry ? handleRetry : undefined}
           />
         ))}

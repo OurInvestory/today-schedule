@@ -3,7 +3,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { CATEGORY_LABELS } from '../../utils/constants';
 import './ChatMessage.css';
 
-const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle }) => {
+const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, onChoiceSelect }) => {
   const isUser = message.role === 'user';
   const isError = message.isError;
   const hasActions = message.actions && message.actions.length > 0;
@@ -335,11 +335,30 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle })
             <div className="chat-message__missing-fields">
               <div className="chat-message__missing-fields-title">추가 정보가 필요해요:</div>
               <ul className="chat-message__missing-fields-list">
-                {message.missingFields.map((field, index) => (
-                  <li key={index}>
-                    {typeof field === 'string' ? field : (field.question || field.field || '정보 필요')}
-                  </li>
-                ))}
+                {message.missingFields.map((field, index) => {
+                  const fieldData = typeof field === 'string' ? { field, question: field } : field;
+                  const choices = fieldData.choices || [];
+                  
+                  return (
+                    <li key={index}>
+                      {fieldData.question || fieldData.field || '정보 필요'}
+                      {/* 선택지가 있으면 버튼으로 표시 */}
+                      {choices.length > 0 && (
+                        <div className="chat-message__choices">
+                          {choices.map((choice, choiceIdx) => (
+                            <button
+                              key={choiceIdx}
+                              className="chat-message__choice-btn"
+                              onClick={() => onChoiceSelect && onChoiceSelect(choice)}
+                            >
+                              {choice}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

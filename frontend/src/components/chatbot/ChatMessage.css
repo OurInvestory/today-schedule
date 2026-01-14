@@ -410,6 +410,30 @@
   color: #ffb020;
 }
 
+/* 선택지 버튼들 */
+.chat-message__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.chat-message__choice-btn {
+  background: white;
+  border: 1px solid #ffb020;
+  border-radius: 16px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: #ff9500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chat-message__choice-btn:hover {
+  background: #ffb020;
+  color: white;
+}
+
 /* 액션 완료 상태 */
 .chat-message__action-status {
   margin-top: var(--spacing-sm);
