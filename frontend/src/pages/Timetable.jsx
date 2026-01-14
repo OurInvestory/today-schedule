@@ -128,11 +128,16 @@ const Timetable = () => {
 
   // 강의 편집 모달 열기
   const handleOpenEditModal = (lecture) => {
-    if (!lecture || !lecture.id) {
+    if (!lecture || (!lecture.id && !lecture.lecture_id)) {
       console.error('Invalid lecture data:', lecture);
       return;
     }
-    setSelectedLecture(lecture);
+    // lecture_id 또는 id 사용
+    const lectureWithId = {
+      ...lecture,
+      id: lecture.id || lecture.lecture_id,
+    };
+    setSelectedLecture(lectureWithId);
     setEditFormData({
       title: lecture.title || '',
       start_time: lecture.start_time?.slice(0, 5) || '09:00',
@@ -423,10 +428,11 @@ const Timetable = () => {
                       const duration = getLectureDuration(lecture);
                       const bgColor = getLectureColor(lecture.title || '');
                       const textColor = getLectureTextColor(bgColor);
+                      const lectureKey = lecture.lecture_id || lecture.id;
                       
                       return (
                         <div
-                          key={lecture.id}
+                          key={lectureKey}
                           className="timetable__lecture"
                           style={{
                             backgroundColor: bgColor,
