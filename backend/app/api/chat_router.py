@@ -1,10 +1,12 @@
 import os
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from dotenv import load_dotenv
 
 # IBM Watsonx SDK
@@ -18,6 +20,8 @@ from app.schemas.ai_chat import (
     ChatResponseData, 
     AIChatParsed
 )
+from app.db.database import get_db
+from app.models.schedule import Schedule
 
 load_dotenv()
 
@@ -51,6 +55,32 @@ def get_watson_model():
         project_id=WATSONX_PROJECT_ID
     )
 
+def get_schedules_for_period(db: Session, start_date: datetime, end_date: datetime) -> list:
+    """지정된 기간의 일정을 조회합니다."""
+    test_user_id = "7822a162-788d-4f36-9366-c956a68393e1"
+    schedules = db.query(Schedule).filter(
+        and_(
+            Schedule.user_id == test_user_id,
+            Schedule.end_at >= start_date,
+            Schedule.end_at <= end_date
+        )
+    ).order_by(Schedule.end_at.asc()).all()
+    return schedules
+
+def format_schedules_for_display(schedules: list) -> str:
+    """일정 목록을 사람이 읽기 좋은 형식으로 변환합니다."""
+    if not schedules:
+        return "등록된 일정이 없어요."
+    
+    result = []
+    for s in schedules:
+        date_str = s.end_at.strftime("%m/%d(%a)") if s.end_at else ""
+        time_str = s.end_at.strftime("%H:%M") if s.end_at else ""
+        category = s.category or "기타"
+        result.append(f"• [{category}] {s.title} - {date_str} {time_str}")
+    
+    return "\n".join(result)
+
 def extract_json_from_text(text: str) -> str:
     """
     텍스트에서 첫 번째 JSON 객체만 정확하게 추출합니다.
@@ -77,8 +107,8 @@ def extract_json_from_text(text: str) -> str:
     except Exception:
         return text.strip()
 
-@router.post("/chat", response_model=APIResponse , response_model_exclude_none=True)
-async def chat_with_ai(req: ChatRequest):
+@router.post("/chat", response_model=APIResponse, response_model_exclude_none=True)
+async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
     try:
         model = get_watson_model()
         now = datetime.now()
@@ -114,6 +144,7 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
 [Rules]
 1. Intent Classification:
    - "SCHEDULE_MUTATION": When the user wants to Create, Update, or Delete a schedule.
+   - "SCHEDULE_QUERY": When user asks to VIEW/SHOW schedules. (e.g., "보여줘", "알려줘", "뭐야", "있어?")
    - "CLARIFY": If essential info (Subject/Time) is missing for CREATE, or if the target is unclear.
 
 2. Determine 'op' (Operation):
@@ -151,12 +182,19 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
      * category: Same as parent or '공부'.
      * tip: "Short, practical advice for this step (Korean, Max 20 chars)"
      
-7. Notification Settings (NEW):
+7. Notification Settings:
    - IF user asks to set/change alarm/reminder: Set actions 'target' to "NOTIFICATION".
    - Payload must include:
      * schedule_title: Target schedule name.
      * minutes_before: Minutes before the event (e.g., 10, 30, 60, 1440=1day). 0 if 'at time'.
      * notification_msg: Custom message (optional).
+
+8. Schedule Query:
+   - IF intent is "SCHEDULE_QUERY", set "preserved_info.query_range" to one of:
+     * "today": 오늘
+     * "tomorrow": 내일
+     * "this_week": 이번 주
+     * "next_week": 다음 주
 
 [Examples]
 ---
@@ -230,6 +268,24 @@ JSON: {{
   }} ]
 }}
 
+# Example 5: Schedule Query (View)
+User: "오늘 일정 보여줘"
+JSON: {{
+  "intent": "SCHEDULE_QUERY",
+  "type": "TASK",
+  "actions": [],
+  "preserved_info": {{ "query_range": "today" }}
+}}
+
+# Example 6: Schedule Query (This Week)
+User: "이번 주 할 일 뭐야"
+JSON: {{
+  "intent": "SCHEDULE_QUERY",
+  "type": "TASK",
+  "actions": [],
+  "preserved_info": {{ "query_range": "this_week" }}
+}}
+
 ---
 
 User Input: {req.text}
@@ -281,6 +337,45 @@ JSON Output:
                         assistant_msg = f"{action_cnt}건의 일정을 등록할까요?"
             else:
                 assistant_msg = "처리할 일정이 없습니다."
+        
+        elif ai_parsed_result.intent == "SCHEDULE_QUERY":
+            # 일정 조회 처리
+            preserved = ai_parsed_result.preserved_info or {}
+            query_range = preserved.get("query_range", "today")
+            
+            # 날짜 범위 계산
+            if query_range == "today":
+                start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = now.replace(hour=23, minute=59, second=59)
+                period_text = "오늘"
+            elif query_range == "tomorrow":
+                tomorrow = now + timedelta(days=1)
+                start_date = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = tomorrow.replace(hour=23, minute=59, second=59)
+                period_text = "내일"
+            elif query_range == "this_week":
+                start_date = now - timedelta(days=now.weekday())
+                start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
+                period_text = "이번 주"
+            elif query_range == "next_week":
+                start_date = now + timedelta(days=7-now.weekday())
+                start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = start_date + timedelta(days=6, hours=23, minutes=59, seconds=59)
+                period_text = "다음 주"
+            else:
+                start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = now + timedelta(days=7)
+                period_text = "앞으로"
+            
+            # DB에서 일정 조회
+            schedules = get_schedules_for_period(db, start_date, end_date)
+            
+            if schedules:
+                schedule_text = format_schedules_for_display(schedules)
+                assistant_msg = f"{period_text} 일정이에요! 📅\n\n{schedule_text}\n\n총 {len(schedules)}건의 일정이 있어요."
+            else:
+                assistant_msg = f"{period_text}은 등록된 일정이 없어요. 🎉 여유로운 하루 보내세요!"
 
         response_data = ChatResponseData(
             parsed_result=ai_parsed_result,
