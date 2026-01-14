@@ -49,6 +49,17 @@ const ScheduleDetail = () => {
   const dragStartRef = useRef({});
   const dragCurrentRef = useRef({});
 
+  // 할 일 목록 조회 (useEffect보다 먼저 선언)
+  const fetchSubTasks = useCallback(async () => {
+    try {
+      const tasks = await getSubTasksBySchedule(id);
+      console.log('조회된 할 일 목록:', tasks);
+      setSubTasks(tasks);
+    } catch (err) {
+      console.error('할 일 목록 조회 실패:', err);
+    }
+  }, [id]);
+
   // 일정 상세 정보 불러오기
   useEffect(() => {
     const fetchSchedule = async () => {
@@ -72,17 +83,6 @@ const ScheduleDetail = () => {
     
     fetchSchedule();
   }, [id, fetchSubTasks]);
-
-  // 할 일 목록 조회
-  const fetchSubTasks = useCallback(async () => {
-    try {
-      const tasks = await getSubTasksBySchedule(id);
-      console.log('조회된 할 일 목록:', tasks);
-      setSubTasks(tasks);
-    } catch (err) {
-      console.error('할 일 목록 조회 실패:', err);
-    }
-  }, [id]);
 
   // 할 일 추가
   const handleAddSubTask = async () => {
