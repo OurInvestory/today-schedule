@@ -214,7 +214,7 @@ def get_sub_tasks(
             )
         ).order_by(SubTask.date.asc()).all()
 
-        # 응답 데이터 생성 - schedule 정보를 포함하여 tip과 category 추가
+        # 응답 데이터 생성 - DB에 저장된 category와 priority를 우선 사용
         response_data = []
         for task in tasks:
             task_dict = {
@@ -226,27 +226,21 @@ def get_sub_tasks(
                 "estimated_minute": task.estimated_minute,
                 "is_done": task.is_done,
                 "update_text": task.update_text,
-                "tip": None,
-                "category": "other"  # 기본값
+                "priority": task.priority if task.priority else "medium",
+                "category": task.category if task.category else "other",
+                "tip": task.tip if task.tip else None
             }
             
-            # DB에 저장된 tip이 있으면 사용
-            if task.tip:
-                task_dict["tip"] = task.tip
-            # schedule_id가 있으면 schedule 정보 조회
-            elif task.schedule_id:
-                schedule = db.query(Schedule).filter(Schedule.schedule_id == task.schedule_id).first()
-                if schedule:
-                    task_dict["category"] = schedule.category if schedule.category else "other"
-                    # schedule에 tip이 있으면 사용
-                    if hasattr(schedule, 'tip') and schedule.tip:
+            # tip이 없는 경우에만 schedule에서 가져오거나 랜덤 응원 문구 사용
+            if not task_dict["tip"]:
+                if task.schedule_id:
+                    schedule = db.query(Schedule).filter(Schedule.schedule_id == task.schedule_id).first()
+                    if schedule and hasattr(schedule, 'tip') and schedule.tip:
                         task_dict["tip"] = schedule.tip
                     else:
-                        # AI tip이 없으면 랜덤 응원 문구
                         task_dict["tip"] = get_random_encouragement()
-            else:
-                # schedule_id가 없는 독립 할일 - 랜덤 응원 문구
-                task_dict["tip"] = get_random_encouragement()
+                else:
+                    task_dict["tip"] = get_random_encouragement()
             
             response_data.append(SubTaskResponse(**task_dict))
 

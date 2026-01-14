@@ -162,18 +162,18 @@ export const analyzeTimetableImage = async (imageFile) => {
     const data = response.data?.data;
     const parsedResult = data?.parsed_result || data?.parsedResult;
     const assistantMessage = data?.assistant_message || data?.assistantMessage || '이미지 분석 완료';
-    const actions = parsedResult?.actions || [];
     
-    // 사용자에게 보여줄 메시지 생성
-    let displayMessage = assistantMessage;
-    if (actions.length > 0) {
-      displayMessage += `\n\n📋 ${actions.length}개의 일정을 발견했습니다. 추가하시겠습니까?`;
-    }
+    // actions에 target 필드 추가 (백엔드에서 없는 경우 대비)
+    let actions = parsedResult?.actions || [];
+    actions = actions.map(action => ({
+      ...action,
+      target: action.target || (action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE'),
+    }));
     
     return {
       success: true,
-      message: displayMessage,
-      parsedResult: parsedResult,
+      message: assistantMessage,
+      parsedResult: { ...parsedResult, actions },
       actions: actions,
       imagePreview: URL.createObjectURL(imageFile),
     };

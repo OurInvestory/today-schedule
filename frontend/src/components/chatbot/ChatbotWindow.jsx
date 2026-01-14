@@ -262,6 +262,9 @@ const ChatbotWindow = ({
             message={message}
             onConfirm={onConfirmAction}
             onCancel={onCancelAction}
+            onConfirmSingle={(messageId, action, actionIndex) => 
+              onConfirmAction(messageId, action, null, actionIndex)
+            }
             onRetry={message.isError && index === messages.length - 1 && canRetry ? handleRetry : undefined}
           />
         ))}

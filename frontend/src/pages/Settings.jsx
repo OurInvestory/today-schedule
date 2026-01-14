@@ -49,6 +49,7 @@ const Settings = () => {
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [cacheSize, setCacheSize] = useState(0);
   const [settings, setSettings] = useState({
     pushNotification: true,
@@ -346,7 +347,7 @@ const Settings = () => {
               </div>
               <div className="profile-info__details">
                 <h3 className="profile-info__name">김학생</h3>
-                <button className="profile-info__manage-button" onClick={() => console.log('Manage Info Clicked')}>내 정보 관리</button>
+                <button className="profile-info__manage-button" onClick={() => setShowProfileModal(true)}>내 정보 관리</button>
               </div>
             </div>
           </div>
@@ -439,9 +440,6 @@ const Settings = () => {
                 <option value="en">English</option>
                 <option value="ja">日本語</option>
                 <option value="zh">中文</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
               </select>
             </div>
 
@@ -809,6 +807,96 @@ const Settings = () => {
                   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
                   SOFTWARE.
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 내 정보 관리 모달 */}
+      {showProfileModal && (
+        <div className="license-modal__overlay" onClick={() => setShowProfileModal(false)}>
+          <div className="license-modal license-modal--profile" onClick={(e) => e.stopPropagation()}>
+            <div className="license-modal__header">
+              <h2 className="license-modal__title">내 정보 관리</h2>
+              <button className="license-modal__close" onClick={() => setShowProfileModal(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="license-modal__content">
+              <div className="profile-modal__avatar-section">
+                <div className="profile-modal__avatar">
+                  <span>김</span>
+                </div>
+                <button className="profile-modal__avatar-btn">사진 변경</button>
+              </div>
+              
+              <div className="profile-modal__form">
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">이름</label>
+                  <input 
+                    type="text" 
+                    className="profile-modal__input" 
+                    defaultValue="김학생"
+                    placeholder="이름을 입력하세요"
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">이메일</label>
+                  <input 
+                    type="email" 
+                    className="profile-modal__input" 
+                    defaultValue="student@university.ac.kr"
+                    placeholder="이메일을 입력하세요"
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">학교/소속</label>
+                  <input 
+                    type="text" 
+                    className="profile-modal__input" 
+                    defaultValue="한국대학교"
+                    placeholder="학교 또는 소속을 입력하세요"
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">학과/전공</label>
+                  <input 
+                    type="text" 
+                    className="profile-modal__input" 
+                    defaultValue="컴퓨터공학과"
+                    placeholder="학과 또는 전공을 입력하세요"
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">학년</label>
+                  <select className="profile-modal__select" defaultValue="3">
+                    <option value="1">1학년</option>
+                    <option value="2">2학년</option>
+                    <option value="3">3학년</option>
+                    <option value="4">4학년</option>
+                    <option value="grad">대학원생</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="profile-modal__actions">
+                <button className="profile-modal__btn profile-modal__btn--cancel" onClick={() => setShowProfileModal(false)}>
+                  취소
+                </button>
+                <button className="profile-modal__btn profile-modal__btn--save" onClick={() => {
+                  alert('프로필이 저장되었습니다! 👤');
+                  setShowProfileModal(false);
+                }}>
+                  저장
+                </button>
               </div>
             </div>
           </div>

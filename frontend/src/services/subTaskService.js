@@ -41,12 +41,15 @@ export const getSubTasks = async (from, to) => {
 
     // 백엔드 응답을 프론트엔드 형식으로 변환
     return (response.data.data || []).map(task => ({
-      ...task,
       id: task.sub_task_id || task.id,
       scheduleId: task.schedule_id,
+      title: task.title,
+      date: task.date,
       estimatedMinute: task.estimated_minute,
-      completed: task.is_completed || false,
-      category: task.category,
+      completed: task.is_done || false,
+      category: task.category || 'other',
+      priority: task.priority,
+      tip: task.tip,
     }));
   } catch (error) {
     console.error('Failed to fetch sub-tasks:', error);
@@ -64,7 +67,7 @@ export const updateSubTask = async (id, subTaskData) => {
     if (subTaskData.title !== undefined) payload.title = subTaskData.title;
     if (subTaskData.date !== undefined) payload.date = subTaskData.date;
     if (subTaskData.estimatedMinute !== undefined) payload.estimated_minute = subTaskData.estimatedMinute;
-    if (subTaskData.completed !== undefined) payload.is_completed = subTaskData.completed;
+    if (subTaskData.completed !== undefined) payload.is_done = subTaskData.completed;
     if (subTaskData.category !== undefined) payload.category = subTaskData.category;
     if (subTaskData.priority !== undefined) payload.priority = subTaskData.priority;
 
