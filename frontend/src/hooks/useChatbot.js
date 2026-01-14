@@ -362,9 +362,20 @@ export const useChatbot = () => {
           result = response?.data || response;
           confirmContent = '일정이 성공적으로 추가되었습니다! ✅';
         } else if (actionTarget === 'SUB_TASK' || action?.payload?.type === 'TASK') {
-          // 할 일 생성 - tip 전달
+          // 할 일 생성 - importance_score를 priority로 변환
+          const importanceScore = action.payload.importance_score || 5;
+          let priority = 'medium';
+          if (importanceScore >= 7) priority = 'high';
+          else if (importanceScore <= 3) priority = 'low';
+          
+          // end_at에서 date 추출
+          const endAt = action.payload.end_at || action.payload.date;
+          const dateStr = endAt ? endAt.split('T')[0] : new Date().toISOString().split('T')[0];
+          
           const payloadWithTip = {
             ...action.payload,
+            date: dateStr,
+            priority: action.payload.priority || priority,
             tip: action.payload.tip || action.payload.reason || null,
           };
           const response = await createSubTaskFromAI(action.scheduleId, payloadWithTip);
@@ -448,9 +459,9 @@ export const useChatbot = () => {
   // 빠른 액션 (자주 사용하는 명령어)
   const quickActions = [
     { label: '오늘 할 일', message: '오늘 할 일 보여줘' },
-    { label: '우선순위 높은 일정', message: '우선순위 높은 일정 추천해줘' },
+    { label: '🔥 우선순위 높은 일정', message: '우선순위 높은 일정 추천해줘' },
     { label: '📷 시간표 추가', message: '시간표 사진에 있는 강의 추가해줘' },
-    { label: '이번 주 일정', message: '이번 주 일정 보여줘' },
+    { label: '이번 주 일정', message: '이번 주 일정 정리해줘' },
   ];
 
   const sendQuickAction = (action) => {

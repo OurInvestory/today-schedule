@@ -86,7 +86,7 @@ export const createScheduleFromAI = async (payload) => {
     
     const schedulePayload = {
       title: payload.title,
-      type: payload.type || 'task',
+      type: payload.type === 'EVENT' ? 'event' : 'task',
       category: payload.category || '기타',
       start_at: finalStartAt,
       end_at: endAt,
@@ -96,6 +96,7 @@ export const createScheduleFromAI = async (payload) => {
       source: 'ai'
     };
     
+    console.log('Creating schedule:', schedulePayload);
     const response = await api.post('/api/schedules', schedulePayload);
     return response;
   } catch (error) {
@@ -109,33 +110,30 @@ export const createScheduleFromAI = async (payload) => {
  */
 export const createSubTaskFromAI = async (scheduleId, payload) => {
   try {
-    // importance_score (1-10)를 priority (high/medium/low)로 변환
-    const getPriority = (score) => {
-      if (score >= 7) return 'high';
-      if (score >= 4) return 'medium';
-      return 'low';
-    };
+    // end_at에서 date 추출
+    const endAt = payload.end_at || payload.due_date || payload.date;
+    const dateStr = endAt ? (typeof endAt === 'string' ? endAt.split('T')[0] : endAt) : new Date().toISOString().split('T')[0];
     
-    // 날짜 추출 (end_at에서 날짜만 추출 또는 date 필드 사용)
-    let taskDate = payload.date;
-    if (!taskDate && payload.end_at) {
-      taskDate = payload.end_at.split('T')[0];
-    }
-    if (!taskDate) {
-      taskDate = new Date().toISOString().split('T')[0];
+    // importance_score를 priority로 변환
+    let priority = payload.priority || 'medium';
+    if (!payload.priority && payload.importance_score) {
+      if (payload.importance_score >= 7) priority = 'high';
+      else if (payload.importance_score <= 3) priority = 'low';
+      else priority = 'medium';
     }
     
     // AI가 생성한 할 일 데이터를 백엔드 스키마에 맞게 변환
     const subTaskPayload = {
       schedule_id: scheduleId || null, // scheduleId 없으면 독립 할 일
       title: payload.title,
-      date: taskDate,
+      date: dateStr,
       estimated_minute: payload.estimated_minute || 60,
-      priority: payload.priority || getPriority(payload.importance_score || 5),
+      priority: priority,
       category: payload.category || '기타',
       tip: payload.tip || payload.reason || null,
     };
     
+    console.log('Creating sub-task:', subTaskPayload);
     // 직접 sub-tasks 엔드포인트로 POST
     const response = await api.post('/api/sub-tasks', subTaskPayload);
     return response;
