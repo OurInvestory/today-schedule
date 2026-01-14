@@ -63,12 +63,15 @@ const getPriorityLabel = (score) => {
 
 /**
  * Fetch all todos from the backend.
+ * @param {Object} options - 조회 옵션
+ * @param {string} options.from - 시작 날짜 (YYYY-MM-DD)
+ * @param {string} options.to - 종료 날짜 (YYYY-MM-DD)
  */
-export const fetchTodos = async () => {
+export const fetchTodos = async (options = {}) => {
   try {
     const today = new Date();
-    const from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const to = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    const from = options.from || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const to = options.to || new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
     const response = await api.get('/api/sub-tasks', {
       params: { from, to },
@@ -175,7 +178,8 @@ export const deleteTodo = async (id) => {
  * Todo 목록 조회
  */
 export const getTodos = async (params = {}) => {
-  let todos = await fetchTodos();
+  // from/to가 있으면 fetchTodos에 전달
+  let todos = await fetchTodos({ from: params.from, to: params.to });
 
   // 필터 적용
   if (params.date) {

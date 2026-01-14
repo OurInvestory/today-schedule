@@ -7,6 +7,7 @@ import ChatbotWindow from '../components/chatbot/ChatbotWindow';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import Input from '../components/common/Input';
+import SearchableSelect from '../components/common/SearchableSelect';
 import { useTodo } from '../hooks/useTodo';
 import { useChatbot } from '../hooks/useChatbot';
 import { useCalendar } from '../hooks/useCalendar';
@@ -210,27 +211,23 @@ const Home = ({ isFullCalendarMode = false }) => {
         <div className="add-todo-form">
           <div className="add-todo-form__group">
             <label className="add-todo-form__label">소속 일정 * (필수)</label>
-            <select
-              className="add-todo-form__select"
+            <SearchableSelect
+              options={schedules}
               value={newTodo.scheduleId}
-              onChange={(e) => {
-                const selectedSchedule = schedules.find(s => s.id === e.target.value);
+              onChange={(schedule) => {
                 setNewTodo({ 
                   ...newTodo, 
-                  scheduleId: e.target.value,
+                  scheduleId: schedule.id,
                   // 선택한 일정의 카테고리를 자동 설정
-                  category: selectedSchedule?.category || newTodo.category,
+                  category: schedule.category || newTodo.category,
                 });
               }}
+              placeholder="일정을 검색하거나 선택하세요"
+              searchPlaceholder="일정 검색..."
+              formatOption={(schedule) => schedule.title}
+              formatDate={formatDate}
               required
-            >
-              <option value="">일정을 선택하세요</option>
-              {schedules.map((schedule) => (
-                <option key={schedule.id} value={schedule.id}>
-                  {schedule.title} ({formatDate(schedule.startDate || schedule.start_at, 'M/D')})
-                </option>
-              ))}
-            </select>
+            />
             <small className="add-todo-form__hint">할 일은 반드시 일정에 소속되어야 합니다.</small>
           </div>
           <Input
