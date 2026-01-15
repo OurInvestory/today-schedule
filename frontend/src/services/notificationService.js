@@ -464,7 +464,7 @@ export const sendDailyBriefing = async () => {
       const endDate = today;
       
       const response = await api.get('/api/schedules', {
-        params: { start_date: startDate, end_date: endDate }
+        params: { from: startDate, to: endDate }
       });
       
       if (response.data?.status === 200 && Array.isArray(response.data?.data)) {
@@ -516,6 +516,18 @@ export const sendDailyBriefing = async () => {
       tag: 'daily-briefing',
       requireInteraction: true,
     });
+    
+    // 백엔드 API에 알림 저장 (알림 페이지에 표시되도록)
+    try {
+      const { createNotification } = await import('./notificationApiService');
+      await createNotification({
+        message: `🌅 AI 데일리 브리핑: ${briefingMessage}`,
+        notify_at: new Date().toISOString(),
+      });
+      console.log('[DailyBriefing] 백엔드 알림 저장 완료');
+    } catch (saveError) {
+      console.warn('[DailyBriefing] 백엔드 알림 저장 실패:', saveError);
+    }
     
     // 전송 성공 시 오늘 날짜 기록
     if (notificationResult) {
