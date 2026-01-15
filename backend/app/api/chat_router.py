@@ -261,14 +261,20 @@ JSON: {{
   "missingFields": [{{ "field": "date", "question": "알고리즘 시험이 언제인가요?", "choices": [] }}]
 }}
 
-# Example 4: Notification CLARIFY
-User: "회의 10분 전에 알림 예약해줘"
+# Example 4: Notification (독립 알림 - 일정 연결 없이 바로 등록)
+User: "내일 3시에 알림 맞춰줘"
 JSON: {{
-  "intent": "CLARIFY",
+  "intent": "SCHEDULE_MUTATION",
   "type": "TASK",
-  "actions": [],
-  "preserved_info": {{ "minutes_before": 10, "search_keyword": "회의" }},
-  "missingFields": [{{ "field": "schedule_title", "question": "어떤 회의에 대한 알림을 설정할까요?", "choices": [] }}]
+  "actions": [{{ "op": "CREATE", "target": "NOTIFICATION", "payload": {{ "message": "알림", "notify_at": "2026-01-16T15:00:00+09:00" }} }}]
+}}
+
+# Example 4-2: Notification with message
+User: "해커톤 발표 30분 전에 알려줘"
+JSON: {{
+  "intent": "SCHEDULE_MUTATION",
+  "type": "TASK",
+  "actions": [{{ "op": "CREATE", "target": "NOTIFICATION", "payload": {{ "message": "해커톤 발표 준비하세요!", "schedule_title": "해커톤", "minutes_before": 30 }} }}]
 }}
 
 # Example 5: Exam with sub-tasks
@@ -477,33 +483,36 @@ def handle_delete(ai_result: AIChatParsed, db: Session) -> str:
 
 
 def handle_notification(ai_result: AIChatParsed, db: Session) -> str:
-    """알림 설정 처리"""
+    """알림 설정 처리 - 독립 알림으로 바로 등록"""
     payload = ai_result.actions[0].payload
-    schedule_title = payload.get('schedule_title', '')
+    message = payload.get('message', '알림')
+    notify_at = payload.get('notify_at')
+    schedule_title = payload.get('schedule_title')
+    minutes_before = payload.get('minutes_before')
     
-    if not schedule_title:
-        return "알림 설정을 변경할까요?"
+    # schedule_title이 있으면 해당 일정 찾아서 시간 계산
+    if schedule_title and minutes_before:
+        matching = search_schedules_by_keyword(db, schedule_title, limit=1)
+        if matching:
+            schedule = matching[0]
+            payload['schedule_id'] = str(schedule.schedule_id)
+            if schedule.start_at:
+                calculated_time = schedule.start_at - timedelta(minutes=minutes_before)
+                payload['notify_at'] = calculated_time.isoformat()
+                time_str = calculated_time.strftime("%m/%d %H:%M")
+                return f"'{schedule.title}' {minutes_before}분 전({time_str})에 알림을 설정할까요?"
+        return f"'{schedule_title}' 일정을 찾지 못했어요. 알림 시간을 직접 알려주세요!"
     
-    matching = search_schedules_by_keyword(db, schedule_title, limit=1)
-    exact_match = [s for s in matching if s.title == schedule_title]
+    # notify_at이 있으면 바로 알림 설정
+    if notify_at:
+        try:
+            notify_dt = datetime.fromisoformat(notify_at.replace('Z', '+00:00'))
+            time_str = notify_dt.strftime("%m/%d %H:%M")
+            return f"{time_str}에 알림을 설정할까요? 📢"
+        except:
+            pass
     
-    if exact_match:
-        payload['schedule_id'] = str(exact_match[0].schedule_id)
-        return f"'{schedule_title}' 일정에 알림을 설정할까요?"
-    
-    if matching:
-        return f"'{schedule_title}' 일정을 찾지 못했어요. 혹시 '{matching[0].title}'을 말씀하신 건가요?"
-    
-    # 일정이 없으면 CLARIFY로 전환
-    ai_result.actions = [
-        Action(op="CREATE", target="SCHEDULE", payload={"title": schedule_title, "importance_score": 5, "category": "기타"})
-    ]
-    ai_result.missingFields = [
-        MissingField(field="schedule_time", question=f"'{schedule_title}' 일정이 없어요. 새로 추가하려면 시간을 알려주세요! (예: 내일 3시)", choices=[])
-    ]
-    ai_result.intent = "CLARIFY"
-    ai_result.preserved_info = {**payload, 'pending_title': schedule_title}
-    return f"'{schedule_title}' 일정이 등록되어 있지 않아요. 새로 추가하려면 시간을 알려주세요! (예: 내일 3시)"
+    return "언제 알림을 받으실 건가요? (예: 내일 3시, 1월 20일 오후 2시)"
 
 
 def handle_priority_query(ai_result: AIChatParsed, db: Session) -> str:
