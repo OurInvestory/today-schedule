@@ -6,7 +6,9 @@ import api from './api';
 const getSeoulDate = () => {
   const now = new Date();
   // 서울 시간대로 변환
-  const seoulTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  const seoulTime = new Date(
+    now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })
+  );
   return seoulTime;
 };
 
@@ -29,29 +31,31 @@ export const searchSchedulesByKeyword = async (keyword) => {
     const now = new Date();
     const oneMonthAgo = new Date(now);
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    
+
     const fromDate = oneMonthAgo.toISOString().split('T')[0];
-    const toDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 앞으로 30일
-    
+    const toDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0]; // 앞으로 30일
+
     const response = await api.get('/api/schedules', {
       params: { from: fromDate, to: toDate },
     });
-    
+
     const schedules = response.data?.data || [];
-    
+
     // 키워드 필터링 및 마감일이 지나지 않은 일정만 반환
-    const filtered = schedules.filter(schedule => {
+    const filtered = schedules.filter((schedule) => {
       const title = schedule.title?.toLowerCase() || '';
       const matchesKeyword = title.includes(keyword.toLowerCase());
-      
+
       // 마감일(end_at 또는 start_at)이 현재 시간 이후인 것만
       const scheduleTime = schedule.start_at || schedule.end_at;
       if (!scheduleTime) return matchesKeyword;
-      
+
       const scheduleDate = new Date(scheduleTime);
       return matchesKeyword && scheduleDate >= now;
     });
-    
+
     return filtered;
   } catch (error) {
     console.error('Failed to search schedules:', error);
@@ -130,14 +134,14 @@ export const createScheduleFromAI = async (payload) => {
     // AI 응답 필드를 백엔드 스키마에 맞게 변환
     const startAt = payload.start_at || payload.start_time || null;
     let endAt = payload.end_at || payload.end_time || null;
-    
+
     // start_at만 있고 end_at이 없으면 1시간 후로 설정
     if (startAt && !endAt) {
       const startDate = new Date(startAt);
       startDate.setHours(startDate.getHours() + 1);
       endAt = startDate.toISOString();
     }
-    
+
     // end_at만 있고 start_at이 없으면 1시간 전으로 설정
     let finalStartAt = startAt;
     if (!startAt && endAt) {
@@ -145,7 +149,7 @@ export const createScheduleFromAI = async (payload) => {
       endDate.setHours(endDate.getHours() - 1);
       finalStartAt = endDate.toISOString();
     }
-    
+
     const schedulePayload = {
       title: payload.title,
       type: payload.type === 'EVENT' ? 'event' : 'task',
@@ -155,9 +159,9 @@ export const createScheduleFromAI = async (payload) => {
       priority_score: payload.importance_score || payload.priority_score || 5,
       original_text: payload.original_text || null,
       estimated_minute: payload.estimated_minute || 60,
-      source: 'ai'
+      source: 'ai',
     };
-    
+
     console.log('Creating schedule:', schedulePayload);
     const response = await api.post('/api/schedules', schedulePayload);
     return response;
@@ -174,8 +178,12 @@ export const createSubTaskFromAI = async (scheduleId, payload) => {
   try {
     // end_at에서 date 추출
     const endAt = payload.end_at || payload.due_date || payload.date;
-    const dateStr = endAt ? (typeof endAt === 'string' ? endAt.split('T')[0] : endAt) : new Date().toISOString().split('T')[0];
-    
+    const dateStr = endAt
+      ? typeof endAt === 'string'
+        ? endAt.split('T')[0]
+        : endAt
+      : new Date().toISOString().split('T')[0];
+
     // importance_score를 priority로 변환
     let priority = payload.priority || 'medium';
     if (!payload.priority && payload.importance_score) {
@@ -183,7 +191,7 @@ export const createSubTaskFromAI = async (scheduleId, payload) => {
       else if (payload.importance_score <= 3) priority = 'low';
       else priority = 'medium';
     }
-    
+
     // AI가 생성한 할 일 데이터를 백엔드 스키마에 맞게 변환
     const subTaskPayload = {
       schedule_id: scheduleId || null, // scheduleId 없으면 독립 할 일
@@ -194,7 +202,7 @@ export const createSubTaskFromAI = async (scheduleId, payload) => {
       category: payload.category || '기타',
       tip: payload.tip || payload.reason || null,
     };
-    
+
     console.log('Creating sub-task:', subTaskPayload);
     // 직접 sub-tasks 엔드포인트로 POST
     const response = await api.post('/api/sub-tasks', subTaskPayload);
@@ -303,12 +311,13 @@ export const analyzeTimetableImage = async (imageFile) => {
 
     const data = response.data?.data;
     const parsedResult = data?.parsed_result || data?.parsedResult;
-    const assistantMessage = data?.assistant_message || data?.assistantMessage || '이미지 분석 완료';
+    const assistantMessage =
+      data?.assistant_message || data?.assistantMessage || '이미지 분석 완료';
     const lectures = data?.lectures || [];
-    
+
     // actions에 target 필드 추가 (백엔드에서 없는 경우 대비)
     let actions = parsedResult?.actions || [];
-    
+
     // lectures가 있으면 LECTURES 액션 추가
     if (lectures.length > 0) {
       actions = [
@@ -321,12 +330,19 @@ export const analyzeTimetableImage = async (imageFile) => {
         },
       ];
     } else {
-      actions = actions.map(action => ({
-        ...action,
-        target: action.target || (action.payload?.type === 'TASK' ? 'SUB_TASK' : 'SCHEDULE'),
-      }));
+      actions = actions.map((action) => {
+        // target 결정: 제목에 [준비]가 있거나 type이 TASK면 SUB_TASK로 강제 지정
+        const title = action.payload?.title || '';
+        const isSubTask =
+          title.includes('[준비]') || action.payload?.type === 'TASK';
+
+        return {
+          ...action,
+          target: isSubTask ? 'SUB_TASK' : action.target || 'SCHEDULE',
+        };
+      });
     }
-    
+
     return {
       success: true,
       message: assistantMessage,
@@ -354,7 +370,7 @@ export const createLectureFromAI = async (payload) => {
       end_day: payload.end_day,
       week: payload.week || [],
     };
-    
+
     console.log('Creating lecture:', lecturePayload);
     const response = await api.post('/api/lectures', lecturePayload);
     return response;

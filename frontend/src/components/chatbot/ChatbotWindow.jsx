@@ -13,12 +13,12 @@ const suggestedQuestions = [
   { id: 5, text: '우선순위 높은 일정 추천해줘', icon: '🎯' },
 ];
 
-const ChatbotWindow = ({ 
-  isOpen, 
-  onClose, 
-  messages, 
-  onSendMessage, 
-  loading, 
+const ChatbotWindow = ({
+  isOpen,
+  onClose,
+  messages,
+  onSendMessage,
+  loading,
   messagesEndRef,
   onConfirmAction,
   onCancelAction,
@@ -26,6 +26,7 @@ const ChatbotWindow = ({
   onRetry,
   canRetry,
   onSelectScheduleForNotification,
+  onChoiceSelect,
 }) => {
   const fileInputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -37,25 +38,35 @@ const ChatbotWindow = ({
   const [isFileDragging, setIsFileDragging] = useState(false);
   const [isTimetableUpload, setIsTimetableUpload] = useState(false); // "시간표 사진" 버튼으로 파일 선택 여부
   const [loadingMessage, setLoadingMessage] = useState('');
-  
+
   // 로딩 상태 변경 시 랜덤 메시지 설정 (2초마다 변경)
   useEffect(() => {
     if (loading) {
       setLoadingMessage(getRandomLoadingMessage());
-      
+
       // 2초마다 메시지 변경
       const interval = setInterval(() => {
         setLoadingMessage(getRandomLoadingMessage());
       }, 2000);
-      
+
       return () => clearInterval(interval);
     }
   }, [loading]);
 
+  // 챗봇 창이 열릴 때 최신 메시지로 스크롤
+  useEffect(() => {
+    if (isOpen && messagesEndRef?.current) {
+      // 약간의 딜레이 후 스크롤 (렌더링 완료 대기)
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 100);
+    }
+  }, [isOpen, messagesEndRef]);
+
   // 컴포넌트 언마운트 시 미리보기 URL 정리 (Hook은 조건부 return 전에 호출되어야 함)
   useEffect(() => {
     return () => {
-      selectedFiles.forEach(f => {
+      selectedFiles.forEach((f) => {
         if (f.preview) {
           URL.revokeObjectURL(f.preview);
         }
@@ -112,24 +123,27 @@ const ChatbotWindow = ({
   };
 
   const processFiles = (files) => {
-    const processedFiles = files.map(file => {
+    const processedFiles = files.map((file) => {
       const fileData = {
         name: file.name,
         type: file.type,
         size: file.size,
         file: file,
       };
-      
+
       // 이미지 파일인 경우 미리보기 URL 생성
       if (file.type.startsWith('image/')) {
         fileData.preview = URL.createObjectURL(file);
       }
-      
+
       return fileData;
     });
-    
-    setSelectedFiles(prev => [...prev, ...processedFiles]);
-    console.log('Files processed:', processedFiles.map(f => f.name));
+
+    setSelectedFiles((prev) => [...prev, ...processedFiles]);
+    console.log(
+      'Files processed:',
+      processedFiles.map((f) => f.name)
+    );
   };
 
   // 드래그 앤 드롭 핸들러
@@ -156,7 +170,7 @@ const ChatbotWindow = ({
     e.preventDefault();
     e.stopPropagation();
     setIsFileDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       processFiles(files);
@@ -166,19 +180,20 @@ const ChatbotWindow = ({
   const handleSendWithFiles = (text) => {
     if (selectedFiles.length > 0) {
       // 파일 객체만 추출
-      const fileObjects = selectedFiles.map(f => f.file);
-      
+      const fileObjects = selectedFiles.map((f) => f.file);
+
       // "시간표 사진" 버튼으로 파일 선택했으면 자동 메시지 전송
-      const messageText = text || (isTimetableUpload ? '시간표 사진에 있는 강의 추가해줘' : '');
+      const messageText =
+        text || (isTimetableUpload ? '시간표 사진에 있는 강의 추가해줘' : '');
       onSendMessage(messageText, null, fileObjects);
-      
+
       // 미리보기 URL 정리
-      selectedFiles.forEach(f => {
+      selectedFiles.forEach((f) => {
         if (f.preview) {
           URL.revokeObjectURL(f.preview);
         }
       });
-      
+
       setSelectedFiles([]);
       setIsTimetableUpload(false); // 플래그 초기화
     } else {
@@ -191,7 +206,7 @@ const ChatbotWindow = ({
     if (file.preview) {
       URL.revokeObjectURL(file.preview);
     }
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSuggestedQuestion = (question) => {
@@ -216,8 +231,10 @@ const ChatbotWindow = ({
   };
 
   return (
-    <div 
-      className={`chatbot-window ${isFileDragging ? 'chatbot-window--dragging' : ''}`}
+    <div
+      className={`chatbot-window ${
+        isFileDragging ? 'chatbot-window--dragging' : ''
+      }`}
       ref={dropZoneRef}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
@@ -227,13 +244,22 @@ const ChatbotWindow = ({
       {isFileDragging && (
         <div className="chatbot-window__drop-overlay">
           <div className="chatbot-window__drop-message">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
             <p>이미지나 파일을 여기에 드롭하세요</p>
-            <small>시간표 이미지를 분석하여 일정을 자동으로 추가할 수 있습니다</small>
+            <small>
+              시간표 이미지를 분석하여 일정을 자동으로 추가할 수 있습니다
+            </small>
           </div>
         </div>
       )}
@@ -271,16 +297,20 @@ const ChatbotWindow = ({
 
       <div className="chatbot-window__messages">
         {messages.map((message, index) => (
-          <ChatMessage 
-            key={message.id} 
+          <ChatMessage
+            key={message.id}
             message={message}
             onConfirm={onConfirmAction}
             onCancel={onCancelAction}
-            onConfirmSingle={(messageId, action, actionIndex) => 
+            onConfirmSingle={(messageId, action, actionIndex) =>
               onConfirmAction(messageId, action, null, actionIndex)
             }
-            onChoiceSelect={(choice) => onSendMessage(choice)}
-            onRetry={message.isError && index === messages.length - 1 && canRetry ? handleRetry : undefined}
+            onChoiceSelect={onChoiceSelect}
+            onRetry={
+              message.isError && index === messages.length - 1 && canRetry
+                ? handleRetry
+                : undefined
+            }
             onSelectScheduleForNotification={onSelectScheduleForNotification}
           />
         ))}
@@ -301,7 +331,7 @@ const ChatbotWindow = ({
 
       {/* 추천 질문 카드 */}
       <div className="chatbot-window__suggestions">
-        <div 
+        <div
           className="chatbot-window__suggestions-scroll"
           ref={suggestionsRef}
           onMouseDown={handleMouseDown}
@@ -333,13 +363,9 @@ const ChatbotWindow = ({
                   <img src={file.preview} alt={file.name} />
                 </div>
               ) : (
-                <div className="chatbot-window__file-icon">
-                  📄
-                </div>
+                <div className="chatbot-window__file-icon">📄</div>
               )}
-              <span className="chatbot-window__file-name">
-                {file.name}
-              </span>
+              <span className="chatbot-window__file-name">{file.name}</span>
               <button
                 type="button"
                 className="chatbot-window__file-remove"
@@ -352,13 +378,13 @@ const ChatbotWindow = ({
         </div>
       )}
 
-      <ChatInput 
-        onSend={handleSendWithFiles} 
+      <ChatInput
+        onSend={handleSendWithFiles}
         disabled={loading}
         onFileUpload={handleFileUpload}
         hasFiles={selectedFiles.length > 0}
       />
-      
+
       {/* 숨겨진 파일 입력 */}
       <input
         type="file"
