@@ -1,158 +1,120 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  getNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  deleteNotification,
-} from '../services/notificationService';
+  getMyNotifications,
+  checkNotifications,
+  startNotificationPolling,
+  stopNotificationPolling,
+  requestNotificationPermission,
+} from '../services/notificationApiService';
 import './Notifications.css';
 
-// 상대 시간 포맷팅 함수
-const formatTimeAgo = (date) => {
+// 시간 포맷팅 함수 (실제 알림 시간 표시)
+const formatNotificationTime = (dateStr) => {
+  const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now - date;
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   
+  // 미래 시간인 경우 (아직 예약된 알림)
+  if (diffMs < 0) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const mins = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${mins} 예정`;
+  }
+  
+  // 과거 시간인 경우
   if (diffMins < 1) return '방금 전';
   if (diffMins < 60) return `${diffMins}분 전`;
   if (diffHours < 24) return `${diffHours}시간 전`;
-  return `${diffDays}일 전`;
-};
-
-// 초기 알림 데이터 가져오기
-const getInitialNotifications = () => {
-  const stored = getNotifications();
-  if (stored.length > 0) {
-    return stored.map(n => ({
-      ...n,
-      time: formatTimeAgo(new Date(n.timestamp)),
-    }));
-  }
-  // 샘플 데이터 (처음 실행 시)
-  return [
-    {
-      id: 1,
-      type: 'deadline',
-      title: '과제 마감 임박',
-      message: '프로그래밍 과제가 2시간 후에 마감됩니다.',
-      time: '10분 전',
-      timestamp: new Date(Date.now() - 10 * 60000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: 2,
-      type: 'reminder',
-      title: '일정 알림',
-      message: '팀 미팅이 30분 후에 시작됩니다.',
-      time: '25분 전',
-      timestamp: new Date(Date.now() - 25 * 60000).toISOString(),
-      isRead: false,
-    },
-    {
-      id: 3,
-      type: 'complete',
-      title: '할 일 완료',
-      message: '보고서 작성을 완료했습니다!',
-      time: '1시간 전',
-      timestamp: new Date(Date.now() - 60 * 60000).toISOString(),
-      isRead: true,
-    },
-    {
-      id: 4,
-      type: 'briefing',
-      title: 'AI 데일리 브리핑',
-      message: '오늘 할 일 3개 (긴급 1개). 화이팅!',
-      time: '2시간 전',
-      timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
-      isRead: true,
-    },
-  ];
+  if (diffDays < 7) return `${diffDays}일 전`;
+  
+  // 7일 이상이면 날짜 표시
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${month}/${day}`;
 };
 
 const Notifications = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(getInitialNotifications);
-  const [filter, setFilter] = useState('all'); // 'all' | 'unread'
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // 필터링된 알림 목록
-  const filteredNotifications = useMemo(() => {
-    if (filter === 'unread') {
-      return notifications.filter(n => !n.isRead);
-    }
-    return notifications;
-  }, [notifications, filter]);
-
-  const getIcon = (type) => {
-    switch (type) {
-      case 'deadline':
-        return (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-        );
-      case 'reminder':
-        return (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-        );
-      case 'complete':
-        return (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        );
-      case 'briefing':
-        return (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="5" />
-            <line x1="12" y1="1" x2="12" y2="3" />
-            <line x1="12" y1="21" x2="12" y2="23" />
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-            <line x1="1" y1="12" x2="3" y2="12" />
-            <line x1="21" y1="12" x2="23" y2="12" />
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-          </svg>
-        );
-      default:
-        return (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-        );
+  // 알림 목록 로드
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const response = await getMyNotifications(50, true);
+      // API 응답: { status, message, data: [...] }
+      // axios response: { data: { status, message, data: [...] } }
+      const responseData = response?.data;
+      if (responseData?.status === 200 && Array.isArray(responseData?.data)) {
+        setNotifications(responseData.data);
+      } else {
+        setNotifications([]);
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleMarkAsRead = (id) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, isRead: true } : n))
-    );
-    markNotificationAsRead(id);
+  useEffect(() => {
+    // 알림 권한 요청
+    requestNotificationPermission();
+    
+    // 알림 목록 로드
+    loadNotifications();
+    
+    // 폴링 시작 (새 알림 수신 시 목록 새로고침)
+    startNotificationPolling((newNotification) => {
+      setNotifications(prev => Array.isArray(prev) ? [newNotification, ...prev] : [newNotification]);
+    });
+    
+    return () => {
+      stopNotificationPolling();
+    };
+  }, []);
+
+  // 읽지 않은 알림 수
+  const unreadCount = useMemo(() => 
+    Array.isArray(notifications) ? notifications.filter(n => !n.is_checked).length : 0, 
+    [notifications]
+  );
+
+  // 알림 확인 처리
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await checkNotifications([notificationId]);
+      setNotifications(prev => 
+        prev.map(n => n.notification_id === notificationId ? { ...n, is_checked: true } : n)
+      );
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    markAllNotificationsAsRead();
+  // 모두 읽음 처리
+  const handleMarkAllAsRead = async () => {
+    if (!Array.isArray(notifications)) return;
+    const unreadIds = notifications.filter(n => !n.is_checked).map(n => n.notification_id);
+    if (unreadIds.length === 0) return;
+    
+    try {
+      await checkNotifications(unreadIds);
+      setNotifications(prev => Array.isArray(prev) ? prev.map(n => ({ ...n, is_checked: true })) : []);
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
-
-  const handleDelete = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    deleteNotification(id);
-  };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <div className="notifications">
+      {/* 헤더 - 기존 디자인 유지 */}
       <div className="notifications__header">
         <button className="notifications__back" onClick={() => navigate(-1)}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -176,72 +138,53 @@ const Notifications = () => {
           </svg>
           <h1 className="notifications__title">알림</h1>
         </div>
-        {unreadCount > 0 && (
-          <button className="notifications__mark-all" onClick={handleMarkAllAsRead}>
-            모두 읽음
-          </button>
+        <button 
+          className="notifications__mark-all" 
+          onClick={handleMarkAllAsRead}
+          disabled={unreadCount === 0}
+        >
+          모두 읽음
+        </button>
+      </div>
+
+      {/* 토스 스타일 알림 목록 */}
+      <div className="notifications__toss-content">
+        {/* 새로운 알림 없음 섹션 */}
+        {unreadCount === 0 && (
+          <div className="notifications__section-header">
+            새로운 알림이 없어요
+          </div>
         )}
-      </div>
 
-      {/* 필터 버튼 */}
-      <div className="notifications__filter">
-        <button
-          className={`notifications__filter-btn ${filter === 'all' ? 'notifications__filter-btn--active' : ''}`}
-          onClick={() => setFilter('all')}
-        >
-          전체
-          <span className="notifications__filter-count">{notifications.length}</span>
-        </button>
-        <button
-          className={`notifications__filter-btn ${filter === 'unread' ? 'notifications__filter-btn--active' : ''}`}
-          onClick={() => setFilter('unread')}
-        >
-          읽지 않음
-          {unreadCount > 0 && (
-            <span className="notifications__filter-count notifications__filter-count--unread">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      <div className="notifications__content">
-        {filteredNotifications.length === 0 ? (
-          <div className="notifications__empty">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            <p>{filter === 'unread' ? '읽지 않은 알림이 없습니다' : '새로운 알림이 없습니다'}</p>
+        {loading ? (
+          <div className="notifications__loading">
+            <div className="notifications__spinner"></div>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="notifications__empty-toss">
+            <p>아직 알림이 없어요</p>
           </div>
         ) : (
-          <div className="notifications__list">
-            {filteredNotifications.map(notification => (
-              <div
-                key={notification.id}
-                className={`notification-item ${!notification.isRead ? 'notification-item--unread' : ''}`}
-                onClick={() => handleMarkAsRead(notification.id)}
+          <div className="notifications__toss-list">
+            {notifications.map((notification) => (
+              <div 
+                key={notification.notification_id} 
+                className="notifications__toss-item"
+                onClick={() => handleMarkAsRead(notification.notification_id)}
               >
-                <div className={`notification-item__icon notification-item__icon--${notification.type}`}>
-                  {getIcon(notification.type)}
-                </div>
-                <div className="notification-item__content">
-                  <h3 className="notification-item__title">{notification.title}</h3>
-                  <p className="notification-item__message">{notification.message}</p>
-                  <span className="notification-item__time">{notification.time}</span>
-                </div>
-                <button
-                  className="notification-item__delete"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(notification.id);
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
+                <div className="notifications__toss-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
                   </svg>
-                </button>
+                </div>
+                <div className="notifications__toss-content-wrap">
+                  <div className="notifications__toss-header">
+                    <span className="notifications__toss-source">일정 알림</span>
+                    <span className="notifications__toss-time">{formatNotificationTime(notification.notify_at)}</span>
+                  </div>
+                  <p className="notifications__toss-message">{notification.message}</p>
+                </div>
               </div>
             ))}
           </div>

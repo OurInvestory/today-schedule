@@ -13,6 +13,7 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import { ToastProvider } from './components/common/Toast';
 import NetworkStatus from './components/common/NetworkStatus';
 import { initNotificationService, cleanupNotificationService } from './services/notificationService';
+import { startNotificationPolling, stopNotificationPolling, requestNotificationPermission as requestApiNotificationPermission } from './services/notificationApiService';
 import './App.css';
 
 // 알림 권한 요청 함수
@@ -42,6 +43,9 @@ function App() {
         console.log('알림 권한이 허용되었습니다.');
         // 알림 서비스 초기화 (마감 알림, 데일리 브리핑 스케줄러 시작)
         initNotificationService();
+        // 백엔드 알림 폴링 시작
+        requestApiNotificationPermission();
+        startNotificationPolling();
       } else {
         console.log('알림 권한이 거부되었습니다.');
       }
@@ -50,6 +54,7 @@ function App() {
     // 클린업
     return () => {
       cleanupNotificationService();
+      stopNotificationPolling();
     };
   }, []);
 

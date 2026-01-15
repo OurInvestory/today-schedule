@@ -8,29 +8,33 @@
 
 ## ✨ 주요 기능
 
-### 🤖 AI 챗봇 (watsonx.ai 기반)
+### 🤖 AI 챗봇 (watsonx.ai Llama 3.3 70B)
 - **자연어 일정 추가**: "다음 주 수요일까지 자료구조 과제" → AI가 자동 파싱하여 일정 등록
 - **다중 일정 처리**: 여러 일정을 한 번에 인식하고 개별 확인/취소 가능
-- **알림 예약**: "내일 오전 9시에 알려줘" → 푸시 알림 자동 예약
+- **알림 예약**: "회의 10분 전에 알림 예약해줘" → 일정 선택 후 푸시 알림 자동 예약
+- **우선순위 추천**: "우선순위 높은 일정 추천해줘" → 중요 일정 목록 표시
 - **일정 검색/조회**: "이번 주 일정 알려줘", "오늘 할 일 뭐야?"
 
 ### 📷 이미지 인식 (Vision AI)
+- **시간표 인식**: "시간표 사진에 있는 강의 추가해줘" → 대학 시간표 이미지에서 강의 자동 추출
 - **시험/과제 일정표 자동 추출**: 이미지에서 일정을 인식하여 자동 등록
 - **공모전 포스터 분석**: 대회 일정, 마감기한, 세부 일정(Sub-task) 자동 생성
-- **시간표 인식**: 대학 시간표 이미지 → 주간 강의 시간표 자동 등록
 
 ### 📅 캘린더 & 시간표
-- **월간 캘린더**: 전체 일정 한눈에 확인
-- **주간 시간표**: 강의 시간표 관리, 다중 시간대 지원 (예: 월/목 다른 시간)
-- **Google Calendar 연동**: 외부 캘린더와 동기화
+- **월간 캘린더**: 전체 일정 한눈에 확인, 날짜별 일정 표시
+- **주간 시간표**: 강의 시간표 관리, 드래그 앤 드롭으로 시간 수정
+- **Google Calendar 연동**: 외부 캘린더와 동기화 (설정에서 연결)
 
-### 🔔 스마트 알림
+### 🔔 스마트 알림 시스템
+- **백엔드 알림 API**: 알림 예약, 조회, 확인 처리 (1분 폴링)
+- **브라우저 푸시 알림**: Web Notification API 활용
 - **마감 임박 알림**: D-day 기반 자동 리마인더
-- **커스텀 알림**: 원하는 시간에 맞춤 알림 설정
+- **AI 데일리 브리핑**: 매일 설정된 시간에 오늘 일정 요약 알림
+- **토스 스타일 알림 페이지**: 깔끔한 알림 목록 UI
 
 ### 📊 우선순위 관리
 - **AI 기반 우선순위 추천**: 마감기한, 소요 시간, 중요도 분석
-- **카테고리 분류**: 과제, 시험, 팀플, 대외활동 자동 분류
+- **카테고리 분류**: 수업, 과제, 시험, 팀플, 대외활동 자동 분류
 - **Sub-task 관리**: 큰 일정을 세부 작업으로 분할
 
 ## 🛠 기술 스택
@@ -39,22 +43,24 @@
 - **React 18.2**: UI 라이브러리
 - **Vite 5.0**: 빌드 도구 및 개발 서버
 - **Axios**: HTTP 클라이언트
-- **date-fns**: 날짜 처리
+- **React Router**: 클라이언트 라우팅
+- **Web Notification API**: 브라우저 푸시 알림
 
 ### Backend
 - **FastAPI**: Python 웹 프레임워크
-- **MySQL**: 관계형 데이터베이스
+- **MySQL 8.0**: 관계형 데이터베이스
 - **Alembic**: 데이터베이스 마이그레이션
 - **SQLAlchemy**: ORM
+- **Pydantic**: 데이터 검증
 
 ### AI / Cloud
-- **IBM watsonx.ai**: 자연어 처리, 일정 분석
-- **IBM Cloud Functions**: 서버리스 백엔드
+- **IBM watsonx.ai**: Llama 3.3 70B 모델 (자연어 처리, 일정 분석)
+- **IBM Cloud**: 클라우드 인프라
 - **Google Calendar API**: 캘린더 연동
 
 ### DevOps
-- **Docker & Docker Compose**: 컨테이너화
-- **GitHub Actions**: CI/CD
+- **Docker & Docker Compose**: 컨테이너화 (frontend, backend, db)
+- **GitHub**: 버전 관리
 
 ## 👥 팀 구성
 
@@ -74,8 +80,33 @@
 git clone https://github.com/ibm-ai-hackathon/five-today-schedule.git
 cd five-today-schedule
 
+# .env 파일 설정 (아래 환경 변수 참고)
+
 # Docker Compose로 실행
-docker-compose up --build
+docker-compose up -d --build
+
+# 접속
+# Frontend: http://localhost:5173
+# Backend API: http://localhost:8000
+# API 문서: http://localhost:8000/docs
+```
+
+### 환경 변수 (.env)
+
+```env
+# Database
+DATABASE_URL=mysql+pymysql://root:1869@db:3306/five_today_schedule
+MYSQL_ROOT_PASSWORD=1869
+MYSQL_DATABASE=five_today_schedule
+
+# IBM watsonx.ai
+WATSONX_API_KEY=your_api_key
+WATSONX_URL=https://us-south.ml.cloud.ibm.com/
+WATSONX_PROJECT_ID=your_project_id
+WATSONX_MODEL_ID=meta-llama/llama-3-3-70b-instruct
+
+# Frontend
+VITE_API_BASE_URL=http://localhost:8000/api
 ```
 
 ### 개별 실행

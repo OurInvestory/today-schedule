@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getNotificationSettings, updateNotificationSettings } from '../services/notificationService';
+import { getNotificationSettings, updateNotificationSettings, triggerDailyBriefing } from '../services/notificationService';
 import { getGoogleAuthStatus, initiateGoogleAuth, disconnectGoogleCalendar } from '../services/calendarService';
 import { t, getCurrentLanguage } from '../utils/i18n';
 import './Settings.css';
@@ -70,7 +70,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
 
   const [connectedAccounts, setConnectedAccounts] = useState({
-    google: { connected: false, email: null },
+    google: { connected: true, email: 'demo@five-today.com' },
     kakao: { connected: false, email: null },
     naver: { connected: false, email: null },
   });
@@ -590,6 +590,28 @@ const Settings = () => {
                   value={settings.dailySummaryTime || '08:00'}
                   onChange={(e) => handleSelectChange('dailySummaryTime', e.target.value)}
                 />
+              </div>
+            )}
+
+            {settings.dailySummary && (
+              <div className="settings-item settings-item--sub">
+                <div className="settings-item__text">
+                  <span className="settings-item__label">브리핑 테스트</span>
+                  <span className="settings-item__desc">지금 바로 브리핑 알림을 받아봅니다</span>
+                </div>
+                <button
+                  className="settings-item__button"
+                  onClick={async () => {
+                    const result = await triggerDailyBriefing();
+                    if (result) {
+                      alert('브리핑 전송 완료! 알림을 확인하세요.');
+                    } else {
+                      alert('브리핑 전송 실패. 알림 권한을 확인하세요.');
+                    }
+                  }}
+                >
+                  테스트
+                </button>
               </div>
             )}
           </div>
