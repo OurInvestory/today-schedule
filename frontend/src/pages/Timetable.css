@@ -278,7 +278,8 @@
   cursor: pointer;
   overflow: hidden;
   z-index: 1;
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition: transform var(--transition-base),
+    box-shadow var(--transition-base);
   display: flex;
   flex-direction: column;
   gap: 2px;

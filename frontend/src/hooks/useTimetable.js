@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  getLectures, 
-  createLecture, 
-  updateLecture, 
+import {
+  getLectures,
+  createLecture,
+  updateLecture,
   deleteLecture,
   getWeekNumber,
-  getWeekRange 
+  getWeekRange,
 } from '../services/lectureService';
 import { formatDate } from '../utils/dateUtils';
 
@@ -17,16 +17,16 @@ export const useTimetable = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   // 현재 주의 시작/종료일
   const { startOfWeek, endOfWeek } = getWeekRange(currentDate);
-  
+
   // 현재 주차 번호
   const weekNumber = getWeekNumber(currentDate);
   const year = currentDate.getFullYear();
 
   // 토/일 강의가 있는지 확인 (백엔드: 0=월, 5=토, 6=일)
-  const hasWeekendLectures = lectures.some(lecture => {
+  const hasWeekendLectures = lectures.some((lecture) => {
     const weekDays = lecture.week || [];
     return weekDays.includes(5) || weekDays.includes(6); // 5=토, 6=일
   });
@@ -38,8 +38,8 @@ export const useTimetable = () => {
   const calculateTimeRange = useCallback(() => {
     let minHour = 9;
     let maxHour = 17;
-    
-    lectures.forEach(lecture => {
+
+    lectures.forEach((lecture) => {
       if (lecture.start_time) {
         const startHour = parseInt(lecture.start_time.split(':')[0], 10);
         minHour = Math.min(minHour, startHour);
@@ -51,7 +51,7 @@ export const useTimetable = () => {
         maxHour = Math.max(maxHour, endMinute > 0 ? endHour + 1 : endHour);
       }
     });
-    
+
     return { minHour, maxHour };
   }, [lectures]);
 
@@ -61,16 +61,16 @@ export const useTimetable = () => {
   const fetchLectures = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const from = formatDate(startOfWeek, 'YYYY-MM-DD');
       const to = formatDate(endOfWeek, 'YYYY-MM-DD');
-      
+
       const response = await getLectures(from, to);
-      
+
       // response 구조에 따라 처리
       let lectureData = [];
-      
+
       if (response) {
         // { status: 200, data: [...] } 형식
         if (response.status === 200 && response.data) {
@@ -85,7 +85,7 @@ export const useTimetable = () => {
           lectureData = response;
         }
       }
-      
+
       setLectures(Array.isArray(lectureData) ? lectureData : []);
     } catch (err) {
       console.error('Failed to fetch lectures:', err);
@@ -144,7 +144,12 @@ export const useTimetable = () => {
     try {
       const response = await deleteLecture(lectureId);
       // lectureService는 response.data를 반환하므로 response 자체가 {status, data, message}
-      if (response && (response.status === 200 || response.status === 201 || response.status === 204)) {
+      if (
+        response &&
+        (response.status === 200 ||
+          response.status === 201 ||
+          response.status === 204)
+      ) {
         await fetchLectures();
         return response;
       }
@@ -181,7 +186,7 @@ export const useTimetable = () => {
 
   // 특정 요일의 강의 목록 가져오기
   const getLecturesForDay = (dayOfWeek) => {
-    return lectures.filter(lecture => {
+    return lectures.filter((lecture) => {
       const weekDays = lecture.week || [];
       return weekDays.includes(dayOfWeek);
     });
