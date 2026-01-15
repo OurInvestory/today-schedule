@@ -215,10 +215,11 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
               <div className="chat-message__lectures-list">
                 <ul className="chat-message__lecture-items">
                   {message.lectures.map((lecture, idx) => {
-                    const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
+                    // 백엔드: 0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일
+                    const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
                     const weekDays = Array.isArray(lecture.week) 
                       ? lecture.week.map(w => dayNames[w] || w).join(', ') 
-                      : (dayNames[lecture.week] || lecture.week);
+                      : (dayNames[lecture.week] ?? lecture.week);
                     
                     return (
                       <li key={idx} className="chat-message__lecture-item">

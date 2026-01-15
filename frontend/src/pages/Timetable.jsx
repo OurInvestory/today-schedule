@@ -8,15 +8,15 @@ import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import './Timetable.css';
 
-// 요일 라벨
+// 요일 라벨 (백엔드: 0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일)
 const DAY_LABELS = {
-  0: '일',
-  1: '월',
-  2: '화',
-  3: '수',
-  4: '목',
-  5: '금',
-  6: '토',
+  0: '월',
+  1: '화',
+  2: '수',
+  3: '목',
+  4: '금',
+  5: '토',
+  6: '일',
 };
 
 // 기본 시간 슬롯

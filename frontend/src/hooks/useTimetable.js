@@ -25,16 +25,14 @@ export const useTimetable = () => {
   const weekNumber = getWeekNumber(currentDate);
   const year = currentDate.getFullYear();
 
-  // 토/일 강의가 있는지 확인
+  // 토/일 강의가 있는지 확인 (백엔드: 0=월, 5=토, 6=일)
   const hasWeekendLectures = lectures.some(lecture => {
     const weekDays = lecture.week || [];
-    return weekDays.includes(0) || weekDays.includes(6); // 0=일, 6=토
+    return weekDays.includes(5) || weekDays.includes(6); // 5=토, 6=일
   });
 
-  // 표시할 요일 결정 (기본 월~금, 주말 강의 있으면 월~일)
-  const displayDays = hasWeekendLectures 
-    ? [1, 2, 3, 4, 5, 6, 0] // 월~일
-    : [1, 2, 3, 4, 5];       // 월~금
+  // 표시할 요일 결정 (항상 월~일 7일 표시)
+  const displayDays = [0, 1, 2, 3, 4, 5, 6]; // 월~일
 
   // 시간 범위 계산 (기본 9~17시, 강의에 따라 확장)
   const calculateTimeRange = useCallback(() => {
@@ -189,12 +187,11 @@ export const useTimetable = () => {
     });
   };
 
-  // 특정 요일의 날짜 계산
+  // 특정 요일의 날짜 계산 (백엔드: 0=월, 1=화, ..., 6=일)
   const getDateForDay = (dayOfWeek) => {
     const date = new Date(startOfWeek);
-    // 월요일(1)부터 시작하므로 조정
-    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    date.setDate(date.getDate() + diff);
+    // startOfWeek은 월요일, dayOfWeek 0=월이므로 그대로 더하면 됨
+    date.setDate(date.getDate() + dayOfWeek);
     return date;
   };
 
