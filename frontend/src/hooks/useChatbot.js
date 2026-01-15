@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage, createLectureFromAI, saveLectures } from '../services/aiService';
+import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage, createLectureFromAI, saveLectures, searchSchedulesByKeyword } from '../services/aiService';
 import { scheduleReminder, scheduleReminderForSchedule } from '../services/notificationService';
 
 // localStorage 키
@@ -58,6 +58,45 @@ const loadingMessages = [
 // 랜덤 로딩 메시지 가져오기
 export const getRandomLoadingMessage = () => {
   return loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+};
+
+// 빠른 패턴 매칭: "알림 예약" 패턴 감지
+const NOTIFICATION_PATTERN = /(.+?)\s*(\d+)\s*분\s*전에?\s*알림/;
+const TIMETABLE_PATTERN = /시간표.*사진|사진.*시간표|강의.*추가/;
+
+// 빠른 알림 예약 처리 (LLM 호출 없이 로컬에서 처리)
+const handleQuickNotificationRequest = async (text) => {
+  const match = text.match(NOTIFICATION_PATTERN);
+  if (!match) return null;
+  
+  const keyword = match[1].trim(); // "회의" 등의 키워드
+  const minutesBefore = parseInt(match[2], 10);
+  
+  // 키워드로 일정 검색
+  const schedules = await searchSchedulesByKeyword(keyword);
+  
+  if (schedules.length === 0) {
+    return {
+      type: 'NO_SCHEDULES',
+      keyword,
+      minutesBefore,
+      message: `'${keyword}' 키워드가 포함된 예정된 일정을 찾지 못했어요. 다른 키워드로 검색하거나 일정을 먼저 추가해주세요.`,
+    };
+  }
+  
+  // 일정 목록 반환 (사용자가 선택할 수 있도록)
+  return {
+    type: 'SCHEDULE_LIST',
+    keyword,
+    minutesBefore,
+    schedules: schedules.map(s => ({
+      id: s.schedule_id || s.id,
+      title: s.title,
+      start_at: s.start_at,
+      end_at: s.end_at,
+    })),
+    message: `'${keyword}' 키워드가 포함된 일정을 찾았어요! 📋\n알림을 설정할 일정을 선택해주세요.`,
+  };
 };
 
 // localStorage에서 메시지 불러오기
@@ -144,19 +183,6 @@ export const useChatbot = () => {
     // 재시도를 위한 마지막 메시지 저장
     setLastUserMessage({ text, selectedScheduleId, files });
 
-    // 이미지 파일 분석
-    let imageAnalysisResult = null;
-    const imageFiles = files ? Array.from(files).filter(f => f.type.startsWith('image/')) : [];
-    
-    if (imageFiles.length > 0) {
-      try {
-        // 첫 번째 이미지 분석 (시간표 감지)
-        imageAnalysisResult = await analyzeTimetableImage(imageFiles[0]);
-      } catch (error) {
-        console.error('Image analysis failed:', error);
-      }
-    }
-
     // 파일 정보 생성 (미리보기 URL 포함)
     const fileInfo = files ? Array.from(files).map(f => {
       const info = { 
@@ -174,16 +200,12 @@ export const useChatbot = () => {
     }) : null;
 
     // 사용자 메시지 추가
-    // 시간표 이미지 분석인 경우 적절한 메시지 사용
-    let userContent = text;
-    if (!text && imageFiles.length > 0) {
-      userContent = '시간표 사진에 있는 강의 추가해줘';
-    }
+    let userContent = text || '시간표 사진에 있는 강의 추가해줘';
     
     const userMessage = {
       id: Date.now(),
       role: 'user',
-      content: userContent || '이미지를 분석해주세요',
+      content: userContent,
       timestamp: new Date().toISOString(),
       files: fileInfo,
     };
@@ -193,57 +215,104 @@ export const useChatbot = () => {
     setError(null);
 
     try {
-      // 이미지 파일이 있으면 이미지 분석 결과를 사용
-      if (imageAnalysisResult && imageAnalysisResult.success) {
-        let actions = imageAnalysisResult.actions || imageAnalysisResult.parsedResult?.actions || [];
-        const lectures = imageAnalysisResult.lectures || [];
+      // 이미지 파일이 있는 경우 시간표 분석
+      const imageFiles = files ? Array.from(files).filter(f => f.type.startsWith('image/')) : [];
+      
+      if (imageFiles.length > 0) {
+        // 시간표 이미지 분석
+        const imageAnalysisResult = await analyzeTimetableImage(imageFiles[0]);
         
-        // lectures가 있으면 SCHEDULE 액션들 대신 lectures 기반 일정 추가 UI 표시
-        // 백엔드 응답의 parsedResult.actions에 일정 데이터가 있음
-        
-        // 이미지 분석 결과로 일정/할 일 추출 성공
-        let displayMessage = '이미지를 분석했지만 일정을 찾지 못했어요. 📸';
-        
-        // actions가 있으면 일정 추가 UI를 표시하기 위한 메시지 구성
-        if (actions.length > 0) {
-          // 강의(LECTURES 타겟), 일정(SCHEDULE 타겟), 할 일(SUB_TASK 타겟) 카운트
-          const lecturesAction = actions.find(a => a.target === 'LECTURES');
-          const lectureCount = lecturesAction 
-            ? (Array.isArray(lecturesAction.payload) ? lecturesAction.payload.length : 1) 
-            : 0;
+        if (imageAnalysisResult && imageAnalysisResult.success) {
+          let actions = imageAnalysisResult.actions || imageAnalysisResult.parsedResult?.actions || [];
+          const lectures = imageAnalysisResult.lectures || [];
           
-          // SCHEDULE 타겟인 액션 (일정으로 추가될 항목들)
-          const scheduleActions = actions.filter(a => a.target === 'SCHEDULE' || (a.payload?.type === 'EVENT' && a.target !== 'LECTURES'));
-          const scheduleCount = scheduleActions.length;
+          let displayMessage = '이미지를 분석했지만 강의 정보를 찾지 못했어요. 📸\n다른 이미지로 다시 시도해주세요.';
           
-          // SUB_TASK 타겟인 액션 (할 일로 추가될 항목들)
-          const taskActions = actions.filter(a => a.target === 'SUB_TASK' || a.payload?.type === 'TASK');
-          const taskCount = taskActions.length;
-          
-          const totalCount = lectureCount + scheduleCount + taskCount;
-          const parts = [];
-          if (lectureCount > 0) parts.push(`강의 ${lectureCount}개`);
-          if (scheduleCount > 0) parts.push(`일정 ${scheduleCount}개`);
-          if (taskCount > 0) parts.push(`할 일 ${taskCount}개`);
-          
-          if (parts.length > 0) {
-            displayMessage = `이미지에서 ${parts.join(', ')}를 발견했어요! 📸\n시간표에 추가할까요?`;
+          // lectures 배열이 있으면 강의 추가 UI 표시
+          if (lectures && lectures.length > 0) {
+            // lectures를 LECTURES 타겟 액션으로 변환
+            const lecturesAction = {
+              op: 'CREATE',
+              target: 'LECTURES',
+              payload: lectures
+            };
+            // 기존 actions에 lectures 액션 추가 (중복 방지)
+            const hasLecturesAction = actions.some(a => a.target === 'LECTURES');
+            if (!hasLecturesAction) {
+              actions = [lecturesAction, ...actions.filter(a => a.payload?.type !== 'EVENT')];
+            }
+            
+            // 강의 정보 리스트 포맷팅
+            const lectureList = lectures.map((l, idx) => {
+              const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
+              const weekDays = Array.isArray(l.week) ? l.week.map(w => dayNames[w] || w).join(', ') : (dayNames[l.week] || l.week);
+              return `• ${l.title} (${weekDays}요일 ${l.startTime}~${l.endTime})`;
+            }).join('\n');
+            
+            displayMessage = `이미지에서 강의 정보를 찾았어요! 📚\n\n${lectureList}\n\n시간표에 추가할까요?`;
           }
+          
+          const newAssistantMessage = {
+            id: Date.now() + 1,
+            role: 'assistant',
+            content: displayMessage,
+            timestamp: new Date().toISOString(),
+            parsedResult: imageAnalysisResult.parsedResult,
+            actions: actions,
+            imageAnalysis: imageAnalysisResult,
+            lectures: lectures,
+          };
+          setMessages(prev => [...prev, newAssistantMessage]);
+          setLoading(false);
+          return;
+        } else {
+          // 이미지 분석 실패
+          const errorMessage = {
+            id: Date.now() + 1,
+            role: 'assistant',
+            content: '이미지 분석에 실패했어요. 😢\n시간표가 잘 보이는 선명한 이미지로 다시 시도해주세요.',
+            timestamp: new Date().toISOString(),
+          };
+          setMessages(prev => [...prev, errorMessage]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 빠른 알림 예약 패턴 감지 (LLM 호출 없이 로컬에서 처리)
+      const notificationResult = await handleQuickNotificationRequest(text);
+      
+      if (notificationResult) {
+        if (notificationResult.type === 'NO_SCHEDULES') {
+          // 일정을 찾지 못한 경우
+          const noScheduleMessage = {
+            id: Date.now() + 1,
+            role: 'assistant',
+            content: notificationResult.message,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages(prev => [...prev, noScheduleMessage]);
+          setLoading(false);
+          return;
         }
         
-        const newAssistantMessage = {
-          id: Date.now() + 1,
-          role: 'assistant',
-          content: displayMessage,
-          timestamp: new Date().toISOString(),
-          parsedResult: imageAnalysisResult.parsedResult,
-          actions: actions,
-          imageAnalysis: imageAnalysisResult,
-          lectures: lectures, // lectures 데이터 추가
-        };
-        setMessages(prev => [...prev, newAssistantMessage]);
-        setLoading(false);
-        return;
+        if (notificationResult.type === 'SCHEDULE_LIST') {
+          // 일정 목록을 보여주고 사용자가 선택하게 함
+          const scheduleListMessage = {
+            id: Date.now() + 1,
+            role: 'assistant',
+            content: notificationResult.message,
+            timestamp: new Date().toISOString(),
+            notificationRequest: {
+              keyword: notificationResult.keyword,
+              minutesBefore: notificationResult.minutesBefore,
+              schedules: notificationResult.schedules,
+            },
+          };
+          setMessages(prev => [...prev, scheduleListMessage]);
+          setLoading(false);
+          return;
+        }
       }
 
       // 이전 CLARIFY 컨텍스트 확인 (마지막 assistant 메시지에서)
@@ -593,39 +662,45 @@ export const useChatbot = () => {
       };
       setMessages(prev => [...prev, cancelMessage]);
     } else if (actionIndex !== null) {
-      // 개별 액션 취소
-      let actionTitle = '';
-      setMessages(prev => prev.map(msg => {
-        if (msg.id !== messageId) return msg;
+      // 개별 액션 취소 - 먼저 제목을 찾고 나서 상태 업데이트
+      setMessages(prev => {
+        // 취소된 액션의 제목 찾기
+        const targetMsg = prev.find(msg => msg.id === messageId);
+        const actionTitle = targetMsg?.actions?.[actionIndex]?.payload?.title || 
+                           targetMsg?.actions?.[actionIndex]?.payload?.name || 
+                           '항목';
         
-        // 취소된 액션의 제목 저장
-        actionTitle = msg.actions?.[actionIndex]?.payload?.title || '항목';
+        // 메시지 업데이트
+        const updatedMessages = prev.map(msg => {
+          if (msg.id !== messageId) return msg;
+          
+          const newCompletedActions = { 
+            ...msg.completedActions, 
+            [actionIndex]: 'cancelled' 
+          };
+          
+          // 모든 액션이 완료되었는지 확인
+          const totalActions = msg.actions?.length || 0;
+          const completedCount = Object.keys(newCompletedActions).length;
+          const allCompleted = completedCount === totalActions;
+          
+          return { 
+            ...msg, 
+            completedActions: newCompletedActions,
+            actionCompleted: allCompleted ? 'partial' : msg.actionCompleted
+          };
+        });
         
-        const newCompletedActions = { 
-          ...msg.completedActions, 
-          [actionIndex]: 'cancelled' 
+        // 취소 메시지 추가
+        const cancelMessage = {
+          id: Date.now(),
+          role: 'assistant',
+          content: `'${actionTitle}' 항목이 취소되었습니다.`,
+          timestamp: new Date().toISOString(),
         };
         
-        // 모든 액션이 완료되었는지 확인
-        const totalActions = msg.actions?.length || 0;
-        const completedCount = Object.keys(newCompletedActions).length;
-        const allCompleted = completedCount === totalActions;
-        
-        return { 
-          ...msg, 
-          completedActions: newCompletedActions,
-          actionCompleted: allCompleted ? 'partial' : msg.actionCompleted
-        };
-      }));
-      
-      // 개별 취소 메시지 추가
-      const cancelMessage = {
-        id: Date.now(),
-        role: 'assistant',
-        content: `'${actionTitle}' 항목이 취소되었습니다.`,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, cancelMessage]);
+        return [...updatedMessages, cancelMessage];
+      });
     } else {
       // 전체 취소 (기존 로직, messageId만 전달된 경우)
       setMessages(prev => prev.map(msg => 
@@ -654,6 +729,71 @@ export const useChatbot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  // 알림 예약을 위한 일정 선택 처리
+  const selectScheduleForNotification = useCallback(async (messageId, schedule, minutesBefore) => {
+    // 선택한 일정에 대한 알림 예약
+    const startTime = schedule.start_at;
+    if (!startTime) {
+      const errorMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '해당 일정에 시작 시간이 설정되어 있지 않아 알림을 예약할 수 없어요. 😢',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+    
+    const scheduleStartTime = new Date(startTime);
+    const reminderTime = new Date(scheduleStartTime.getTime() - minutesBefore * 60 * 1000);
+    
+    // 이미 지난 시간인지 확인
+    if (reminderTime <= new Date()) {
+      const errorMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `'${schedule.title}' 일정의 ${minutesBefore}분 전은 이미 지났어요. 다른 일정을 선택해주세요.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+    
+    // 알림 예약
+    scheduleReminder({
+      title: `${schedule.title} 알림`,
+      message: `${minutesBefore}분 후에 '${schedule.title}'이(가) 시작됩니다!`,
+      scheduledTime: reminderTime.toISOString(),
+      scheduleId: schedule.id,
+    });
+    
+    // 원래 메시지의 상태 업데이트
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId 
+        ? { ...msg, notificationCompleted: true, selectedSchedule: schedule }
+        : msg
+    ));
+    
+    // 날짜/시간 포맷팅
+    const formatDateTime = (date) => {
+      const d = new Date(date);
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${month}월 ${day}일 ${hours}:${minutes}`;
+    };
+    
+    // 성공 메시지 추가
+    const successMessage = {
+      id: Date.now(),
+      role: 'assistant',
+      content: `'${schedule.title}' 일정 ${minutesBefore}분 전 알림이 예약되었습니다! 🔔\n알림 시간: ${formatDateTime(reminderTime)}`,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, successMessage]);
+  }, []);
 
   // 빠른 액션 (자주 사용하는 명령어)
   const quickActions = [
@@ -686,5 +826,6 @@ export const useChatbot = () => {
     cancelAction,
     retryLastMessage,
     lastUserMessage,
+    selectScheduleForNotification,
   };
 };

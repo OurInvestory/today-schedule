@@ -1,9 +1,6 @@
 import api from './api';
 
 /**
- * 챗봇 메시지 전송
- */
-/**
  * 서울 시간 기준으로 현재 날짜 가져오기
  */
 const getSeoulDate = () => {
@@ -22,6 +19,44 @@ const getSeoulDateString = () => {
   const month = String(seoulDate.getMonth() + 1).padStart(2, '0');
   const day = String(seoulDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+/**
+ * 키워드로 일정 검색 (마감일이 지나지 않은 최근 한 달 내)
+ */
+export const searchSchedulesByKeyword = async (keyword) => {
+  try {
+    const now = new Date();
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    const fromDate = oneMonthAgo.toISOString().split('T')[0];
+    const toDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 앞으로 30일
+    
+    const response = await api.get('/api/schedules', {
+      params: { from: fromDate, to: toDate },
+    });
+    
+    const schedules = response.data?.data || [];
+    
+    // 키워드 필터링 및 마감일이 지나지 않은 일정만 반환
+    const filtered = schedules.filter(schedule => {
+      const title = schedule.title?.toLowerCase() || '';
+      const matchesKeyword = title.includes(keyword.toLowerCase());
+      
+      // 마감일(end_at 또는 start_at)이 현재 시간 이후인 것만
+      const scheduleTime = schedule.start_at || schedule.end_at;
+      if (!scheduleTime) return matchesKeyword;
+      
+      const scheduleDate = new Date(scheduleTime);
+      return matchesKeyword && scheduleDate >= now;
+    });
+    
+    return filtered;
+  } catch (error) {
+    console.error('Failed to search schedules:', error);
+    return [];
+  }
 };
 
 export const sendChatMessage = async (

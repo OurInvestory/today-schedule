@@ -50,6 +50,7 @@ const Home = () => {
     clearMessages,
     retryLastMessage,
     lastUserMessage,
+    selectScheduleForNotification,
   } = useChatbot();
 
   const handleDateSelect = (date) => {
@@ -178,6 +179,7 @@ const Home = () => {
         onClearHistory={clearMessages}
         onRetry={retryLastMessage}
         canRetry={!!lastUserMessage}
+        onSelectScheduleForNotification={selectScheduleForNotification}
       />
 
       {/* Add Todo Modal */}

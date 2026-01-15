@@ -3,7 +3,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { CATEGORY_LABELS } from '../../utils/constants';
 import './ChatMessage.css';
 
-const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, onChoiceSelect }) => {
+const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, onChoiceSelect, onSelectScheduleForNotification }) => {
   const isUser = message.role === 'user';
   const isError = message.isError;
   const hasActions = message.actions && message.actions.length > 0;
@@ -166,8 +166,97 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
             </div>
           )}
           
-          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 (imageAnalysis가 있을 때) */}
-          {!isUser && message.imageAnalysis && message.actions && message.actions.length > 0 && !message.actionCompleted && (() => {
+          {/* 알림 예약을 위한 일정 선택 UI */}
+          {!isUser && message.notificationRequest && !message.notificationCompleted && (
+            <div className="chat-message__notification-schedules">
+              <div className="chat-message__schedule-select-list">
+                {message.notificationRequest.schedules.map((schedule) => {
+                  const startDate = schedule.start_at ? new Date(schedule.start_at) : null;
+                  const dateStr = startDate 
+                    ? `${startDate.getMonth() + 1}월 ${startDate.getDate()}일 ${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
+                    : '시간 미정';
+                  
+                  return (
+                    <button
+                      key={schedule.id}
+                      type="button"
+                      className="chat-message__schedule-select-btn"
+                      onClick={() => onSelectScheduleForNotification && onSelectScheduleForNotification(
+                        message.id,
+                        schedule,
+                        message.notificationRequest.minutesBefore
+                      )}
+                    >
+                      <span className="chat-message__schedule-title">{schedule.title}</span>
+                      <span className="chat-message__schedule-date">{dateStr}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          
+          {/* 알림 예약 완료 상태 표시 */}
+          {!isUser && message.notificationCompleted && message.selectedSchedule && (
+            <div className="chat-message__notification-completed">
+              <span className="chat-message__notification-badge">✅ 선택됨</span>
+              <span className="chat-message__notification-title">{message.selectedSchedule.title}</span>
+            </div>
+          )}
+          
+          {/* AI 이미지 분석 결과 - 강의 목록 표시 (lectures가 있을 때) */}
+          {!isUser && message.lectures && message.lectures.length > 0 && !message.actionCompleted && (() => {
+            const lecturesAction = message.actions?.find(a => a.target === 'LECTURES');
+            if (!lecturesAction) return null;
+            
+            const pendingCount = message.actions.filter((_, idx) => !completedActions[idx]).length;
+            
+            return (
+              <div className="chat-message__lectures-list">
+                <ul className="chat-message__lecture-items">
+                  {message.lectures.map((lecture, idx) => {
+                    const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
+                    const weekDays = Array.isArray(lecture.week) 
+                      ? lecture.week.map(w => dayNames[w] || w).join(', ') 
+                      : (dayNames[lecture.week] || lecture.week);
+                    
+                    return (
+                      <li key={idx} className="chat-message__lecture-item">
+                        <span className="chat-message__lecture-name">{lecture.title}</span>
+                        <span className="chat-message__lecture-time">
+                          {weekDays}요일 {lecture.startTime} ~ {lecture.endTime}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                
+                {pendingCount > 0 && (
+                  <div className="chat-message__lecture-actions">
+                    <button 
+                      type="button" 
+                      className="chat-message__action-btn chat-message__action-btn--confirm"
+                      onClick={() => handleConfirmAction(lecturesAction, 0)}
+                      disabled={message.actionLoading}
+                    >
+                      {message.actionLoading ? '추가 중...' : '✓ 확인'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="chat-message__action-btn chat-message__action-btn--cancel"
+                      onClick={handleCancelAll}
+                      disabled={message.actionLoading}
+                    >
+                      ✕ 취소
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          
+          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 (imageAnalysis가 있고 lectures가 없을 때) */}
+          {!isUser && message.imageAnalysis && message.actions && message.actions.length > 0 && !message.actionCompleted && !message.lectures?.length && (() => {
             // 완료/취소되지 않은 pending 액션 수 계산
             const pendingCount = message.actions.filter((_, idx) => !completedActions[idx]).length;
             const confirmedCount = Object.values(completedActions).filter(v => v === 'confirmed').length;

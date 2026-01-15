@@ -495,37 +495,109 @@
 
 /* 강의 목록 스타일 */
 .chat-message__lectures-list {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(59, 130, 246, 0.05);
+  margin-top: 12px;
+  padding: 12px;
+  background: #f0f7ff;
+  border: 1px solid #3182f6;
   border-radius: 8px;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
-.chat-message__lectures-list ul {
+.chat-message__lecture-items {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 0 0 12px 0;
 }
 
-.chat-message__lectures-list li {
+.chat-message__lecture-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
+  flex-direction: column;
+  padding: 8px 0;
   font-size: 13px;
   color: var(--color-gray-700);
-  border-bottom: 1px solid var(--color-gray-100);
+  border-bottom: 1px solid #e5e8eb;
 }
 
-.chat-message__lectures-list li:last-child {
+.chat-message__lecture-item:last-child {
   border-bottom: none;
+}
+
+.chat-message__lecture-name {
+  font-weight: 600;
+  color: #191f28;
 }
 
 .chat-message__lecture-time {
   font-size: 12px;
-  color: var(--color-gray-500);
-  margin-left: 8px;
-  white-space: nowrap;
+  color: #8b95a1;
+  margin-top: 2px;
+}
+
+.chat-message__lecture-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* 알림 예약 일정 선택 UI */
+.chat-message__notification-schedules {
+  margin-top: 12px;
+}
+
+.chat-message__schedule-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-message__schedule-select-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e8eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.chat-message__schedule-select-btn:hover {
+  background: #f0f7ff;
+  border-color: #3182f6;
+}
+
+.chat-message__schedule-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #191f28;
+}
+
+.chat-message__schedule-date {
+  font-size: 12px;
+  color: #8b95a1;
+}
+
+/* 알림 예약 완료 상태 */
+.chat-message__notification-completed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #22c55e;
+  border-radius: 8px;
+}
+
+.chat-message__notification-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.chat-message__notification-title {
+  font-size: 13px;
+  color: #191f28;
 }
