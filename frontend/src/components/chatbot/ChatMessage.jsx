@@ -348,6 +348,34 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
             );
           })()}
           
+          {/* 우선순위 높은 일정 목록 UI */}
+          {!isUser && message.parsedResult?.intent === 'PRIORITY_QUERY' && 
+           message.parsedResult?.preserved_info?.schedules?.length > 0 && (
+            <div className="chat-message__priority-schedules">
+              <ul className="chat-message__priority-items">
+                {message.parsedResult.preserved_info.schedules.map((schedule, idx) => {
+                  const endDate = schedule.end_at ? new Date(schedule.end_at) : null;
+                  const dateStr = endDate 
+                    ? `${endDate.getMonth() + 1}/${endDate.getDate()} ${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+                    : '';
+                  
+                  return (
+                    <li key={schedule.id || idx} className="chat-message__priority-item">
+                      <div className="chat-message__priority-info">
+                        <span className="chat-message__priority-category">[{schedule.category}]</span>
+                        <span className="chat-message__priority-title">{schedule.title}</span>
+                      </div>
+                      <span className="chat-message__priority-date">{dateStr}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="chat-message__priority-summary">
+                총 {message.parsedResult.preserved_info.total_count}건의 중요 일정이 있어요.
+              </div>
+            </div>
+          )}
+          
           {/* AI 추론 이유 표시 */}
           {!isUser && message.reasoning && (
             <div className="chat-message__reasoning">

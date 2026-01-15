@@ -242,14 +242,8 @@ export const useChatbot = () => {
               actions = [lecturesAction, ...actions.filter(a => a.payload?.type !== 'EVENT')];
             }
             
-            // 강의 정보 리스트 포맷팅
-            const lectureList = lectures.map((l, idx) => {
-              const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
-              const weekDays = Array.isArray(l.week) ? l.week.map(w => dayNames[w] || w).join(', ') : (dayNames[l.week] || l.week);
-              return `• ${l.title} (${weekDays}요일 ${l.startTime}~${l.endTime})`;
-            }).join('\n');
-            
-            displayMessage = `이미지에서 강의 정보를 찾았어요! 📚\n\n${lectureList}\n\n시간표에 추가할까요?`;
+            // 텍스트 리스트는 chat-message__lectures-list UI에서 표시하므로 메시지에서 제거
+            displayMessage = `이미지에서 강의 정보를 찾았어요! 📚\n시간표에 추가할까요?`;
           }
           
           const newAssistantMessage = {

@@ -480,8 +480,25 @@ JSON Output:
             high_priority.sort(key=lambda x: x.priority_score or 0, reverse=True)
             
             if high_priority:
-                schedule_text = format_schedules_for_display(high_priority[:5])  # 상위 5개
-                assistant_msg = f"우선순위가 높은 일정이에요! 🔥\n\n{schedule_text}\n\n총 {len(high_priority)}건의 중요 일정이 있어요."
+                # 구조화된 일정 데이터를 preserved_info에 추가
+                high_priority_data = []
+                for s in high_priority[:5]:
+                    high_priority_data.append({
+                        "id": str(s.id),
+                        "title": s.title,
+                        "category": translate_category(s.category),
+                        "end_at": s.end_at.isoformat() if s.end_at else None,
+                        "priority_score": s.priority_score
+                    })
+                
+                ai_parsed_result.preserved_info = {
+                    **(ai_parsed_result.preserved_info or {}),
+                    "query_type": "high_priority",
+                    "schedules": high_priority_data,
+                    "total_count": len(high_priority)
+                }
+                
+                assistant_msg = f"우선순위가 높은 일정이에요! 🔥"
             else:
                 assistant_msg = "현재 우선순위가 높은 일정이 없어요. 🎉 여유롭게 하루를 보내세요!"
         
