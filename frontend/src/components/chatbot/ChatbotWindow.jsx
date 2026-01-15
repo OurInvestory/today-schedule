@@ -25,6 +25,7 @@ const ChatbotWindow = ({
   onClearHistory,
   onRetry,
   canRetry,
+  onSelectScheduleForNotification,
 }) => {
   const fileInputRef = useRef(null);
   const suggestionsRef = useRef(null);
@@ -280,6 +281,7 @@ const ChatbotWindow = ({
             }
             onChoiceSelect={(choice) => onSendMessage(choice)}
             onRetry={message.isError && index === messages.length - 1 && canRetry ? handleRetry : undefined}
+            onSelectScheduleForNotification={onSelectScheduleForNotification}
           />
         ))}
         {loading && (
