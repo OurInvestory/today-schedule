@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  getLectures, 
-  createLecture, 
-  updateLecture, 
+import {
+  getLectures,
+  createLecture,
+  updateLecture,
   deleteLecture,
   getWeekNumber,
-  getWeekRange 
+  getWeekRange,
 } from '../services/lectureService';
 import { formatDate } from '../utils/dateUtils';
 
@@ -17,31 +17,29 @@ export const useTimetable = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   // 현재 주의 시작/종료일
   const { startOfWeek, endOfWeek } = getWeekRange(currentDate);
-  
+
   // 현재 주차 번호
   const weekNumber = getWeekNumber(currentDate);
   const year = currentDate.getFullYear();
 
-  // 토/일 강의가 있는지 확인
-  const hasWeekendLectures = lectures.some(lecture => {
+  // 토/일 강의가 있는지 확인 (백엔드: 0=월, 5=토, 6=일)
+  const hasWeekendLectures = lectures.some((lecture) => {
     const weekDays = lecture.week || [];
-    return weekDays.includes(0) || weekDays.includes(6); // 0=일, 6=토
+    return weekDays.includes(5) || weekDays.includes(6); // 5=토, 6=일
   });
 
-  // 표시할 요일 결정 (기본 월~금, 주말 강의 있으면 월~일)
-  const displayDays = hasWeekendLectures 
-    ? [1, 2, 3, 4, 5, 6, 0] // 월~일
-    : [1, 2, 3, 4, 5];       // 월~금
+  // 표시할 요일 결정 (항상 월~일 7일 표시)
+  const displayDays = [0, 1, 2, 3, 4, 5, 6]; // 월~일
 
   // 시간 범위 계산 (기본 9~17시, 강의에 따라 확장)
   const calculateTimeRange = useCallback(() => {
     let minHour = 9;
     let maxHour = 17;
-    
-    lectures.forEach(lecture => {
+
+    lectures.forEach((lecture) => {
       if (lecture.start_time) {
         const startHour = parseInt(lecture.start_time.split(':')[0], 10);
         minHour = Math.min(minHour, startHour);
@@ -53,7 +51,7 @@ export const useTimetable = () => {
         maxHour = Math.max(maxHour, endMinute > 0 ? endHour + 1 : endHour);
       }
     });
-    
+
     return { minHour, maxHour };
   }, [lectures]);
 
@@ -63,16 +61,16 @@ export const useTimetable = () => {
   const fetchLectures = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const from = formatDate(startOfWeek, 'YYYY-MM-DD');
       const to = formatDate(endOfWeek, 'YYYY-MM-DD');
-      
+
       const response = await getLectures(from, to);
-      
+
       // response 구조에 따라 처리
       let lectureData = [];
-      
+
       if (response) {
         // { status: 200, data: [...] } 형식
         if (response.status === 200 && response.data) {
@@ -87,7 +85,7 @@ export const useTimetable = () => {
           lectureData = response;
         }
       }
-      
+
       setLectures(Array.isArray(lectureData) ? lectureData : []);
     } catch (err) {
       console.error('Failed to fetch lectures:', err);
@@ -146,7 +144,12 @@ export const useTimetable = () => {
     try {
       const response = await deleteLecture(lectureId);
       // lectureService는 response.data를 반환하므로 response 자체가 {status, data, message}
-      if (response && (response.status === 200 || response.status === 201 || response.status === 204)) {
+      if (
+        response &&
+        (response.status === 200 ||
+          response.status === 201 ||
+          response.status === 204)
+      ) {
         await fetchLectures();
         return response;
       }
@@ -183,18 +186,17 @@ export const useTimetable = () => {
 
   // 특정 요일의 강의 목록 가져오기
   const getLecturesForDay = (dayOfWeek) => {
-    return lectures.filter(lecture => {
+    return lectures.filter((lecture) => {
       const weekDays = lecture.week || [];
       return weekDays.includes(dayOfWeek);
     });
   };
 
-  // 특정 요일의 날짜 계산
+  // 특정 요일의 날짜 계산 (백엔드: 0=월, 1=화, ..., 6=일)
   const getDateForDay = (dayOfWeek) => {
     const date = new Date(startOfWeek);
-    // 월요일(1)부터 시작하므로 조정
-    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    date.setDate(date.getDate() + diff);
+    // startOfWeek은 월요일, dayOfWeek 0=월이므로 그대로 더하면 됨
+    date.setDate(date.getDate() + dayOfWeek);
     return date;
   };
 

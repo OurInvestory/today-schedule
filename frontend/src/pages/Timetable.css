@@ -168,10 +168,13 @@
 .timetable__grid-container {
   padding: var(--spacing-md);
   overflow-x: auto;
+  height: calc(100vh - 180px); /* 화면 높이에서 헤더/네비 제외 */
+  overflow-y: auto;
 }
 
 .timetable__grid {
   min-width: 100%;
+  min-height: 100%;
   border: 1px solid var(--color-gray-200);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -197,7 +200,7 @@
 .timetable__cell {
   flex: 1;
   min-width: 80px;
-  min-height: 60px;
+  min-height: 80px;
   padding: var(--spacing-xs);
   border-right: 1px solid var(--color-gray-100);
   position: relative;
@@ -225,8 +228,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-sm);
-  min-height: auto;
+  padding: var(--spacing-xs);
+  min-height: 50px;
 }
 
 .timetable__cell--today {
@@ -275,7 +278,8 @@
   cursor: pointer;
   overflow: hidden;
   z-index: 1;
-  transition: transform var(--transition-base), box-shadow var(--transition-base);
+  transition: transform var(--transition-base),
+    box-shadow var(--transition-base);
   display: flex;
   flex-direction: column;
   gap: 2px;
