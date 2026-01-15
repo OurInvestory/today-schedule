@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { sendChatMessage, getChatHistory, createScheduleFromAI, createSubTaskFromAI, analyzeTimetableImage, createLectureFromAI, saveLectures, searchSchedulesByKeyword } from '../services/aiService';
 import { scheduleReminder, scheduleReminderForSchedule } from '../services/notificationService';
+import { createNotification } from '../services/notificationApiService';
 
 // localStorage 키
 const CHAT_STORAGE_KEY = 'chatbot_messages';
@@ -754,39 +755,65 @@ export const useChatbot = () => {
       return;
     }
     
-    // 알림 예약
-    scheduleReminder({
-      title: `${schedule.title} 알림`,
-      message: `${minutesBefore}분 후에 '${schedule.title}'이(가) 시작됩니다!`,
-      scheduledTime: reminderTime.toISOString(),
-      scheduleId: schedule.id,
-    });
-    
-    // 원래 메시지의 상태 업데이트
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, notificationCompleted: true, selectedSchedule: schedule }
-        : msg
-    ));
-    
-    // 날짜/시간 포맷팅
-    const formatDateTime = (date) => {
-      const d = new Date(date);
-      const month = d.getMonth() + 1;
-      const day = d.getDate();
-      const hours = String(d.getHours()).padStart(2, '0');
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      return `${month}월 ${day}일 ${hours}:${minutes}`;
-    };
-    
-    // 성공 메시지 추가
-    const successMessage = {
-      id: Date.now(),
-      role: 'assistant',
-      content: `'${schedule.title}' 일정 ${minutesBefore}분 전 알림이 예약되었습니다! 🔔\n알림 시간: ${formatDateTime(reminderTime)}`,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages(prev => [...prev, successMessage]);
+    try {
+      // 백엔드 API를 통한 알림 예약
+      const notificationData = {
+        schedule_id: schedule.id,
+        schedule_title: schedule.title,
+        message: `${minutesBefore}분 후에 '${schedule.title}'이(가) 시작됩니다!`,
+        notify_at: reminderTime.toISOString(),
+        minutes_before: minutesBefore,
+      };
+      
+      const response = await createNotification(notificationData);
+      
+      if (response.status !== 200 && response.status !== 201) {
+        throw new Error('알림 예약 실패');
+      }
+      
+      // 기존 로컬 알림도 함께 예약 (백업)
+      scheduleReminder({
+        title: `${schedule.title} 알림`,
+        message: `${minutesBefore}분 후에 '${schedule.title}'이(가) 시작됩니다!`,
+        scheduledTime: reminderTime.toISOString(),
+        scheduleId: schedule.id,
+      });
+      
+      // 원래 메시지의 상태 업데이트
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, notificationCompleted: true, selectedSchedule: schedule }
+          : msg
+      ));
+      
+      // 날짜/시간 포맷팅
+      const formatDateTime = (date) => {
+        const d = new Date(date);
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${month}월 ${day}일 ${hours}:${minutes}`;
+      };
+      
+      // 성공 메시지 추가
+      const successMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: `'${schedule.title}' 일정 ${minutesBefore}분 전 알림이 예약되었습니다! 🔔\n알림 시간: ${formatDateTime(reminderTime)}`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, successMessage]);
+    } catch (error) {
+      console.error('Failed to create notification:', error);
+      const errorMessage = {
+        id: Date.now(),
+        role: 'assistant',
+        content: '알림 예약 중 오류가 발생했어요. 다시 시도해주세요. 😢',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
   }, []);
 
   // 빠른 액션 (자주 사용하는 명령어)

@@ -70,7 +70,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
 
   const [connectedAccounts, setConnectedAccounts] = useState({
-    google: { connected: false, email: null },
+    google: { connected: true, email: 'demo@five-today.com' },
     kakao: { connected: false, email: null },
     naver: { connected: false, email: null },
   });

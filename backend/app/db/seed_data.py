@@ -231,11 +231,51 @@ def get_seed_sub_tasks():
     return sub_tasks
 
 
+def get_seed_notifications():
+    """알림 시드 데이터"""
+    base_year = 2026
+    base_month = 1
+    now = datetime.now()
+    
+    notifications = [
+        {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": TEST_USER_ID,
+            "schedule_id": SCHEDULE_IDS["hackathon_final"],
+            "message": "🔥 해커톤 발표가 30분 후에 시작됩니다! 최종 점검하세요!",
+            "notify_at": now - timedelta(hours=2),
+            "is_sent": True,
+            "is_checked": False,
+        },
+        {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": TEST_USER_ID,
+            "schedule_id": SCHEDULE_IDS["mentoring_3"],
+            "message": "📹 멘토링 세션이 1시간 후에 시작됩니다. 질문 목록 준비하세요!",
+            "notify_at": now - timedelta(hours=5),
+            "is_sent": True,
+            "is_checked": False,
+        },
+        {
+            "notification_id": str(uuid.uuid4()),
+            "user_id": TEST_USER_ID,
+            "schedule_id": None,
+            "message": "🌅 오늘 일정 3개, 긴급 1개! 화이팅하세요! 💪",
+            "notify_at": now - timedelta(days=1),
+            "is_sent": True,
+            "is_checked": True,
+        },
+    ]
+    
+    return notifications
+
+
 def seed_database(db):
     """데이터베이스에 시드 데이터 삽입"""
     from app.models.user import User
     from app.models.schedule import Schedule
     from app.models.sub_task import SubTask
+    from app.models.notification import Notification
     
     # 테스트 사용자가 이미 있는지 확인
     existing_user = db.query(User).filter(User.user_id == TEST_USER_ID).first()
@@ -267,6 +307,13 @@ def seed_database(db):
             sub_task = SubTask(**t_data)
             db.add(sub_task)
         print(f"  ✓ 할 일 {len(sub_tasks)}개 생성")
+        
+        # 4. 알림 생성
+        notifications = get_seed_notifications()
+        for n_data in notifications:
+            notification = Notification(**n_data)
+            db.add(notification)
+        print(f"  ✓ 알림 {len(notifications)}개 생성")
         
         db.commit()
         print("🎉 시드 데이터 삽입 완료!")

@@ -484,7 +484,7 @@ JSON Output:
                 high_priority_data = []
                 for s in high_priority[:5]:
                     high_priority_data.append({
-                        "id": str(s.id),
+                        "id": str(s.schedule_id),
                         "title": s.title,
                         "category": translate_category(s.category),
                         "end_at": s.end_at.isoformat() if s.end_at else None,
