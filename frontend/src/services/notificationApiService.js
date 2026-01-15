@@ -1,5 +1,8 @@
 import api from './api';
-import { sendBrowserNotification, addNotification } from './notificationService';
+import {
+  sendBrowserNotification,
+  addNotification,
+} from './notificationService';
 
 /**
  * 알림 등록 (백엔드 API)
@@ -14,7 +17,7 @@ export const createNotification = async ({
   notify_at,
   notifyAt,
   minutes_before,
-  minutesBefore
+  minutesBefore,
 }) => {
   try {
     const payload = {
@@ -24,7 +27,7 @@ export const createNotification = async ({
       notify_at: notify_at || notifyAt,
       minutes_before: minutes_before || minutesBefore || null,
     };
-    
+
     const response = await api.post('/api/notifications', payload);
     return response;
   } catch (error) {
@@ -53,7 +56,7 @@ export const getPendingNotifications = async () => {
 export const getMyNotifications = async (limit = 20, includeChecked = true) => {
   try {
     const response = await api.get('/api/notifications', {
-      params: { limit, include_checked: includeChecked }
+      params: { limit, include_checked: includeChecked },
     });
     return response;
   } catch (error) {
@@ -68,11 +71,24 @@ export const getMyNotifications = async (limit = 20, includeChecked = true) => {
 export const checkNotifications = async (notificationIds) => {
   try {
     const response = await api.post('/api/notifications/check', {
-      notification_ids: notificationIds
+      notification_ids: notificationIds,
     });
     return response;
   } catch (error) {
     console.error('Failed to check notifications:', error);
+    throw error;
+  }
+};
+
+/**
+ * 알림 삭제
+ */
+export const deleteNotification = async (notificationId) => {
+  try {
+    const response = await api.delete(`/api/notifications/${notificationId}`);
+    return response;
+  } catch (error) {
+    console.error('Failed to delete notification:', error);
     throw error;
   }
 };
@@ -88,16 +104,16 @@ export const requestNotificationPermission = async () => {
     console.warn('This browser does not support notifications');
     return false;
   }
-  
+
   if (Notification.permission === 'granted') {
     return true;
   }
-  
+
   if (Notification.permission !== 'denied') {
     const permission = await Notification.requestPermission();
     return permission === 'granted';
   }
-  
+
   return false;
 };
 
@@ -108,13 +124,13 @@ export const showBrowserNotification = (title, options = {}) => {
   if (Notification.permission !== 'granted') {
     return null;
   }
-  
+
   const notification = new Notification(title, {
     icon: '/icons/icon-192x192.png',
     badge: '/icons/badge-72x72.png',
     ...options,
   });
-  
+
   return notification;
 };
 
@@ -124,23 +140,27 @@ export const showBrowserNotification = (title, options = {}) => {
 export const startNotificationPolling = (onNotification) => {
   // 기존 폴링 중지
   stopNotificationPolling();
-  
+
   const checkPendingNotifications = async () => {
     try {
       const response = await getPendingNotifications();
       // API 응답: { data: { status, message, data: [...] } }
       const responseData = response?.data;
-      
-      if (responseData?.status === 200 && Array.isArray(responseData?.data) && responseData.data.length > 0) {
+
+      if (
+        responseData?.status === 200 &&
+        Array.isArray(responseData?.data) &&
+        responseData.data.length > 0
+      ) {
         // 각 알림에 대해 브라우저 알림 표시 (설정 체크 포함)
-        responseData.data.forEach(notification => {
+        responseData.data.forEach((notification) => {
           // notificationService의 sendBrowserNotification 사용 (설정 체크 포함)
           sendBrowserNotification('🔔 일정 알림', {
             body: notification.message,
             tag: `notification-${notification.notification_id}`,
             requireInteraction: true,
           });
-          
+
           // 콜백 호출 (UI 업데이트용)
           if (onNotification) {
             onNotification(notification);
@@ -151,10 +171,10 @@ export const startNotificationPolling = (onNotification) => {
       console.error('Notification polling error:', error);
     }
   };
-  
+
   // 즉시 한 번 체크
   checkPendingNotifications();
-  
+
   // 1분마다 폴링
   pollingInterval = setInterval(checkPendingNotifications, 60000);
 };
@@ -174,6 +194,7 @@ export default {
   getPendingNotifications,
   getMyNotifications,
   checkNotifications,
+  deleteNotification,
   requestNotificationPermission,
   showBrowserNotification,
   startNotificationPolling,

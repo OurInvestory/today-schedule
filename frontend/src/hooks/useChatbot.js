@@ -557,6 +557,25 @@ export const useChatbot = () => {
             const response = await saveLectures(lecturesPayload);
             result = response?.data || response;
             confirmContent = `${lecturesPayload.length}개의 강의가 시간표에 추가되었습니다! 📚`;
+          } else if (actionTarget === 'NOTIFICATION') {
+            // 알림 생성 - POST /api/notifications
+            const notifyPayload = {
+              message: action.payload.message,
+              notify_at: action.payload.notify_at,
+              schedule_id: action.payload.schedule_id || null,
+            };
+            const response = await createNotification(notifyPayload);
+            result = response?.data || response;
+
+            // 알림 시간 포맷팅
+            const notifyAt = new Date(action.payload.notify_at);
+            const timeStr = `${
+              notifyAt.getMonth() + 1
+            }월 ${notifyAt.getDate()}일 ${String(notifyAt.getHours()).padStart(
+              2,
+              '0'
+            )}:${String(notifyAt.getMinutes()).padStart(2, '0')}`;
+            confirmContent = `알림이 설정되었습니다! 🔔 (${timeStr})`;
           } else if (actionTarget === 'SCHEDULE' || payloadType === 'EVENT') {
             // 일정 생성
             const response = await createScheduleFromAI(action.payload);

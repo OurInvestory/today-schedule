@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   getLectures,
   createLecture,
@@ -18,8 +18,21 @@ export const useTimetable = () => {
   const [error, setError] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // 현재 주의 시작/종료일
-  const { startOfWeek, endOfWeek } = getWeekRange(currentDate);
+  // 현재 주의 시작/종료일 (useMemo로 안정화)
+  const { startOfWeek, endOfWeek } = useMemo(
+    () => getWeekRange(currentDate),
+    [currentDate.getTime()]
+  );
+
+  // 날짜 문자열 (useCallback 의존성용)
+  const fromDateStr = useMemo(
+    () => formatDate(startOfWeek, 'YYYY-MM-DD'),
+    [startOfWeek]
+  );
+  const toDateStr = useMemo(
+    () => formatDate(endOfWeek, 'YYYY-MM-DD'),
+    [endOfWeek]
+  );
 
   // 현재 주차 번호
   const weekNumber = getWeekNumber(currentDate);
@@ -63,10 +76,7 @@ export const useTimetable = () => {
     setError(null);
 
     try {
-      const from = formatDate(startOfWeek, 'YYYY-MM-DD');
-      const to = formatDate(endOfWeek, 'YYYY-MM-DD');
-
-      const response = await getLectures(from, to);
+      const response = await getLectures(fromDateStr, toDateStr);
 
       // response 구조에 따라 처리
       let lectureData = [];
@@ -95,7 +105,7 @@ export const useTimetable = () => {
     } finally {
       setLoading(false);
     }
-  }, [startOfWeek, endOfWeek]);
+  }, [fromDateStr, toDateStr]);
 
   // 강의 추가
   const addLecture = async (lectureData) => {
@@ -143,22 +153,9 @@ export const useTimetable = () => {
   const removeLecture = async (lectureId) => {
     try {
       const response = await deleteLecture(lectureId);
-      // lectureService는 response.data를 반환하므로 response 자체가 {status, data, message}
-      if (
-        response &&
-        (response.status === 200 ||
-          response.status === 201 ||
-          response.status === 204)
-      ) {
-        await fetchLectures();
-        return response;
-      }
-      // status가 없으면 성공으로 간주
-      if (response && !response.status) {
-        await fetchLectures();
-        return { status: 200, data: response };
-      }
-      throw new Error(response?.message || '강의 삭제에 실패했습니다.');
+      // 삭제 API는 빈 응답을 반환할 수 있으므로 성공으로 간주
+      await fetchLectures();
+      return response || { status: 200 };
     } catch (err) {
       console.error('Failed to delete lecture:', err);
       throw err;

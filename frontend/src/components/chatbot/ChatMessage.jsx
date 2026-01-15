@@ -109,6 +109,17 @@ const ChatMessage = ({
         parts.push(
           `카테고리: ${CATEGORY_LABELS[payload.category] || payload.category}`
         );
+    } else if (actionTarget === 'NOTIFICATION') {
+      // 알림 표시
+      if (payload.message) parts.push(`메시지: ${payload.message}`);
+      if (payload.notify_at) {
+        parts.push(
+          `알림 시간: ${formatDate(payload.notify_at, 'M월 D일 HH:mm')}`
+        );
+      }
+      if (payload.schedule_id) {
+        parts.push('(일정 연결됨)');
+      }
     }
 
     return parts.join(', ');
@@ -124,6 +135,9 @@ const ChatMessage = ({
     if (target === 'LECTURES') {
       const count = Array.isArray(action.payload) ? action.payload.length : 1;
       return { icon: '📚', label: `강의 ${count}개` };
+    }
+    if (target === 'NOTIFICATION') {
+      return { icon: '🔔', label: '알림' };
     }
     if (target === 'SUB_TASK' || payloadType === 'TASK') {
       return { icon: '✓', label: '할 일' };

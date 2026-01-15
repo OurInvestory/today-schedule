@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getMyNotifications,
   checkNotifications,
+  deleteNotification,
   startNotificationPolling,
   stopNotificationPolling,
   requestNotificationPermission,
@@ -41,6 +42,12 @@ const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [swipingId, setSwipingId] = useState(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const touchStartX = useRef(0);
+  const touchCurrentX = useRef(0);
+  const isSwiping = useRef(false);
+  const SWIPE_THRESHOLD = 80; // 삭제 트리거 임계값
 
   // 알림 목록 로드
   const loadNotifications = async () => {
@@ -133,6 +140,55 @@ const Notifications = () => {
     }
   };
 
+  // 알림 삭제 처리
+  const handleDeleteNotification = async (notificationId) => {
+    try {
+      await deleteNotification(notificationId);
+      setNotifications((prev) =>
+        prev.filter((n) => n.notification_id !== notificationId)
+      );
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+    }
+  };
+
+  // 스와이프 시작
+  const handleTouchStart = (e, notificationId) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchCurrentX.current = e.touches[0].clientX;
+    isSwiping.current = true;
+    setSwipingId(notificationId);
+    setSwipeOffset(0);
+  };
+
+  // 스와이프 중
+  const handleTouchMove = (e) => {
+    if (!isSwiping.current) return;
+    touchCurrentX.current = e.touches[0].clientX;
+    const diff = touchStartX.current - touchCurrentX.current;
+    // 왼쪽으로만 스와이프 (삭제 방향)
+    if (diff > 0) {
+      setSwipeOffset(Math.min(diff, 120)); // 최대 120px
+    } else {
+      setSwipeOffset(0);
+    }
+  };
+
+  // 스와이프 끝
+  const handleTouchEnd = (notificationId) => {
+    if (!isSwiping.current) return;
+    isSwiping.current = false;
+
+    if (swipeOffset >= SWIPE_THRESHOLD) {
+      // 삭제 실행
+      handleDeleteNotification(notificationId);
+    }
+
+    // 리셋
+    setSwipingId(null);
+    setSwipeOffset(0);
+  };
+
   return (
     <div className="notifications">
       {/* 헤더 - 기존 디자인 유지 */}
@@ -197,10 +253,12 @@ const Notifications = () => {
             {sortedNotifications.map((notification) => (
               <div
                 key={notification.notification_id}
-                className="notifications__toss-item"
-                onClick={() => handleMarkAsRead(notification.notification_id)}
+                className={`notifications__toss-item-wrapper ${
+                  swipingId === notification.notification_id ? 'swiping' : ''
+                }`}
               >
-                <div className="notifications__toss-icon">
+                {/* 삭제 배경 */}
+                <div className="notifications__delete-bg">
                   <svg
                     width="20"
                     height="20"
@@ -209,22 +267,63 @@ const Notifications = () => {
                     stroke="currentColor"
                     strokeWidth="2"
                   >
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                   </svg>
+                  <span>삭제</span>
                 </div>
-                <div className="notifications__toss-content-wrap">
-                  <div className="notifications__toss-header">
-                    <span className="notifications__toss-source">
-                      일정 알림
-                    </span>
-                    <span className="notifications__toss-time">
-                      {formatNotificationTime(notification.notify_at)}
-                    </span>
+                {/* 알림 콘텐츠 */}
+                <div
+                  className={`notifications__toss-item ${
+                    notification.is_checked
+                      ? 'notifications__toss-item--read'
+                      : ''
+                  }`}
+                  style={{
+                    transform:
+                      swipingId === notification.notification_id
+                        ? `translateX(-${swipeOffset}px)`
+                        : 'translateX(0)',
+                    transition:
+                      swipingId === notification.notification_id
+                        ? 'none'
+                        : 'transform 0.3s ease',
+                  }}
+                  onClick={() => handleMarkAsRead(notification.notification_id)}
+                  onTouchStart={(e) =>
+                    handleTouchStart(e, notification.notification_id)
+                  }
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={() =>
+                    handleTouchEnd(notification.notification_id)
+                  }
+                >
+                  <div className="notifications__toss-icon">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
                   </div>
-                  <p className="notifications__toss-message">
-                    {notification.message}
-                  </p>
+                  <div className="notifications__toss-content-wrap">
+                    <div className="notifications__toss-header">
+                      <span className="notifications__toss-source">
+                        일정 알림
+                      </span>
+                      <span className="notifications__toss-time">
+                        {formatNotificationTime(notification.notify_at)}
+                      </span>
+                    </div>
+                    <p className="notifications__toss-message">
+                      {notification.message}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
