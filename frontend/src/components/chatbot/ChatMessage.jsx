@@ -200,6 +200,122 @@ const ChatMessage = ({
             </div>
           )}
 
+          {/* CLARIFY 선택지 UI (일정 삭제 확인, 여러 건 선택 등) */}
+          {!isUser &&
+            message.parsedResult?.intent === 'CLARIFY' &&
+            !message.clarifyCompleted &&
+            (() => {
+              // missingFields의 choices 또는 preserved_info의 matching_schedules 사용
+              const choices = message.parsedResult?.missingFields?.[0]?.choices;
+              const preservedInfo =
+                message.parsedResult?.preserved_info ||
+                message.parsedResult?.preservedInfo ||
+                {};
+              const matchingSchedules =
+                preservedInfo.matching_schedules ||
+                preservedInfo.matchingSchedules ||
+                [];
+
+              // choices가 있으면 사용
+              if (choices && choices.length > 0) {
+                return (
+                  <div className="chat-message__clarify-choices">
+                    {choices.map((choice, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="chat-message__choice-btn"
+                        onClick={() =>
+                          onChoiceSelect &&
+                          onChoiceSelect(message.id, choice, idx, preservedInfo)
+                        }
+                      >
+                        {choice}
+                      </button>
+                    ))}
+                  </div>
+                );
+              }
+
+              // matching_schedules가 있으면 사용 (삭제할 일정 선택)
+              if (matchingSchedules && matchingSchedules.length > 0) {
+                return (
+                  <div className="chat-message__clarify-choices">
+                    {matchingSchedules.map((schedule, idx) => {
+                      // 날짜 포맷팅 (date 또는 start_at 사용)
+                      const dateValue = schedule.date || schedule.start_at;
+                      const dateStr = dateValue
+                        ? ` (${new Date(dateValue).toLocaleDateString('ko-KR', {
+                            month: '2-digit',
+                            day: '2-digit',
+                          })})`
+                        : '';
+                      return (
+                        <button
+                          key={schedule.id || idx}
+                          type="button"
+                          className="chat-message__choice-btn"
+                          onClick={() =>
+                            onChoiceSelect &&
+                            onChoiceSelect(message.id, schedule.title, idx, {
+                              ...preservedInfo,
+                              schedule_id: schedule.id,
+                            })
+                          }
+                        >
+                          {schedule.title}
+                          {dateStr}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
+          {/* 삭제 확인 UI (단일 일정 삭제 확인) */}
+          {!isUser &&
+            message.parsedResult?.intent === 'DELETE_CONFIRM' &&
+            message.parsedResult?.preserved_info?.schedule_id &&
+            !message.deleteCompleted && (
+              <div className="chat-message__delete-confirm">
+                <button
+                  type="button"
+                  className="chat-message__action-btn chat-message__action-btn--confirm"
+                  onClick={() =>
+                    onChoiceSelect &&
+                    onChoiceSelect(
+                      message.id,
+                      '예',
+                      0,
+                      message.parsedResult.preserved_info
+                    )
+                  }
+                  disabled={message.deleteLoading}
+                >
+                  {message.deleteLoading ? '삭제 중...' : '삭제'}
+                </button>
+                <button
+                  type="button"
+                  className="chat-message__action-btn chat-message__action-btn--cancel"
+                  onClick={() =>
+                    onChoiceSelect &&
+                    onChoiceSelect(
+                      message.id,
+                      '아니오',
+                      -1,
+                      message.parsedResult.preserved_info
+                    )
+                  }
+                  disabled={message.deleteLoading}
+                >
+                  취소
+                </button>
+              </div>
+            )}
+
           {/* 알림 예약을 위한 일정 선택 UI */}
           {!isUser &&
             message.notificationRequest &&
@@ -316,7 +432,7 @@ const ChatMessage = ({
                         onClick={() => handleConfirmAction(lecturesAction, 0)}
                         disabled={message.actionLoading}
                       >
-                        {message.actionLoading ? '추가 중...' : '✓ 확인'}
+                        {message.actionLoading ? '추가 중...' : '확인'}
                       </button>
                       <button
                         type="button"
@@ -324,157 +440,7 @@ const ChatMessage = ({
                         onClick={handleCancelAll}
                         disabled={message.actionLoading}
                       >
-                        ✕ 취소
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-          {/* AI 이미지 분석 결과 - 일정 목록 미리보기 (imageAnalysis가 있고 lectures가 없을 때) */}
-          {!isUser &&
-            message.imageAnalysis &&
-            message.actions &&
-            message.actions.length > 0 &&
-            !message.actionCompleted &&
-            !message.lectures?.length &&
-            (() => {
-              // 완료/취소되지 않은 pending 액션 수 계산
-              const pendingCount = message.actions.filter(
-                (_, idx) => !completedActions[idx]
-              ).length;
-              const confirmedCount = Object.values(completedActions).filter(
-                (v) => v === 'confirmed'
-              ).length;
-              const cancelledCount = Object.values(completedActions).filter(
-                (v) => v === 'cancelled'
-              ).length;
-
-              return (
-                <div className="chat-message__image-analysis">
-                  <div className="chat-message__analysis-header">
-                    📷 이미지에서 {message.actions.length}건의 일정을
-                    발견했어요!
-                  </div>
-                  <div className="chat-message__analysis-content">
-                    <ul className="chat-message__schedule-list">
-                      {message.actions.slice(0, 5).map((action, idx) => {
-                        const isCompleted = completedActions[idx];
-                        const statusBadge =
-                          isCompleted === 'confirmed'
-                            ? ' ✅'
-                            : isCompleted === 'cancelled'
-                            ? ' ❌'
-                            : '';
-
-                        // LECTURES 타겟인 경우 payload가 배열임
-                        if (
-                          action.target === 'LECTURES' &&
-                          Array.isArray(action.payload)
-                        ) {
-                          return action.payload
-                            .slice(0, 3)
-                            .map((lecture, lectureIdx) => (
-                              <li key={`${idx}-${lectureIdx}`}>
-                                <strong>{lecture.title}</strong>
-                                <span className="chat-message__schedule-time">
-                                  {' - '}
-                                  {lecture.startTime} ~ {lecture.endTime}
-                                </span>
-                              </li>
-                            ));
-                        }
-
-                        const startTime =
-                          action.payload?.start_at ||
-                          action.payload?.start_time;
-                        const endTime =
-                          action.payload?.end_at || action.payload?.end_time;
-                        return (
-                          <li
-                            key={idx}
-                            className={
-                              isCompleted
-                                ? 'chat-message__schedule-item--completed'
-                                : ''
-                            }
-                          >
-                            <strong>
-                              {action.payload?.title}
-                              {statusBadge}
-                            </strong>
-                            {(startTime || endTime) && (
-                              <span className="chat-message__schedule-time">
-                                {startTime ? (
-                                  <>
-                                    {' - '}
-                                    {formatDate(startTime, 'M/D HH:mm')}
-                                    {endTime &&
-                                      ` ~ ${formatDate(endTime, 'HH:mm')}`}
-                                  </>
-                                ) : (
-                                  <>
-                                    {' - '}마감:{' '}
-                                    {formatDate(endTime, 'M/D HH:mm')}
-                                  </>
-                                )}
-                              </span>
-                            )}
-                          </li>
-                        );
-                      })}
-                      {message.actions.length > 5 && (
-                        <li className="chat-message__more-items">
-                          ...외 {message.actions.length - 5}개
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-
-                  {/* 처리 현황 표시 */}
-                  {(confirmedCount > 0 || cancelledCount > 0) && (
-                    <div className="chat-message__action-summary">
-                      {confirmedCount > 0 && (
-                        <span className="chat-message__summary-confirmed">
-                          ✅ {confirmedCount}개 추가됨
-                        </span>
-                      )}
-                      {cancelledCount > 0 && (
-                        <span className="chat-message__summary-cancelled">
-                          ❌ {cancelledCount}개 취소됨
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 남은 액션이 있을 때만 버튼 표시 */}
-                  {pendingCount > 0 && (
-                    <div className="chat-message__bulk-actions">
-                      <button
-                        type="button"
-                        className="chat-message__action-btn chat-message__action-btn--confirm-all"
-                        onClick={() => {
-                          // 아직 처리되지 않은 일정만 추가
-                          message.actions.forEach((action, idx) => {
-                            if (!completedActions[idx]) {
-                              handleConfirmAction(action, idx);
-                            }
-                          });
-                        }}
-                        disabled={message.actionLoading}
-                      >
-                        {message.actionLoading
-                          ? '추가 중...'
-                          : `✓ ${pendingCount}개 일정 추가`}
-                      </button>
-                      <button
-                        type="button"
-                        className="chat-message__action-btn chat-message__action-btn--cancel"
-                        onClick={handleCancelAll}
-                        disabled={message.actionLoading}
-                      >
-                        ✕ 전체 취소
+                        취소
                       </button>
                     </div>
                   )}
@@ -577,7 +543,7 @@ const ChatMessage = ({
                       }
                       disabled={message.actionLoading}
                     >
-                      {message.actionLoading ? '처리중...' : '✓ 예약'}
+                      {message.actionLoading ? '처리중...' : '예약'}
                     </button>
                     <button
                       type="button"
@@ -585,18 +551,18 @@ const ChatMessage = ({
                       onClick={handleCancelAll}
                       disabled={message.actionLoading}
                     >
-                      ✕ 취소
+                      취소
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-          {/* 파싱된 액션 표시 (이미지 분석이 아닌 일반 채팅의 경우) */}
+          {/* 파싱된 액션 표시 (이미지 분석이 아닌 일반 채팅 또는 포스터 분석의 경우) */}
           {!isUser &&
             hasActions &&
             !hasAllCompleted &&
-            !message.imageAnalysis &&
+            (!message.imageAnalysis || !message.lectures?.length) &&
             (() => {
               const confirmedCount = Object.values(completedActions).filter(
                 (v) => v === 'confirmed'
@@ -612,12 +578,18 @@ const ChatMessage = ({
                     const isCompleted = completedActions[index];
                     const isLoading = message.loadingActions?.[index];
 
+                    const isSubTask = action.target === 'SUB_TASK';
+
                     // 이미 완료된 액션은 완료 상태로 표시
                     if (isCompleted) {
                       return (
                         <div
                           key={index}
-                          className="chat-message__action-card chat-message__action-card--completed"
+                          className={`chat-message__action-card chat-message__action-card--completed ${
+                            isSubTask
+                              ? 'chat-message__action-card--subtask'
+                              : ''
+                          }`}
                         >
                           <div className="chat-message__action-header">
                             <span className="chat-message__action-type">
@@ -643,7 +615,12 @@ const ChatMessage = ({
                     }
 
                     return (
-                      <div key={index} className="chat-message__action-card">
+                      <div
+                        key={index}
+                        className={`chat-message__action-card ${
+                          isSubTask ? 'chat-message__action-card--subtask' : ''
+                        }`}
+                      >
                         <div className="chat-message__action-header">
                           <span className="chat-message__action-type">
                             {typeInfo.icon} {typeInfo.label}
@@ -666,7 +643,7 @@ const ChatMessage = ({
                             onClick={() => handleConfirmAction(action, index)}
                             disabled={isLoading}
                           >
-                            {isLoading ? '처리중...' : '✓ 확인'}
+                            {isLoading ? '처리중...' : '확인'}
                           </button>
                           <button
                             type="button"
@@ -674,7 +651,7 @@ const ChatMessage = ({
                             onClick={() => handleCancelAction(index)}
                             disabled={isLoading}
                           >
-                            ✕ 취소
+                            취소
                           </button>
                         </div>
                       </div>
@@ -713,62 +690,20 @@ const ChatMessage = ({
                           });
                         }}
                       >
-                        ✓ {pendingActions.length}개 일정 추가
+                        {pendingActions.length}개 일정 추가
                       </button>
                       <button
                         type="button"
                         className="chat-message__action-btn chat-message__action-btn--cancel-all"
                         onClick={handleCancelAll}
                       >
-                        ✕ 전체 취소
+                        전체 취소
                       </button>
                     </div>
                   )}
                 </div>
               );
             })()}
-
-          {/* 누락된 필드 표시 */}
-          {!isUser &&
-            message.missingFields &&
-            message.missingFields.length > 0 && (
-              <div className="chat-message__missing-fields">
-                <div className="chat-message__missing-fields-title">
-                  추가 정보가 필요해요:
-                </div>
-                <ul className="chat-message__missing-fields-list">
-                  {message.missingFields.map((field, index) => {
-                    const fieldData =
-                      typeof field === 'string'
-                        ? { field, question: field }
-                        : field;
-                    const choices = fieldData.choices || [];
-
-                    return (
-                      <li key={index}>
-                        {fieldData.question || fieldData.field || '정보 필요'}
-                        {/* 선택지가 있으면 버튼으로 표시 */}
-                        {choices.length > 0 && (
-                          <div className="chat-message__choices">
-                            {choices.map((choice, choiceIdx) => (
-                              <button
-                                key={choiceIdx}
-                                className="chat-message__choice-btn"
-                                onClick={() =>
-                                  onChoiceSelect && onChoiceSelect(choice)
-                                }
-                              >
-                                {choice}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
 
           {/* 액션 완료 표시 */}
           {message.actionCompleted &&

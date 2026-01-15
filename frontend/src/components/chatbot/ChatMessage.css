@@ -332,6 +332,21 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+/* SubTask(할일) 카드 구분 스타일 */
+.chat-message__action-card--subtask {
+  background: #f8f9fa;
+  border-left: 3px solid #6c757d;
+  border-color: #dee2e6;
+}
+
+.chat-message__action-card--subtask .chat-message__action-header {
+  color: #495057;
+}
+
+.chat-message__action-card--subtask .chat-message__action-type {
+  opacity: 0.85;
+}
+
 .chat-message__action-header {
   display: flex;
   align-items: center;
@@ -432,6 +447,37 @@
 .chat-message__choice-btn:hover {
   background: #ffb020;
   color: white;
+}
+
+/* CLARIFY 선택지 UI */
+.chat-message__clarify-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chat-message__clarify-choices .chat-message__choice-btn {
+  text-align: left;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: #f8f9fa;
+  border: 1px solid #e5e8eb;
+  color: #191f28;
+}
+
+.chat-message__clarify-choices .chat-message__choice-btn:hover {
+  background: #e8f4fd;
+  border-color: #3182f6;
+  color: #3182f6;
+}
+
+/* 삭제 확인 UI */
+.chat-message__delete-confirm {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 /* 액션 완료 상태 */
