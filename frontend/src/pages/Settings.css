@@ -319,6 +319,31 @@
   box-shadow: 0 0 0 3px rgba(43, 127, 230, 0.1);
 }
 
+/* 설정 버튼 */
+.settings-item__button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--color-primary-500);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
+  cursor: pointer;
+  outline: none;
+  min-width: 70px;
+  min-height: 36px;
+  transition: all var(--transition-base);
+}
+
+.settings-item__button:hover {
+  background: var(--color-primary-100);
+}
+
+.settings-item__button:active {
+  background: var(--color-primary-200);
+}
+
 /* 토글 스위치 */
 .toggle-switch {
   position: relative;

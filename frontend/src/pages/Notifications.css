@@ -155,27 +155,6 @@
   border-bottom: none;
 }
 
-/* 읽지 않은 알림 */
-.notifications__toss-item--unread {
-  background: linear-gradient(90deg, var(--color-primary-50) 0%, var(--color-bg-default) 100%);
-}
-
-.notifications__toss-item--unread::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 4px;
-  background: var(--color-primary-500);
-  border-radius: 50%;
-}
-
-.notifications__toss-item--unread:hover {
-  background: linear-gradient(90deg, var(--color-primary-100) 0%, var(--color-gray-50) 100%);
-}
-
 /* 토스 스타일 아이콘 */
 .notifications__toss-icon {
   display: flex;

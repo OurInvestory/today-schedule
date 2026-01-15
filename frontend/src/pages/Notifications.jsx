@@ -9,8 +9,8 @@ import {
 } from '../services/notificationApiService';
 import './Notifications.css';
 
-// 상대 시간 포맷팅 함수
-const formatTimeAgo = (dateStr) => {
+// 시간 포맷팅 함수 (실제 알림 시간 표시)
+const formatNotificationTime = (dateStr) => {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now - date;
@@ -18,10 +18,23 @@ const formatTimeAgo = (dateStr) => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   
+  // 미래 시간인 경우 (아직 예약된 알림)
+  if (diffMs < 0) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const mins = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${mins} 예정`;
+  }
+  
+  // 과거 시간인 경우
   if (diffMins < 1) return '방금 전';
   if (diffMins < 60) return `${diffMins}분 전`;
   if (diffHours < 24) return `${diffHours}시간 전`;
-  return `${diffDays}일 전`;
+  if (diffDays < 7) return `${diffDays}일 전`;
+  
+  // 7일 이상이면 날짜 표시
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  return `${month}/${day}`;
 };
 
 const Notifications = () => {
@@ -156,7 +169,7 @@ const Notifications = () => {
             {notifications.map((notification) => (
               <div 
                 key={notification.notification_id} 
-                className={`notifications__toss-item ${!notification.is_checked ? 'notifications__toss-item--unread' : ''}`}
+                className="notifications__toss-item"
                 onClick={() => handleMarkAsRead(notification.notification_id)}
               >
                 <div className="notifications__toss-icon">
@@ -168,7 +181,7 @@ const Notifications = () => {
                 <div className="notifications__toss-content-wrap">
                   <div className="notifications__toss-header">
                     <span className="notifications__toss-source">일정 알림</span>
-                    <span className="notifications__toss-time">{formatTimeAgo(notification.notify_at)}</span>
+                    <span className="notifications__toss-time">{formatNotificationTime(notification.notify_at)}</span>
                   </div>
                   <p className="notifications__toss-message">{notification.message}</p>
                 </div>

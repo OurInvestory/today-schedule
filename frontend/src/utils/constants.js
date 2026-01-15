@@ -59,11 +59,14 @@ export const WEEKDAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 // API 엔드포인트
 export const API_ENDPOINTS = {
-  TODOS: '/todos',
-  AI_PARSE: '/ai/parse',
-  AI_PRIORITY: '/ai/priority',
-  CALENDAR_SYNC: '/calendar/sync',
-  CHAT: '/chat',
+  TODOS: '/api/sub-tasks',
+  SCHEDULES: '/api/schedules',
+  LECTURES: '/api/lectures',
+  NOTIFICATIONS: '/api/notifications',
+  AI_PARSE: '/api/chat',
+  AI_PRIORITY: '/api/chat',
+  CALENDAR_SYNC: '/api/schedules/google-calendar',
+  CHAT: '/api/chat',
 };
 
 // 로컬 스토리지 키
