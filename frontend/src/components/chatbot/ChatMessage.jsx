@@ -362,7 +362,7 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
                   {schedules.map((schedule, idx) => {
                     const endDate = schedule.end_at ? new Date(schedule.end_at) : null;
                     const dateStr = endDate 
-                      ? `${endDate.getMonth() + 1}/${endDate.getDate()} ${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
+                      ? `${endDate.getMonth() + 1}/${endDate.getDate()}`
                       : '';
                     
                     return (
@@ -371,7 +371,7 @@ const ChatMessage = ({ message, onConfirm, onCancel, onRetry, onConfirmSingle, o
                           <span className="chat-message__priority-category">[{schedule.category}]</span>
                           <span className="chat-message__priority-title">{schedule.title}</span>
                         </div>
-                        <span className="chat-message__priority-date">{dateStr}</span>
+                        <span className="chat-message__priority-date">~{dateStr}</span>
                       </li>
                     );
                   })}

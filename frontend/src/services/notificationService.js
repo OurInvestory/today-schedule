@@ -312,38 +312,40 @@ const checkDeadlines = async (alertMinutes = 60) => {
  * AI 데일리 브리핑 스케줄링
  */
 export const scheduleDailyBriefing = async () => {
-  const settings = await getNotificationSettings();
-  
   // 기존 타임아웃 정리
   if (dailyBriefingTimeout) {
     clearTimeout(dailyBriefingTimeout);
+    dailyBriefingTimeout = null;
   }
   
+  const settings = await getNotificationSettings();
+  
   if (!settings.dailySummary) {
+    console.log('[DailyBriefing] 브리핑이 비활성화되어 있습니다.');
     return;
   }
   
-  const scheduleNext = () => {
-    const now = new Date();
-    const [hours, minutes] = settings.dailySummaryTime.split(':').map(Number);
-    
-    let nextBriefing = new Date();
-    nextBriefing.setHours(hours, minutes, 0, 0);
-    
-    // 이미 지난 시간이면 다음 날로 설정
-    if (nextBriefing <= now) {
-      nextBriefing.setDate(nextBriefing.getDate() + 1);
-    }
-    
-    const msUntilBriefing = nextBriefing.getTime() - now.getTime();
-    
-    dailyBriefingTimeout = setTimeout(async () => {
-      await sendDailyBriefing();
-      scheduleNext(); // 다음 브리핑 스케줄
-    }, msUntilBriefing);
-  };
+  const now = new Date();
+  const [hours, minutes] = settings.dailySummaryTime.split(':').map(Number);
   
-  scheduleNext();
+  let nextBriefing = new Date();
+  nextBriefing.setHours(hours, minutes, 0, 0);
+  
+  // 이미 지난 시간이면 다음 날로 설정
+  if (nextBriefing <= now) {
+    nextBriefing.setDate(nextBriefing.getDate() + 1);
+  }
+  
+  const msUntilBriefing = nextBriefing.getTime() - now.getTime();
+  
+  console.log(`[DailyBriefing] 다음 브리핑 예약: ${nextBriefing.toLocaleString('ko-KR')} (${Math.round(msUntilBriefing / 1000 / 60)}분 후)`);
+  
+  dailyBriefingTimeout = setTimeout(async () => {
+    console.log('[DailyBriefing] 브리핑 전송 시작!');
+    await sendDailyBriefing();
+    // 다음 브리핑 스케줄 (최신 설정으로 다시 스케줄링)
+    scheduleDailyBriefing();
+  }, msUntilBriefing);
 };
 
 /**
@@ -351,58 +353,80 @@ export const scheduleDailyBriefing = async () => {
  */
 export const sendDailyBriefing = async () => {
   try {
-    const todosStr = localStorage.getItem('todos');
-    if (!todosStr) return;
+    // 백엔드 API에서 오늘 일정 가져오기
+    let todaySchedules = [];
+    let urgentSchedules = [];
     
-    const todos = JSON.parse(todosStr);
-    const today = new Date().toISOString().split('T')[0];
-    
-    // 오늘 할 일 필터링 (startDate <= today <= dueDate)
-    const todayTodos = todos.filter(todo => {
-      if (todo.completed) return false;
-      const start = todo.startDate || todo.dueDate;
-      const end = todo.dueDate;
-      return start <= today && today <= end;
-    });
-    
-    // 긴급한 할 일 (importance >= 7)
-    const urgentTodos = todayTodos.filter(t => t.importance >= 7);
-    
-    // 오늘 마감인 할 일
-    const dueTodayTodos = todayTodos.filter(t => t.dueDate === today);
+    try {
+      const { default: api } = await import('./api');
+      const today = new Date();
+      const startDate = today.toISOString().split('T')[0];
+      const endDate = startDate;
+      
+      const response = await api.get('/api/schedules', {
+        params: { start_date: startDate, end_date: endDate }
+      });
+      
+      if (response.data?.status === 200 && Array.isArray(response.data?.data)) {
+        todaySchedules = response.data.data;
+        urgentSchedules = todaySchedules.filter(s => s.priority_score >= 7);
+      }
+    } catch (apiError) {
+      console.warn('[DailyBriefing] API 호출 실패, localStorage 사용:', apiError);
+      // API 실패 시 localStorage에서 할 일 가져오기
+      const todosStr = localStorage.getItem('todos');
+      if (todosStr) {
+        const todos = JSON.parse(todosStr);
+        const today = new Date().toISOString().split('T')[0];
+        todaySchedules = todos.filter(todo => {
+          if (todo.completed) return false;
+          const start = todo.startDate || todo.dueDate;
+          const end = todo.dueDate;
+          return start <= today && today <= end;
+        });
+        urgentSchedules = todaySchedules.filter(t => t.importance >= 7);
+      }
+    }
     
     // 브리핑 메시지 생성
     let briefingMessage = '';
+    const encouragements = [
+      '화이팅하세요! 💪',
+      '오늘도 파이팅! 🔥',
+      '좋은 하루 되세요! ☀️',
+      '응원합니다! 🌟',
+      '힘내세요! 💯',
+    ];
+    const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
     
-    if (todayTodos.length === 0) {
-      briefingMessage = '오늘은 예정된 할 일이 없습니다. 여유로운 하루 되세요! 🎉';
+    if (todaySchedules.length === 0) {
+      briefingMessage = '오늘은 예정된 일정이 없습니다. 여유로운 하루 되세요! 🎉';
     } else {
-      briefingMessage = `오늘 할 일 ${todayTodos.length}개`;
+      briefingMessage = `오늘 일정 ${todaySchedules.length}개`;
       
-      if (urgentTodos.length > 0) {
-        briefingMessage += ` (긴급 ${urgentTodos.length}개)`;
+      if (urgentSchedules.length > 0) {
+        briefingMessage += `, 긴급 ${urgentSchedules.length}개`;
       }
       
-      if (dueTodayTodos.length > 0) {
-        briefingMessage += `\n오늘 마감: ${dueTodayTodos.map(t => t.title).join(', ')}`;
-      }
+      briefingMessage += `! ${randomEncouragement}`;
     }
     
     // 브라우저 알림 전송
     sendBrowserNotification('🌅 AI 데일리 브리핑', {
       body: briefingMessage,
-      tag: 'briefing',
+      tag: 'daily-briefing',
       requireInteraction: true,
     });
     
+    console.log('[DailyBriefing] 전송 완료:', briefingMessage);
+    
     return {
-      todayTodos,
-      urgentTodos,
-      dueTodayTodos,
+      todaySchedules,
+      urgentSchedules,
       message: briefingMessage,
     };
   } catch (error) {
-    console.error('Error sending daily briefing:', error);
+    console.error('[DailyBriefing] 오류:', error);
     return null;
   }
 };

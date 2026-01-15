@@ -281,8 +281,25 @@ def seed_database(db):
     existing_user = db.query(User).filter(User.user_id == TEST_USER_ID).first()
     
     if existing_user:
-        print("✅ 시드 데이터가 이미 존재합니다. 건너뜁니다.")
-        return False
+        # 알림 데이터가 없으면 알림만 추가
+        existing_notifications = db.query(Notification).filter(Notification.user_id == TEST_USER_ID).count()
+        if existing_notifications == 0:
+            print("🔔 알림 시드 데이터를 추가합니다...")
+            try:
+                notifications = get_seed_notifications()
+                for n_data in notifications:
+                    notification = Notification(**n_data)
+                    db.add(notification)
+                db.commit()
+                print(f"  ✓ 알림 {len(notifications)}개 생성")
+                return True
+            except Exception as e:
+                db.rollback()
+                print(f"❌ 알림 시드 데이터 삽입 실패: {e}")
+                return False
+        else:
+            print("✅ 시드 데이터가 이미 존재합니다. 건너뜁니다.")
+            return False
     
     print("🌱 시드 데이터 삽입을 시작합니다...")
     
