@@ -1,4 +1,5 @@
 import api from './api';
+import { sendBrowserNotification, addNotification } from './notificationService';
 
 /**
  * 알림 등록 (백엔드 API)
@@ -131,9 +132,10 @@ export const startNotificationPolling = (onNotification) => {
       const responseData = response?.data;
       
       if (responseData?.status === 200 && Array.isArray(responseData?.data) && responseData.data.length > 0) {
-        // 각 알림에 대해 브라우저 알림 표시
+        // 각 알림에 대해 브라우저 알림 표시 (설정 체크 포함)
         responseData.data.forEach(notification => {
-          showBrowserNotification('일정 알림', {
+          // notificationService의 sendBrowserNotification 사용 (설정 체크 포함)
+          sendBrowserNotification('🔔 일정 알림', {
             body: notification.message,
             tag: `notification-${notification.notification_id}`,
             requireInteraction: true,

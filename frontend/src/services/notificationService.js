@@ -53,9 +53,11 @@ export const updateNotificationSettings = async (updates) => {
     const updated = { ...current, ...updates };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     
-    // 데일리 브리핑 시간이 변경되면 스케줄러 재설정
+    // 데일리 브리핑 시간이 변경되면 스케줄러 재설정 (오늘 설정한 시간에 알림 오도록)
     if (updates.dailySummaryTime !== undefined || updates.dailySummary !== undefined) {
-      scheduleDailyBriefing();
+      // 시간 변경 시 forceToday=true로 호출하여 오늘 해당 시간에 알림 오게 함
+      const forceToday = updates.dailySummaryTime !== undefined;
+      scheduleDailyBriefing(forceToday);
     }
     
     return updated;
@@ -310,8 +312,9 @@ const checkDeadlines = async (alertMinutes = 60) => {
 
 /**
  * AI 데일리 브리핑 스케줄링
+ * @param {boolean} forceToday - true이면 오늘 이미 지난 시간이어도 오늘로 예약 (설정 변경 시)
  */
-export const scheduleDailyBriefing = async () => {
+export const scheduleDailyBriefing = async (forceToday = false) => {
   // 기존 타임아웃 정리
   if (dailyBriefingTimeout) {
     clearTimeout(dailyBriefingTimeout);
@@ -331,12 +334,21 @@ export const scheduleDailyBriefing = async () => {
   let nextBriefing = new Date();
   nextBriefing.setHours(hours, minutes, 0, 0);
   
-  // 이미 지난 시간이면 다음 날로 설정
-  if (nextBriefing <= now) {
+  // 이미 지난 시간이면 다음 날로 설정 (단, forceToday가 true이면 오늘로 유지)
+  if (nextBriefing <= now && !forceToday) {
     nextBriefing.setDate(nextBriefing.getDate() + 1);
   }
   
   const msUntilBriefing = nextBriefing.getTime() - now.getTime();
+  
+  // 이미 지난 시간이고 forceToday가 true이면 즉시 실행
+  if (msUntilBriefing <= 0 && forceToday) {
+    console.log('[DailyBriefing] 설정 변경으로 즉시 브리핑 전송!');
+    await sendDailyBriefing();
+    // 다음 날 브리핑 스케줄
+    scheduleDailyBriefing(false);
+    return;
+  }
   
   console.log(`[DailyBriefing] 다음 브리핑 예약: ${nextBriefing.toLocaleString('ko-KR')} (${Math.round(msUntilBriefing / 1000 / 60)}분 후)`);
   
@@ -344,7 +356,7 @@ export const scheduleDailyBriefing = async () => {
     console.log('[DailyBriefing] 브리핑 전송 시작!');
     await sendDailyBriefing();
     // 다음 브리핑 스케줄 (최신 설정으로 다시 스케줄링)
-    scheduleDailyBriefing();
+    scheduleDailyBriefing(false);
   }, msUntilBriefing);
 };
 
