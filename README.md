@@ -1,10 +1,12 @@
-# 5늘의 일정
+# 오늘의 일정
 
 > watsonx.ai 기반 대학생 맞춤형 AI 학업 스케줄 도우미
 
 ## 📌 프로젝트 소개
 
 대학생이 자연어로 입력한 할 일(과제, 시험, 팀플, 대외활동 등)을 AI가 자동으로 분석·분류하고, 중요도와 마감기한을 고려해 우선순위를 추천하는 스마트 학습 도우미입니다.
+
+> 본 프로젝트는 IBM AI Hackathon에서 시작되었으며, 이후 별도의 레포지토리에서 기능 고도화 및 구조 개선을 지속하고 있습니다.
 
 ## ✨ 주요 기능
 
@@ -64,12 +66,13 @@
 
 ## 👥 팀 구성
 
-| 역할 | 이름 |
-|------|------|
-| Project Manager | 손민주 |
-| Prompt Engineer & Domain Expert | 천지우 |
-| Frontend Developer | 김혜영, 손민주 |
-| Backend Developer & AI Engineer | 김진영, 조하영 |
+### 초기 기획 및 MVP 구현 (IBM AI Hackathon)
+- IBM AI Hackathon에서 팀 단위로 참여하여 초기 아이디어 도출 및 MVP 구현
+
+### 이후 고도화 및 유지보수
+- **[손민주](https://github.com/mango606), [조하영](https://github.com/fanfanduck)**
+- **Frontend / Backend / AI 연동을 포함한 Full-Stack 전반을 공동으로 작업**
+- 역할 구분 없이 기능 설계, 구현, 리팩토링을 함께 진행
 
 ## 🚀 시작하기
 
@@ -77,8 +80,8 @@
 
 ```bash
 # 프로젝트 클론
-git clone https://github.com/ibm-ai-hackathon/five-today-schedule.git
-cd five-today-schedule
+git clone https://github.com/OurInvestory/today-schedule.git
+cd today-schedule
 
 # .env 파일 설정 (아래 환경 변수 참고)
 
@@ -95,9 +98,9 @@ docker-compose up -d --build
 
 ```env
 # Database
-DATABASE_URL=mysql+pymysql://root:1869@db:3306/five_today_schedule
+DATABASE_URL=mysql+pymysql://root:1869@db:3306/today_schedule
 MYSQL_ROOT_PASSWORD=1869
-MYSQL_DATABASE=five_today_schedule
+MYSQL_DATABASE=today_schedule
 
 # IBM watsonx.ai
 WATSONX_API_KEY=your_api_key
@@ -130,7 +133,7 @@ uvicorn app.main:app --reload
 ## 📁 프로젝트 구조
 
 ```
-five-today-schedule/
+today-schedule/
 ├── frontend/           # React 프론트엔드
 │   ├── src/
 │   │   ├── components/ # 재사용 컴포넌트
@@ -164,4 +167,4 @@ five-today-schedule/
 
 ## 📄 라이선스
 
-이 프로젝트는 MIT 라이선스를 따릅니다.
+This project is licensed under the MIT License.
