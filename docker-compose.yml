@@ -28,6 +28,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
     container_name: five-schedule-frontend
     ports:
       - '5173:5173'
@@ -36,14 +38,11 @@ services:
       - ./frontend/public:/app/public
       - /app/node_modules
     environment:
-      # 로컬 개발: localhost:8000
-      # Docker 컨테이너 간 통신: five-schedule-backend:8000
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=${VITE_API_URL}
     depends_on:
       - backend
     networks:
       - app-network
-
   db:
     image: mysql:8.0
     container_name: five-schedule-db
