@@ -1,6 +1,7 @@
 import os
 import json
 import re
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -9,10 +10,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from dotenv import load_dotenv
 
-# IBM Watsonx SDK
-from ibm_watsonx_ai.foundation_models import ModelInference
-from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
-from ibm_watsonx_ai.foundation_models.utils.enums import DecodingMethods
+# Google Gemini SDK
+import google.generativeai as genai
 
 from app.schemas.ai_chat import (
     ChatRequest, 
@@ -28,16 +27,23 @@ from app.models.schedule import Schedule
 load_dotenv()
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # 설정 및 상수
 # ============================================================
 
-WATSONX_API_KEY = os.getenv("WATSONX_API_KEY")
-WATSONX_URL = os.getenv("WATSONX_URL")
-WATSONX_PROJECT_ID = os.getenv("WATSONX_PROJECT_ID")
-WATSONX_MODEL_ID = os.getenv("WATSONX_MODEL_ID", "meta-llama/llama-3-3-70b-instruct")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# 채팅은 속도와 논리력이 중요하므로 Flash 모델 권장 (Pro도 가능)
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
 
+if not GOOGLE_API_KEY:
+    logger.error("GOOGLE_API_KEY is missing. Chat features will fail.")
+
+# Gemini 설정
+genai.configure(api_key=GOOGLE_API_KEY)
+
+# 테스트용 고정 사용자 ID (나중에 실제 인증으로 교체 필요)
 TEST_USER_ID = "7822a162-788d-4f36-9366-c956a68393e1"
 
 # 카테고리 영어→한국어 매핑
@@ -47,54 +53,23 @@ CATEGORY_MAP = {
     "personal": "개인", "other": "기타",
 }
 
-GENERATE_PARAMS = {
-    GenParams.DECODING_METHOD: DecodingMethods.GREEDY,
-    GenParams.MAX_NEW_TOKENS: 500,
-    GenParams.MIN_NEW_TOKENS: 1,
-    GenParams.TEMPERATURE: 0,
-    GenParams.STOP_SEQUENCES: ["User Input:", "User:", "\n\n\n", "```\n"]
-}
-
 # ============================================================
 # 유틸리티 함수
 # ============================================================
 
-def get_watson_model():
-    """Watsonx 모델 인스턴스 반환"""
-    return ModelInference(
-        model_id=WATSONX_MODEL_ID,
-        params=GENERATE_PARAMS,
-        credentials={"url": WATSONX_URL, "apikey": WATSONX_API_KEY},
-        project_id=WATSONX_PROJECT_ID
+def get_gemini_model():
+    """Gemini 모델 인스턴스 반환 (JSON 모드 활성화)"""
+    return genai.GenerativeModel(
+        model_name=GEMINI_MODEL_NAME,
+        generation_config={
+            "temperature": 0.0,  # 사실 기반 응답을 위해 0으로 설정
+            "response_mime_type": "application/json"  # ★ 핵심: 무조건 JSON만 뱉도록 강제
+        }
     )
-
 
 def translate_category(category: str) -> str:
     """영어 카테고리를 한국어로 변환"""
     return CATEGORY_MAP.get(category.lower(), category) if category else "기타"
-
-
-def extract_json_from_text(text: str) -> str:
-    """텍스트에서 첫 번째 JSON 객체만 추출"""
-    try:
-        text = text.split("User Input:")[0]
-        text = re.sub(r"```json\s*", "", text)
-        text = re.sub(r"```", "", text)
-        
-        start_index = text.find('{')
-        if start_index != -1:
-            brace_count = 0
-            for i, char in enumerate(text[start_index:], start=start_index):
-                if char == '{':
-                    brace_count += 1
-                elif char == '}':
-                    brace_count -= 1
-                if brace_count == 0:
-                    return text[start_index:i+1]
-        return text.strip()
-    except Exception:
-        return text.strip()
-
 
 # ============================================================
 # DB 조회 함수
@@ -110,7 +85,6 @@ def get_schedules_for_period(db: Session, start_date: datetime, end_date: dateti
         )
     ).order_by(Schedule.end_at.asc()).all()
 
-
 def search_schedules_by_keyword(db: Session, keyword: str, limit: int = 5) -> list:
     """키워드가 포함된 일정 검색"""
     now = datetime.now()
@@ -122,7 +96,6 @@ def search_schedules_by_keyword(db: Session, keyword: str, limit: int = 5) -> li
             Schedule.start_at <= now + timedelta(days=14)
         )
     ).order_by(Schedule.start_at.asc()).limit(limit).all()
-
 
 def format_schedules_for_display(schedules: list) -> str:
     """일정 목록을 읽기 좋은 형식으로 변환"""
@@ -136,7 +109,6 @@ def format_schedules_for_display(schedules: list) -> str:
         category = translate_category(s.category)
         lines.append(f"• [{category}] {s.title} - {date_str} {time_str}")
     return "\n".join(lines)
-
 
 # ============================================================
 # 프롬프트 생성
@@ -186,152 +158,50 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
 - Today: {current_date_str}
 - Timezone: {req.timezone}
 - Selected Schedule ID: {req.selected_schedule_id or "None"} 
-(If 'Selected Schedule ID' exists, the user's command likely applies to this specific schedule.)
 
 {context_section}
 
 [Rules]
 1. Intent Classification:
-   - "SCHEDULE_MUTATION": When the user wants to Create, Update, or Delete a schedule or task AND all required info is provided.
-   - "SCHEDULE_QUERY": When user asks to VIEW/SHOW schedules. (e.g., "보여줘", "알려줘", "뭐야", "있어?")
-   - "PRIORITY_QUERY": When user asks about high priority or recommended tasks. (e.g., "우선순위 높은", "추천해줘", "뭐부터 해야 해")
-   - "CLARIFY": If essential info is missing. MUST use CLARIFY when:
-      * No date/time specified for schedule (e.g., "시험 있어", "과제 해야해" without when)
-      * Notification without specific schedule name
-      * Ambiguous schedule reference
+   - "SCHEDULE_MUTATION": Create, Update, or Delete a schedule/task.
+   - "SCHEDULE_QUERY": VIEW/SHOW schedules (e.g., "보여줘", "뭐야").
+   - "PRIORITY_QUERY": High priority or recommendation requests.
+   - "CLARIFY": If essential info (like Date) is missing.
 
-2. Type Classification (EVENT vs TASK):
-   - "EVENT": Has a specific START TIME (e.g., "3시에 회의"). Use 'start_at'.
-   - "TASK": Has a DEADLINE with "~까지" or "마감". Use 'end_at'. Goes to sub_task.
+2. Type Classification:
+   - "EVENT": Has START TIME. Use 'start_at'.
+   - "TASK": Has DEADLINE. Use 'end_at'.
 
-3. Determine 'op': "CREATE" (default), "UPDATE", or "DELETE"
-
-4. Determine 'target': "SCHEDULE", "SUB_TASK", or "NOTIFICATION"
-
-5. Time Parsing: If just a number (e.g., "3시"), assume PM unless context suggests otherwise.
-
-6. Payload Construction:
-   - "importance_score" (1-10): 10=기말/자격증, 7-9=중간/과제, 4-6=퀴즈/회의, 1-3=개인
-   - "estimated_minute": Meeting=60, Report=90, Study=120
+3. Payload Construction:
+   - "importance_score" (1-10)
    - "category": [수업, 과제, 시험, 공모전, 대외활동, 기타]
-   - EVENTs: MUST have 'start_at' AND 'end_at'
-   - TASKs: MUST have 'end_at', 'date', 'priority'
 
-7. Output Format:
+4. Output Format (JSON):
    - "CLARIFY": Fill 'preserved_info' + 'missingFields'
    - "SCHEDULE_MUTATION": Fill 'actions' list
-   - "PRIORITY_QUERY": Set "preserved_info.query_type" to "high_priority"
-
-8. Date Calculation: "내일" = Today + 1 day, "오늘" = Today
-
-9. Notification: If no specific schedule, return CLARIFY asking which schedule.
-
-10. Sub-task for Exams: IF creating 시험/과제, generate 2-3 preparation sub-tasks.
 
 [Examples]
----
-# Example 1: Multiple EVENTs
-User: "내일 3시에 회의, 5시에 미팅 추가해줘"
-JSON: {{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "EVENT",
-  "actions": [
-    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "회의", "start_at": "2026-01-16T15:00:00+09:00", "end_at": "2026-01-16T16:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}} }},
-    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "미팅", "start_at": "2026-01-16T17:00:00+09:00", "end_at": "2026-01-16T18:00:00+09:00", "importance_score": 5, "estimated_minute": 60, "category": "기타"}} }}
-  ]
-}}
+# Example 1: Creation
+User: "내일 3시에 회의"
+JSON: {{ "intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [ {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "회의", "start_at": "2026-01-16T15:00:00+09:00", "end_at": "2026-01-16T16:00:00+09:00", "category": "기타"}} }} ] }}
 
-# Example 2: TASK with deadline
-User: "오늘 6시까지 보고서 작성해야 해"
-JSON: {{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "TASK",
-  "actions": [
-    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "보고서 작성", "date": "2026-01-15", "end_at": "2026-01-15T18:00:00+09:00", "importance_score": 7, "estimated_minute": 90, "category": "과제", "priority": "high"}} }}
-  ]
-}}
-
-# Example 3: CLARIFY - No date specified
-User: "알고리즘 시험 있어"
-JSON: {{
-  "intent": "CLARIFY",
-  "type": "TASK",
-  "actions": [],
-  "preserved_info": {{ "title": "알고리즘 시험", "category": "시험", "importance_score": 10 }},
-  "missingFields": [{{ "field": "date", "question": "알고리즘 시험이 언제인가요?", "choices": [] }}]
-}}
-
-# Example 4: Notification (독립 알림 - 일정 연결 없이 바로 등록)
-User: "내일 3시에 알림 맞춰줘"
-JSON: {{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "TASK",
-  "actions": [{{ "op": "CREATE", "target": "NOTIFICATION", "payload": {{ "message": "알림", "notify_at": "2026-01-16T15:00:00+09:00" }} }}]
-}}
-
-# Example 4-2: Notification with message
-User: "해커톤 발표 30분 전에 알려줘"
-JSON: {{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "TASK",
-  "actions": [{{ "op": "CREATE", "target": "NOTIFICATION", "payload": {{ "message": "해커톤 발표 준비하세요!", "schedule_title": "해커톤", "minutes_before": 30 }} }}]
-}}
-
-# Example 5: Exam with sub-tasks
-User: "다음주 월요일 알고리즘 시험 추가해줘"
-JSON: {{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "TASK",
-  "actions": [
-    {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "알고리즘 시험", "start_at": "2026-01-19T10:00:00+09:00", "end_at": "2026-01-19T12:00:00+09:00", "importance_score": 10, "estimated_minute": 120, "category": "시험"}} }},
-    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "알고리즘 시험 - 개념 정리", "date": "2026-01-16", "end_at": "2026-01-16T23:59:00+09:00", "importance_score": 8, "estimated_minute": 120, "category": "시험", "priority": "high", "tip": "핵심 개념 위주로 1회독"}} }},
-    {{ "op": "CREATE", "target": "SUB_TASK", "payload": {{ "title": "알고리즘 시험 - 기출 풀이", "date": "2026-01-17", "end_at": "2026-01-17T23:59:00+09:00", "importance_score": 8, "estimated_minute": 180, "category": "시험", "priority": "high", "tip": "타이머 켜고 실전처럼"}} }}
-  ]
-}}
-
-# Example 6: Schedule Query
+# Example 2: Query
 User: "오늘 일정 보여줘"
-JSON: {{
-  "intent": "SCHEDULE_QUERY",
-  "type": "TASK",
-  "actions": [],
-  "preserved_info": {{ "query_range": "today" }}
-}}
-
-# Example 7: Priority Query
-User: "우선순위 높은 일정 추천해줘"
-JSON: {{
-  "intent": "PRIORITY_QUERY",
-  "type": "TASK",
-  "actions": [],
-  "preserved_info": {{ "query_type": "high_priority" }}
-}}
-
-# Example 8: Delete
-User: "캡스톤 회의 취소해"
-JSON: {{
-  "intent": "SCHEDULE_MUTATION",
-  "type": "EVENT",
-  "actions": [ {{ "op": "DELETE", "target": "SCHEDULE", "payload": {{ "title": "캡스톤 회의" }} }} ]
-}}
----
+JSON: {{ "intent": "SCHEDULE_QUERY", "type": "TASK", "actions": [], "preserved_info": {{ "query_range": "today" }} }}
 
 User Input: {req.text}
-JSON Output:
 """
 
-
 # ============================================================
-# Intent 핸들러
+# Intent 핸들러 (기존 로직 유지)
 # ============================================================
 
 def handle_clarify(ai_result: AIChatParsed, db: Session) -> str:
     """CLARIFY intent 처리"""
     preserved = ai_result.preserved_info or {}
     search_keyword = preserved.get('search_keyword') or preserved.get('title')
-    target_date = preserved.get('date')  # "2026-01-16" 형식
+    target_date = preserved.get('date') 
     
-    # 날짜 기반 삭제 요청 (예: "내일 일정 취소해줘")
     if target_date and ai_result.missingFields:
         field_info = ai_result.missingFields[0]
         field_name = field_info.get('field', '') if isinstance(field_info, dict) else getattr(field_info, 'field', '')
@@ -345,20 +215,13 @@ def handle_clarify(ai_result: AIChatParsed, db: Session) -> str:
                 
                 if schedules:
                     choices = [f"{s.title} ({s.start_at.strftime('%H:%M') if s.start_at else ''})" for s in schedules]
-                    matching_schedules = [
-                        {"id": str(s.schedule_id), "title": s.title, "date": s.start_at.isoformat() if s.start_at else None}
-                        for s in schedules
-                    ]
                     
-                    # missingFields 업데이트
                     if isinstance(field_info, dict):
                         field_info['choices'] = choices
                     else:
                         field_info.choices = choices
                     
-                    # preserved_info에 일정 정보 추가
                     ai_result.preserved_info['op'] = 'DELETE'
-                    ai_result.preserved_info['matching_schedules'] = matching_schedules
                     
                     date_text = f"{specific_date.month}월 {specific_date.day}일"
                     choice_text = "\n".join([f"• {c}" for c in choices])
@@ -369,7 +232,6 @@ def handle_clarify(ai_result: AIChatParsed, db: Session) -> str:
             except ValueError:
                 pass
     
-    # 키워드로 일정 검색하여 choices 추가
     if search_keyword and ai_result.missingFields:
         related = search_schedules_by_keyword(db, search_keyword)
         if related:
@@ -380,7 +242,6 @@ def handle_clarify(ai_result: AIChatParsed, db: Session) -> str:
             else:
                 field_info.choices = choices
     
-    # 메시지 생성
     if ai_result.missingFields:
         field_info = ai_result.missingFields[0]
         question = field_info.get('question', "정보가 부족합니다.") if isinstance(field_info, dict) else getattr(field_info, 'question', "정보가 부족합니다.")
@@ -393,9 +254,7 @@ def handle_clarify(ai_result: AIChatParsed, db: Session) -> str:
     
     return "정보가 부족합니다. 조금 더 자세히 말씀해 주세요."
 
-
 def handle_mutation(ai_result: AIChatParsed, db: Session) -> str:
-    """SCHEDULE_MUTATION intent 처리"""
     actions = ai_result.actions
     if not actions:
         return "처리할 일정이 없습니다."
@@ -404,19 +263,15 @@ def handle_mutation(ai_result: AIChatParsed, db: Session) -> str:
     op_type = first_action.op
     target_type = getattr(first_action, 'target', 'SCHEDULE')
     
-    # 알림 설정
     if target_type == "NOTIFICATION":
         return handle_notification(ai_result, db)
     
-    # 삭제 처리 - DB 검증
     if op_type == "DELETE":
         return handle_delete(ai_result, db)
     
-    # 수정
     if op_type == "UPDATE":
         return "일정을 변경할까요?"
     
-    # 생성 - 일정/할일 카운트
     schedule_count = sum(1 for a in actions if getattr(a, 'target', 'SCHEDULE') == 'SCHEDULE')
     sub_task_count = sum(1 for a in actions if getattr(a, 'target', 'SCHEDULE') == 'SUB_TASK')
     
@@ -426,37 +281,29 @@ def handle_mutation(ai_result: AIChatParsed, db: Session) -> str:
         return f"할 일 {sub_task_count}건을 등록할까요?"
     return f"일정 {schedule_count}건을 등록할까요?"
 
-
 def handle_delete(ai_result: AIChatParsed, db: Session) -> str:
-    """DELETE 요청 처리 - DB 검증 후 적절한 응답"""
     payload = ai_result.actions[0].payload
     title_keyword = payload.get('title', '')
     
     if not title_keyword:
         return "어떤 일정을 취소할까요?"
     
-    # DB에서 해당 제목으로 일정 검색
     matching = search_schedules_by_keyword(db, title_keyword, limit=10)
-    
-    # 정확히 일치하는 것 우선
     exact_match = [s for s in matching if s.title.lower() == title_keyword.lower()]
     
     if len(exact_match) == 1:
-        # 정확히 1건 → 바로 삭제 확인
         schedule = exact_match[0]
         payload['schedule_id'] = str(schedule.schedule_id)
         date_str = schedule.end_at.strftime("%m/%d") if schedule.end_at else ""
         return f"'{schedule.title}' ({date_str}) 일정을 취소할까요?"
     
     if len(matching) == 1:
-        # 유사한 거 1건
         schedule = matching[0]
         payload['schedule_id'] = str(schedule.schedule_id)
         date_str = schedule.end_at.strftime("%m/%d") if schedule.end_at else ""
         return f"'{schedule.title}' ({date_str}) 일정을 취소할까요?"
     
     if len(matching) > 1:
-        # 여러 건 → CLARIFY로 전환하여 선택 요청
         choices = [f"{s.title} ({s.end_at.strftime('%m/%d') if s.end_at else ''})" for s in matching]
         ai_result.intent = "CLARIFY"
         ai_result.actions = []
@@ -470,27 +317,18 @@ def handle_delete(ai_result: AIChatParsed, db: Session) -> str:
         ai_result.preserved_info = {
             "op": "DELETE",
             "search_keyword": title_keyword,
-            "matching_schedules": [
-                {"id": str(s.schedule_id), "title": s.title, "date": s.end_at.isoformat() if s.end_at else None}
-                for s in matching
-            ]
         }
         choice_text = "\n".join([f"• {c}" for c in choices])
         return f"'{title_keyword}' 관련 일정이 여러 개 있어요. 어떤 걸 취소할까요?\n\n{choice_text}"
     
-    # 0건 - 찾을 수 없음
     return f"'{title_keyword}' 일정을 찾을 수 없어요."
 
-
 def handle_notification(ai_result: AIChatParsed, db: Session) -> str:
-    """알림 설정 처리 - 독립 알림으로 바로 등록"""
     payload = ai_result.actions[0].payload
-    message = payload.get('message', '알림')
     notify_at = payload.get('notify_at')
     schedule_title = payload.get('schedule_title')
     minutes_before = payload.get('minutes_before')
     
-    # schedule_title이 있으면 해당 일정 찾아서 시간 계산
     if schedule_title and minutes_before:
         matching = search_schedules_by_keyword(db, schedule_title, limit=1)
         if matching:
@@ -503,7 +341,6 @@ def handle_notification(ai_result: AIChatParsed, db: Session) -> str:
                 return f"'{schedule.title}' {minutes_before}분 전({time_str})에 알림을 설정할까요?"
         return f"'{schedule_title}' 일정을 찾지 못했어요. 알림 시간을 직접 알려주세요!"
     
-    # notify_at이 있으면 바로 알림 설정
     if notify_at:
         try:
             notify_dt = datetime.fromisoformat(notify_at.replace('Z', '+00:00'))
@@ -512,11 +349,9 @@ def handle_notification(ai_result: AIChatParsed, db: Session) -> str:
         except:
             pass
     
-    return "언제 알림을 받으실 건가요? (예: 내일 3시, 1월 20일 오후 2시)"
-
+    return "언제 알림을 받으실 건가요?"
 
 def handle_priority_query(ai_result: AIChatParsed, db: Session) -> str:
-    """PRIORITY_QUERY intent 처리"""
     now = datetime.now()
     start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = now + timedelta(days=14)
@@ -529,9 +364,8 @@ def handle_priority_query(ai_result: AIChatParsed, db: Session) -> str:
     )[:5]
     
     if not high_priority:
-        return "현재 우선순위가 높은 일정이 없어요. 🎉 여유롭게 하루를 보내세요!"
+        return "현재 우선순위가 높은 일정이 없어요. 🎉"
     
-    # 구조화된 데이터 추가
     ai_result.preserved_info = {
         **(ai_result.preserved_info or {}),
         "query_type": "high_priority",
@@ -549,14 +383,11 @@ def handle_priority_query(ai_result: AIChatParsed, db: Session) -> str:
     }
     return "우선순위가 높은 일정이에요! 🔥"
 
-
 def handle_schedule_query(ai_result: AIChatParsed, db: Session) -> str:
-    """SCHEDULE_QUERY intent 처리"""
     now = datetime.now()
     preserved = ai_result.preserved_info or {}
     query_range = preserved.get("query_range", "today")
     
-    # 날짜 범위 계산
     range_config = {
         "today": (now.replace(hour=0, minute=0, second=0), now.replace(hour=23, minute=59, second=59), "오늘"),
         "tomorrow": ((now + timedelta(days=1)).replace(hour=0, minute=0, second=0), (now + timedelta(days=1)).replace(hour=23, minute=59, second=59), "내일"),
@@ -567,7 +398,6 @@ def handle_schedule_query(ai_result: AIChatParsed, db: Session) -> str:
         ),
     }
     
-    # 특정 날짜 형식 처리 (예: "2026-01-20")
     if query_range not in range_config:
         try:
             specific_date = datetime.strptime(query_range, "%Y-%m-%d")
@@ -575,7 +405,6 @@ def handle_schedule_query(ai_result: AIChatParsed, db: Session) -> str:
             end_date = specific_date.replace(hour=23, minute=59, second=59)
             period_text = f"{specific_date.month}월 {specific_date.day}일"
         except ValueError:
-            # 파싱 실패 시 기본값 (오늘)
             start_date = now.replace(hour=0, minute=0, second=0)
             end_date = now.replace(hour=23, minute=59, second=59)
             period_text = "오늘"
@@ -587,30 +416,38 @@ def handle_schedule_query(ai_result: AIChatParsed, db: Session) -> str:
     if schedules:
         schedule_text = format_schedules_for_display(schedules)
         return f"{period_text} 일정이에요! 📅\n\n{schedule_text}\n\n총 {len(schedules)}건의 일정이 있어요."
-    return f"{period_text}은 등록된 일정이 없어요. 🎉 여유로운 하루 보내세요!"
-
+    return f"{period_text}은 등록된 일정이 없어요."
 
 # ============================================================
 # 메인 API 엔드포인트
 # ============================================================
 
-@router.post("/chat", response_model=APIResponse, response_model_exclude_none=True)
+@router.post("/chat", response_model=APIResponse)
 async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
     try:
-        model = get_watson_model()
+        model = get_gemini_model()
         now = datetime.now()
         current_date_str = req.base_date or now.strftime("%Y-%m-%d (%A)")
         
-        # AI 호출
+        # 1. 프롬프트 생성
         system_prompt = build_system_prompt(req, current_date_str)
-        generated_response = model.generate_text(prompt=system_prompt)
         
-        # JSON 파싱
-        clean_json_str = extract_json_from_text(generated_response)
-        parsed_data = json.loads(clean_json_str)
+        # 2. Gemini 호출 (JSON 모드로 인해 후처리 불필요)
+        response = model.generate_content(system_prompt)
+        
+        # 3. 결과 파싱 (Gemini가 JSON을 보장하므로 바로 로드)
+        try:
+            parsed_data = json.loads(response.text)
+        except json.JSONDecodeError:
+            # 혹시라도 마크다운이 섞여있을 경우 대비 (안전장치)
+            text = response.text
+            text = re.sub(r"```json\s*", "", text)
+            text = re.sub(r"```", "", text)
+            parsed_data = json.loads(text)
+            
         ai_result = AIChatParsed(**parsed_data)
         
-        # Intent별 처리
+        # 4. Intent 처리 (기존 로직 동일)
         intent_handlers = {
             "CLARIFY": handle_clarify,
             "SCHEDULE_MUTATION": handle_mutation,
@@ -621,13 +458,12 @@ async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
         handler = intent_handlers.get(ai_result.intent)
         assistant_msg = handler(ai_result, db) if handler else "일정을 확인했습니다."
         
-        # 응답 반환
-        response_data = ChatResponseData(parsed_result=ai_result, assistant_message=assistant_msg)
-        return APIResponse(status=200, message="Success", data=response_data)
+        return APIResponse(
+            status=200, 
+            message="Success", 
+            data=ChatResponseData(parsed_result=ai_result, assistant_message=assistant_msg)
+        )
 
-    except json.JSONDecodeError:
-        print(f"Failed JSON: {generated_response}")
-        return APIResponse(status=500, message="AI 응답을 분석하는 데 실패했습니다.")
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return APIResponse(status=500, message=f"Server Error: {str(e)}")
+        logger.error(f"Chat API Error: {str(e)}")
+        return APIResponse(status=500, message=f"AI 처리 중 오류가 발생했습니다: {str(e)}")

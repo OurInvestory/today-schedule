@@ -5,28 +5,24 @@ from typing import List, Union
 from datetime import date, datetime
 import os
 import re
+import random
 
 from dotenv import load_dotenv
-from ibm_watsonx_ai.foundation_models import ModelInference
-from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
-from ibm_watsonx_ai.foundation_models.utils.enums import DecodingMethods
+import google.generativeai as genai  # IBM 제거 -> Google 추가
 
 from app.db.database import get_db
 from app.models.sub_task import SubTask
 from app.models.schedule import Schedule
 from app.schemas.sub_task import SaveSubTaskRequest, UpdateSubTaskRequest, SubTaskResponse
 from app.schemas.common import ResponseDTO
-import random
 
 load_dotenv()
 
 router = APIRouter(prefix="/api/sub-tasks", tags=["SubTask"])
 
-# --- Watsonx 설정 ---
-WATSONX_API_KEY = os.getenv("WATSONX_API_KEY")
-WATSONX_URL = os.getenv("WATSONX_URL")
-WATSONX_PROJECT_ID = os.getenv("WATSONX_PROJECT_ID")
-WATSONX_MODEL_ID = os.getenv("WATSONX_MODEL_ID", "meta-llama/llama-3-3-70b-instruct")
+# --- Google Gemini 설정 ---
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
 
 # 응원 문구 15개 (AI 연동이 안 될 때 랜덤 표시)
 ENCOURAGEMENT_TIPS = [
@@ -52,46 +48,30 @@ def get_random_encouragement():
     return random.choice(ENCOURAGEMENT_TIPS)
 
 def generate_ai_tip(title: str, category: str = None) -> str:
-    """AI를 사용하여 할 일에 대한 실용적인 팁 생성"""
+    """Gemini를 사용하여 할 일에 대한 실용적인 팁 생성"""
     try:
-        if not WATSONX_API_KEY or not WATSONX_PROJECT_ID:
+        if not GOOGLE_API_KEY:
             return get_random_encouragement()
         
-        credentials = {
-            "url": WATSONX_URL,
-            "apikey": WATSONX_API_KEY
-        }
-        
-        generate_params = {
-            GenParams.DECODING_METHOD: DecodingMethods.GREEDY,
-            GenParams.MAX_NEW_TOKENS: 50,
-            GenParams.MIN_NEW_TOKENS: 5,
-            GenParams.TEMPERATURE: 0.7,
-            GenParams.STOP_SEQUENCES: ["\n", ".", "!"]
-        }
-        
-        model = ModelInference(
-            model_id=WATSONX_MODEL_ID,
-            params=generate_params,
-            credentials=credentials,
-            project_id=WATSONX_PROJECT_ID
-        )
+        genai.configure(api_key=GOOGLE_API_KEY)
+        model = genai.GenerativeModel(GEMINI_MODEL_NAME)
         
         category_hint = f" (카테고리: {category})" if category else ""
         prompt = f"""당신은 학업 일정 관리 AI입니다. 할 일에 대해 짧고 실용적인 팁을 한 줄로 제공하세요.
 
 할 일: {title}{category_hint}
 
-팁 (15자 이내, 이모지 포함):"""
+팁 (15자 이내, 이모지 포함, 명언 스타일 말고 실천적인 팁):"""
         
-        response = model.generate_text(prompt=prompt)
-        tip = response.strip()
+        # Gemini 호출
+        response = model.generate_content(prompt)
+        tip = response.text.strip()
         
-        # 응답이 너무 길면 자르기
+        # 후처리: 응답이 너무 길면 자르기
         if len(tip) > 30:
             tip = tip[:27] + "..."
         
-        # 이모지가 없으면 추가
+        # 후처리: 이모지가 없으면 강제 추가
         if not any(ord(c) > 127 for c in tip[:2]):
             emojis = ["💡", "✨", "📝", "🎯", "⭐"]
             tip = random.choice(emojis) + " " + tip
@@ -214,7 +194,7 @@ def get_sub_tasks(
             )
         ).order_by(SubTask.date.asc()).all()
 
-        # 응답 데이터 생성 - DB에 저장된 category와 priority를 우선 사용
+        # 응답 데이터 생성
         response_data = []
         for task in tasks:
             task_dict = {
@@ -231,7 +211,7 @@ def get_sub_tasks(
                 "tip": task.tip if task.tip else None
             }
             
-            # tip이 없는 경우에만 schedule에서 가져오거나 랜덤 응원 문구 사용
+            # tip이 없는 경우 보완 로직
             if not task_dict["tip"]:
                 if task.schedule_id:
                     schedule = db.query(Schedule).filter(Schedule.schedule_id == task.schedule_id).first()
