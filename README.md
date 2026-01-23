@@ -98,8 +98,8 @@ docker-compose up -d --build
 
 ```env
 # Database
-DATABASE_URL=mysql+pymysql://root:1869@db:3306/today_schedule
-MYSQL_ROOT_PASSWORD=1869
+DATABASE_URL=mysql+pymysql://root:0000@db:3306/today_schedule
+MYSQL_ROOT_PASSWORD=
 MYSQL_DATABASE=today_schedule
 
 # IBM watsonx.ai
