@@ -83,6 +83,20 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   }, []);
 
+  // 토큰 만료로 인한 자동 로그아웃 이벤트 리스너
+  useEffect(() => {
+    const handleAutoLogout = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+      setShowLoginModal(true);
+    };
+
+    window.addEventListener('auth:logout', handleAutoLogout);
+    return () => {
+      window.removeEventListener('auth:logout', handleAutoLogout);
+    };
+  }, []);
+
   // 프로필 업데이트
   const updateProfile = useCallback(async (profileData) => {
     const response = await updateProfileApi(profileData);

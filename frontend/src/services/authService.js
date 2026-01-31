@@ -6,6 +6,7 @@ import api from './api';
 
 // 로컬 스토리지 키
 const TOKEN_KEY = 'accessToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 const USER_KEY = 'user';
 
 /**
@@ -31,8 +32,11 @@ export const login = async (email, password) => {
   
   // 성공 시 토큰 및 사용자 정보 저장
   if (response.data.status === 200 && response.data.data) {
-    const { access_token, user } = response.data.data;
+    const { access_token, refresh_token, user } = response.data.data;
     setToken(access_token);
+    if (refresh_token) {
+      setRefreshToken(refresh_token);
+    }
     setUser(user);
   }
   
@@ -50,8 +54,34 @@ export const logout = async () => {
   } finally {
     // 로컬 스토리지 정리
     removeToken();
+    removeRefreshToken();
     removeUser();
   }
+};
+
+/**
+ * 토큰 갱신
+ */
+export const refreshAccessToken = async () => {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new Error('No refresh token available');
+  }
+  
+  const response = await api.post('/api/auth/refresh', null, {
+    params: { refresh_token: refreshToken },
+  });
+  
+  if (response.data.status === 200 && response.data.data) {
+    const { access_token, refresh_token: newRefreshToken } = response.data.data;
+    setToken(access_token);
+    if (newRefreshToken) {
+      setRefreshToken(newRefreshToken);
+    }
+    return access_token;
+  }
+  
+  throw new Error('Token refresh failed');
 };
 
 /**
@@ -103,6 +133,7 @@ export const deleteAccount = async (password) => {
   // 성공 시 로컬 스토리지 정리
   if (response.data.status === 200) {
     removeToken();
+    removeRefreshToken();
     removeUser();
   }
   
@@ -163,10 +194,34 @@ export const removeUser = () => {
   localStorage.removeItem(USER_KEY);
 };
 
+// ===== 리프레시 토큰 관리 =====
+
+/**
+ * 리프레시 토큰 저장
+ */
+export const setRefreshToken = (token) => {
+  localStorage.setItem(REFRESH_TOKEN_KEY, token);
+};
+
+/**
+ * 리프레시 토큰 조회
+ */
+export const getRefreshToken = () => {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+};
+
+/**
+ * 리프레시 토큰 삭제
+ */
+export const removeRefreshToken = () => {
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+};
+
 export default {
   signup,
   login,
   logout,
+  refreshAccessToken,
   getMe,
   changePassword,
   updateProfile,
@@ -178,4 +233,7 @@ export default {
   setUser,
   getUser,
   removeUser,
+  setRefreshToken,
+  getRefreshToken,
+  removeRefreshToken,
 };
