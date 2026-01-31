@@ -70,8 +70,9 @@ const getPriorityLabel = (score) => {
 export const fetchTodos = async (options = {}) => {
   try {
     const today = new Date();
-    const from = options.from || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const to = options.to || new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    // 기본 조회 범위: 2개월 전 ~ 2개월 후 (더 많은 할 일 표시)
+    const from = options.from || new Date(today.getFullYear(), today.getMonth() - 2, 1).toISOString().split('T')[0];
+    const to = options.to || new Date(today.getFullYear(), today.getMonth() + 3, 0).toISOString().split('T')[0];
 
     const response = await api.get('/api/sub-tasks', {
       params: { from, to },
@@ -259,6 +260,7 @@ export const toggleTodoComplete = async (id, completed, todoData) => {
  */
 export const getTodayTodos = async () => {
   const today = new Date().toISOString().split('T')[0];
+  // 오늘 날짜 기준으로 넓은 범위 조회
   const allTodos = await fetchTodos();
 
   return allTodos.filter(todo => {

@@ -239,79 +239,115 @@ def get_seed_sub_tasks():
     return sub_tasks
 
 
-def get_seed_notifications():
-    """알림 시드 데이터"""
+def get_seed_notifications(schedules):
+    """알림 시드 데이터
+    
+    Args:
+        schedules: 일정 목록 (schedule_id를 참조하기 위해)
+    """
     now = datetime.now()
     
-    notifications = [
-        {
+    # 해커톤 최종 발표 일정 찾기
+    hackathon_final = None
+    semester_start = None
+    for s in schedules:
+        if "최종 발표" in s.get("title", ""):
+            hackathon_final = s
+        if "1학기 개강" in s.get("title", ""):
+            semester_start = s
+    
+    notifications = []
+    
+    # 해커톤 관련 알림 (일정이 있으면 연결)
+    if hackathon_final:
+        notifications.append({
             "notification_id": str(uuid.uuid4()),
             "user_id": TEST_USER_ID,
-            "schedule_id": None,
+            "schedule_id": hackathon_final["schedule_id"],
             "message": "🏆 강릉원주대 x 강원대학교 AI 개발자 해커톤에서 수상했습니다! 축하합니다!",
             "notify_at": now - timedelta(days=15),
             "is_sent": True,
             "is_checked": False,
-        },
-        {
+        })
+    
+    # 개강 관련 알림
+    if semester_start:
+        notifications.append({
             "notification_id": str(uuid.uuid4()),
             "user_id": TEST_USER_ID,
-            "schedule_id": None,
+            "schedule_id": semester_start["schedule_id"],
             "message": "📚 1학기 개강이 한 달 앞으로 다가왔습니다. 수강신청 준비하세요!",
             "notify_at": now - timedelta(days=2),
             "is_sent": True,
             "is_checked": False,
-        },
-        {
-            "notification_id": str(uuid.uuid4()),
-            "user_id": TEST_USER_ID,
-            "schedule_id": None,
-            "message": "🌅 오늘의 할 일을 확인하세요! 화이팅! 💪",
-            "notify_at": now - timedelta(hours=2),
-            "is_sent": True,
-            "is_checked": True,
-        },
-    ]
+        })
     
     return notifications
 
 
 def get_seed_lectures():
     """강의 시간표 데이터 (1학기)"""
+    from datetime import time
+    
+    base_year = 2026
+    # 1학기 시작: 3월 2일, 종료: 6월 19일 (약 16주)
+    semester_start = date(base_year, 3, 2)
+    semester_end = date(base_year, 6, 19)
+    
+    # day 매핑: mon=0, tue=1, wed=2, thu=3, fri=4
+    day_map = {"mon": "0", "tue": "1", "wed": "2", "thu": "3", "fri": "4", "sat": "5", "sun": "6"}
+    
     lectures = [
         # 월요일
-        {"title": "운영체제", "professor": "김철수", "location": "공대 301호", "day": "mon", "start_time": "09:00", "end_time": "10:30"},
-        {"title": "알고리즘", "professor": "이영희", "location": "공대 201호", "day": "mon", "start_time": "13:00", "end_time": "14:30"},
+        {"title": "운영체제 (김철수, 공대 301호)", "day": "mon", "start_time": "09:00", "end_time": "10:30"},
+        {"title": "알고리즘 (이영희, 공대 201호)", "day": "mon", "start_time": "13:00", "end_time": "14:30"},
         
         # 화요일
-        {"title": "데이터베이스", "professor": "박민수", "location": "공대 401호", "day": "tue", "start_time": "10:30", "end_time": "12:00"},
-        {"title": "인공지능", "professor": "정수연", "location": "공대 501호", "day": "tue", "start_time": "15:00", "end_time": "16:30"},
+        {"title": "데이터베이스 (박민수, 공대 401호)", "day": "tue", "start_time": "10:30", "end_time": "12:00"},
+        {"title": "인공지능 (정수연, 공대 501호)", "day": "tue", "start_time": "15:00", "end_time": "16:30"},
         
         # 수요일
-        {"title": "운영체제", "professor": "김철수", "location": "공대 301호", "day": "wed", "start_time": "09:00", "end_time": "10:30"},
-        {"title": "컴퓨터네트워크", "professor": "최지훈", "location": "공대 302호", "day": "wed", "start_time": "13:00", "end_time": "14:30"},
+        {"title": "운영체제 (김철수, 공대 301호)", "day": "wed", "start_time": "09:00", "end_time": "10:30"},
+        {"title": "컴퓨터네트워크 (최지훈, 공대 302호)", "day": "wed", "start_time": "13:00", "end_time": "14:30"},
         
         # 목요일
-        {"title": "데이터베이스", "professor": "박민수", "location": "공대 401호", "day": "thu", "start_time": "10:30", "end_time": "12:00"},
-        {"title": "인공지능", "professor": "정수연", "location": "공대 501호", "day": "thu", "start_time": "15:00", "end_time": "16:30"},
+        {"title": "데이터베이스 (박민수, 공대 401호)", "day": "thu", "start_time": "10:30", "end_time": "12:00"},
+        {"title": "인공지능 (정수연, 공대 501호)", "day": "thu", "start_time": "15:00", "end_time": "16:30"},
         
         # 금요일
-        {"title": "알고리즘", "professor": "이영희", "location": "공대 201호", "day": "fri", "start_time": "09:00", "end_time": "10:30"},
-        {"title": "컴퓨터네트워크", "professor": "최지훈", "location": "공대 302호", "day": "fri", "start_time": "13:00", "end_time": "14:30"},
+        {"title": "알고리즘 (이영희, 공대 201호)", "day": "fri", "start_time": "09:00", "end_time": "10:30"},
+        {"title": "컴퓨터네트워크 (최지훈, 공대 302호)", "day": "fri", "start_time": "13:00", "end_time": "14:30"},
     ]
     
     now = datetime.now()
+    result = []
     for lecture in lectures:
-        lecture["lecture_id"] = str(uuid.uuid4())
-        lecture["user_id"] = TEST_USER_ID
-        lecture["create_at"] = now
-        lecture["update_at"] = now
+        # 시간 문자열을 time 객체로 변환
+        start_h, start_m = map(int, lecture["start_time"].split(":"))
+        end_h, end_m = map(int, lecture["end_time"].split(":"))
+        
+        result.append({
+            "lecture_id": str(uuid.uuid4()),
+            "user_id": TEST_USER_ID,
+            "title": lecture["title"],
+            "start_time": time(start_h, start_m),
+            "end_time": time(end_h, end_m),
+            "start_day": semester_start,
+            "end_day": semester_end,
+            "week": day_map[lecture["day"]],  # 요일을 숫자로 변환
+            "update_text": None,
+        })
     
-    return lectures
+    return result
 
 
-def seed_database(db):
-    """데이터베이스에 시드 데이터 삽입"""
+def seed_database(db, force_reseed=False):
+    """데이터베이스에 시드 데이터 삽입
+    
+    Args:
+        db: Database session
+        force_reseed: True면 기존 데이터 삭제 후 재삽입
+    """
     from app.models.user import User
     from app.models.schedule import Schedule
     from app.models.sub_task import SubTask
@@ -321,9 +357,26 @@ def seed_database(db):
     # 테스트 사용자가 이미 있는지 확인
     existing_user = db.query(User).filter(User.user_id == TEST_USER_ID).first()
     
-    if existing_user:
+    if existing_user and not force_reseed:
         print("✅ 시드 데이터가 이미 존재합니다. 건너뜁니다.")
+        print("   (강제 재삽입: force_reseed=True)")
         return False
+    
+    if existing_user and force_reseed:
+        print("🔄 기존 시드 데이터를 삭제하고 재삽입합니다...")
+        try:
+            # 기존 데이터 삭제 (순서 중요: 외래키 참조 순서)
+            db.query(Notification).filter(Notification.user_id == TEST_USER_ID).delete()
+            db.query(SubTask).filter(SubTask.user_id == TEST_USER_ID).delete()
+            db.query(Schedule).filter(Schedule.user_id == TEST_USER_ID).delete()
+            db.query(Lecture).filter(Lecture.user_id == TEST_USER_ID).delete()
+            db.query(User).filter(User.user_id == TEST_USER_ID).delete()
+            db.commit()
+            print("  ✓ 기존 데이터 삭제 완료")
+        except Exception as e:
+            db.rollback()
+            print(f"❌ 기존 데이터 삭제 실패: {e}")
+            raise e
     
     print("🌱 시드 데이터 삽입을 시작합니다...")
     
@@ -349,8 +402,8 @@ def seed_database(db):
             db.add(sub_task)
         print(f"  ✓ 할 일 {len(sub_tasks)}개 생성")
         
-        # 4. 알림 생성
-        notifications = get_seed_notifications()
+        # 4. 알림 생성 (일정 데이터 필요)
+        notifications = get_seed_notifications(schedules)
         for n_data in notifications:
             notification = Notification(**n_data)
             db.add(notification)
