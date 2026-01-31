@@ -32,6 +32,7 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     """토큰 응답"""
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: "UserInfo"
 

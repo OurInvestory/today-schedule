@@ -2,7 +2,7 @@
 인증 API 라우터 (회원가입, 로그인, 사용자 정보)
 """
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Query
 from datetime import datetime
 import uuid
 
@@ -24,6 +24,12 @@ from app.core.security import (
     get_password_hash,
     verify_password,
     create_access_token,
+    create_refresh_token,
+    decode_access_token,
+    validate_password_strength,
+    check_login_attempts,
+    record_login_attempt,
+    get_remaining_attempts,
 )
 from app.core.auth import get_current_user
 
@@ -39,6 +45,14 @@ def signup(request: SignupRequest):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="비밀번호가 일치하지 않습니다.",
+        )
+    
+    # 비밀번호 복잡성 검증
+    is_valid, message = validate_password_strength(request.password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message,
         )
     
     db = db_session()
@@ -90,14 +104,26 @@ def signup(request: SignupRequest):
 @router.post("/login", response_model=ResponseDTO)
 def login(request: LoginRequest):
     """로그인"""
+    # 로그인 시도 제한 확인
+    is_allowed, remaining_seconds = check_login_attempts(request.email)
+    if not is_allowed:
+        minutes = remaining_seconds // 60
+        seconds = remaining_seconds % 60
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"로그인 시도 횟수를 초과했습니다. {minutes}분 {seconds}초 후에 다시 시도해주세요.",
+        )
+    
     db = db_session()
     try:
         # 사용자 조회
         user = db.query(User).filter(User.email == request.email).first()
         if not user:
+            record_login_attempt(request.email, False)
+            remaining = get_remaining_attempts(request.email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="이메일 또는 비밀번호가 올바르지 않습니다.",
+                detail=f"이메일 또는 비밀번호가 올바르지 않습니다. (남은 시도: {remaining}회)",
             )
         
         # 비밀번호 검증 (해시 또는 평문 둘 다 지원 - 마이그레이션 호환)
@@ -109,19 +135,26 @@ def login(request: LoginRequest):
             password_valid = (request.password == user.password)
         
         if not password_valid:
+            record_login_attempt(request.email, False)
+            remaining = get_remaining_attempts(request.email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="이메일 또는 비밀번호가 올바르지 않습니다.",
+                detail=f"이메일 또는 비밀번호가 올바르지 않습니다. (남은 시도: {remaining}회)",
             )
+        
+        # 로그인 성공 기록
+        record_login_attempt(request.email, True)
         
         # 토큰 생성
         access_token = create_access_token(data={"sub": user.user_id})
+        refresh_token = create_refresh_token(data={"sub": user.user_id})
         
         return ResponseDTO(
             status=200,
             message="로그인 성공",
             data=TokenResponse(
                 access_token=access_token,
+                refresh_token=refresh_token,
                 token_type="bearer",
                 user=UserInfo(
                     user_id=user.user_id,
@@ -226,6 +259,14 @@ def change_password(
             detail="새 비밀번호가 일치하지 않습니다.",
         )
     
+    # 비밀번호 복잡성 검증
+    is_valid, message = validate_password_strength(request.new_password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message,
+        )
+    
     # 현재 비밀번호 확인
     if not verify_password(request.current_password, current_user.password):
         raise HTTPException(
@@ -264,6 +305,57 @@ def logout(current_user: User = Depends(get_current_user)):
         message="로그아웃 되었습니다.",
         data=None,
     )
+
+
+@router.post("/refresh", response_model=ResponseDTO)
+def refresh_token(refresh_token: str = Query(..., description="리프레시 토큰")):
+    """토큰 갱신"""
+    payload = decode_access_token(refresh_token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="유효하지 않거나 만료된 리프레시 토큰입니다.",
+        )
+    
+    # 리프레시 토큰인지 확인
+    if payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="유효한 리프레시 토큰이 아닙니다.",
+        )
+    
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="토큰에 사용자 정보가 없습니다.",
+        )
+    
+    db = db_session()
+    try:
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="사용자를 찾을 수 없습니다.",
+            )
+        
+        # 새 토큰 생성
+        new_access_token = create_access_token(data={"sub": user.user_id})
+        new_refresh_token = create_refresh_token(data={"sub": user.user_id})
+        
+        return ResponseDTO(
+            status=200,
+            message="토큰이 갱신되었습니다.",
+            data={
+                "access_token": new_access_token,
+                "refresh_token": new_refresh_token,
+                "token_type": "bearer",
+            },
+        )
+    finally:
+        db.close()
 
 
 @router.delete("/account", response_model=ResponseDTO)
