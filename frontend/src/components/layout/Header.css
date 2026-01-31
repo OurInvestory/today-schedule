@@ -211,12 +211,73 @@
     font-weight: var(--font-weight-medium);
     background-color: var(--color-primary-500);
     color: white;
+    border: none;
     border-radius: var(--radius-md);
+    cursor: pointer;
     transition: all var(--transition-base);
   }
   
   .header__login-btn:hover {
     background-color: var(--color-primary-600);
+  }
+
+  /* 사용자 메뉴 */
+  .header__user-wrapper {
+    position: relative;
+  }
+
+  .header__user-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .header__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+    transition: transform var(--transition-fast);
+  }
+
+  .header__user-btn:hover .header__avatar {
+    transform: scale(1.05);
+  }
+
+  .header__user-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 200px;
+    background: white;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    z-index: var(--z-index-popover);
+    overflow: hidden;
+    animation: header-menu-fade-in 0.15s ease-out;
+  }
+
+  .header__user-info {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-gray-100);
+    background-color: var(--color-gray-50);
+  }
+
+  .header__user-email {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    word-break: break-all;
   }
   
   /* Mobile Responsive */

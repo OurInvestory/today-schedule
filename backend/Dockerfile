@@ -23,5 +23,8 @@ COPY . .
 
 EXPOSE 8000
 
-# 개발 모드: --reload 옵션으로 코드 변경 시 자동 재시작
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# 시작 스크립트 생성 (마이그레이션 자동 실행 후 서버 시작)
+RUN echo '#!/bin/bash\necho "Running database migrations..."\nalembic upgrade head\necho "Starting server..."\nexec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload' > /app/start.sh && chmod +x /app/start.sh
+
+# 개발 모드: 마이그레이션 실행 후 서버 시작
+CMD ["/bin/bash", "/app/start.sh"]

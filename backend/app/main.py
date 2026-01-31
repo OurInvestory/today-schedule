@@ -5,7 +5,7 @@ from app.models.user import User
 from app.db.database import engine, Base, db_session
 from app.db.seed_data import seed_database
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
-from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router
+from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router, auth_router
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -53,6 +53,7 @@ app.add_middleware(
 
 
 # 라우터 등록
+app.include_router(auth_router.router)
 app.include_router(user_router.router)
 app.include_router(schedule_router.router)
 app.include_router(chat_router.router, prefix="/api", tags=["AI"])
