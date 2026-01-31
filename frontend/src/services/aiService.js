@@ -379,3 +379,153 @@ export const createLectureFromAI = async (payload) => {
     throw error;
   }
 };
+
+// ============================================================
+// 🆕 스마트 기능 API
+// ============================================================
+
+/**
+ * 오늘 일정 브리핑 요청
+ */
+export const getDailyBriefing = async (targetDate = null) => {
+  return sendChatMessage(
+    targetDate ? `${targetDate} 일정 요약해줘` : '오늘 일정 요약해줘',
+    null,
+    null,
+    { intent_hint: 'DAILY_BRIEFING' }
+  );
+};
+
+/**
+ * 주간 요약 요청
+ */
+export const getWeeklySummary = async () => {
+  return sendChatMessage('이번 주 요약해줘', null, null, {
+    intent_hint: 'WEEKLY_SUMMARY',
+  });
+};
+
+/**
+ * 일정 충돌 체크 요청
+ */
+export const checkConflicts = async () => {
+  return sendChatMessage('겹치는 일정 있어?', null, null, {
+    intent_hint: 'CONFLICT_CHECK',
+  });
+};
+
+/**
+ * 스마트 시간 추천 요청
+ */
+export const getSmartSuggestion = async (
+  category = 'other',
+  durationMinutes = 60
+) => {
+  return sendChatMessage(
+    `${category} 언제 하면 좋을까? ${durationMinutes}분 정도 필요해`,
+    null,
+    null,
+    { intent_hint: 'SMART_SUGGEST', category, duration_minutes: durationMinutes }
+  );
+};
+
+/**
+ * 우선순위 자동 조정 요청
+ */
+export const adjustPriorities = async () => {
+  return sendChatMessage('우선순위 자동으로 조정해줘', null, null, {
+    intent_hint: 'PRIORITY_ADJUST',
+  });
+};
+
+/**
+ * 빈 시간대 채우기 요청
+ */
+export const fillGapTimes = async (targetDate = null) => {
+  return sendChatMessage(
+    targetDate ? `${targetDate} 빈 시간 채워줘` : '오늘 빈 시간 채워줘',
+    null,
+    null,
+    { intent_hint: 'GAP_FILL' }
+  );
+};
+
+/**
+ * 학습 패턴 분석 요청
+ */
+export const analyzePattern = async (period = 'week') => {
+  return sendChatMessage(
+    period === 'month' ? '이번 달 패턴 분석해줘' : '이번 주 패턴 분석해줘',
+    null,
+    null,
+    { intent_hint: 'PATTERN_ANALYSIS', period }
+  );
+};
+
+/**
+ * 할 일 추천 요청
+ */
+export const recommendSubtasks = async (scheduleTitle, category = '') => {
+  return sendChatMessage(`${scheduleTitle} 할 일 추천해줘`, null, null, {
+    intent_hint: 'SUBTASK_RECOMMEND',
+    target_schedule: scheduleTitle,
+    category,
+  });
+};
+
+/**
+ * 일정 세분화 요청
+ */
+export const breakdownSchedule = async (scheduleTitle) => {
+  return sendChatMessage(`${scheduleTitle} 세분화해줘`, null, null, {
+    intent_hint: 'SCHEDULE_BREAKDOWN',
+    target_schedule: scheduleTitle,
+  });
+};
+
+/**
+ * 반복 일정 생성 요청
+ */
+export const createRecurringSchedule = async (
+  title,
+  days = [],
+  time = '10:00',
+  count = 10
+) => {
+  const daysText = days.length > 0 ? days.join(', ') : '매주';
+  return sendChatMessage(
+    `매주 ${daysText} ${time}에 ${title} 넣어줘 (${count}회)`,
+    null,
+    null,
+    { intent_hint: 'RECURRING_SCHEDULE' }
+  );
+};
+
+/**
+ * 자동 모드 토글
+ */
+export const toggleAutoMode = async (enable = true) => {
+  return sendChatMessage(
+    enable ? '자동 추가 모드 켜줘' : '자동 추가 모드 꺼줘',
+    null,
+    null,
+    { intent_hint: 'AUTO_MODE_TOGGLE', auto_mode: enable }
+  );
+};
+
+/**
+ * 컨텍스트 기반 스마트 제안 조회 (직접 API 호출)
+ */
+export const getContextualSuggestions = async () => {
+  try {
+    const response = await api.get('/api/ai/suggestions');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get contextual suggestions:', error);
+    // 실패 시 기본 제안 반환
+    return {
+      suggestions: [],
+      has_suggestions: false,
+    };
+  }
+};

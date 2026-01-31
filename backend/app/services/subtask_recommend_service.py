@@ -223,10 +223,15 @@ def get_gap_times(
     target_date: date
 ) -> List[Dict[str, Any]]:
     """특정 날짜의 빈 시간대 조회"""
-    # 해당 날짜의 강의 조회
-    day_name = target_date.strftime("%a").lower()[:3]
+    # 해당 날짜의 강의 조회 (week 컬럼은 요일 숫자: 0=월 ~ 6=일)
+    day_of_week = str(target_date.weekday())  # 0=월, 6=일
     lectures = db.query(Lecture).filter(
-        and_(Lecture.user_id == user_id, Lecture.day == day_name)
+        and_(
+            Lecture.user_id == user_id, 
+            Lecture.week == day_of_week,
+            Lecture.start_day <= target_date,
+            Lecture.end_day >= target_date
+        )
     ).order_by(Lecture.start_time).all()
     
     # 해당 날짜의 일정 조회

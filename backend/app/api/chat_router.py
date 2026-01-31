@@ -1,5 +1,5 @@
 """
-AI 챗봇 라우터 - 확장 버전
+AI 챗봇 라우터 - 확장 버전 v2
 지원 기능:
 - 일정 CRUD (생성/조회/수정/삭제)
 - 할 일 추천 및 세분화
@@ -8,6 +8,11 @@ AI 챗봇 라우터 - 확장 버전
 - 학습 패턴 분석
 - 반복 일정 설정
 - 알림 예약
+- 🆕 일정 충돌 감지 및 자동 조정
+- 🆕 스마트 시간 추천
+- 🆕 일정 요약/브리핑
+- 🆕 다중 일정 일괄 처리
+- 🆕 컨텍스트 기반 스마트 제안
 """
 
 import os
@@ -43,6 +48,18 @@ from app.services.subtask_recommend_service import (
     recommend_tasks_for_gap_time,
     analyze_learning_pattern,
     create_recurring_schedules
+)
+from app.services.smart_schedule_service import (
+    detect_schedule_conflicts,
+    suggest_alternative_times,
+    auto_adjust_schedule,
+    analyze_user_schedule_patterns,
+    smart_time_suggestion,
+    generate_daily_briefing,
+    generate_weekly_summary,
+    auto_adjust_priorities,
+    batch_create_schedules,
+    get_contextual_suggestions
 )
 
 load_dotenv()
@@ -168,7 +185,7 @@ INSTRUCTION:
 
 
 def build_system_prompt(req: ChatRequest, current_date_str: str) -> str:
-    """시스템 프롬프트 생성 - 확장된 인텐트 지원"""
+    """시스템 프롬프트 생성 - 확장된 인텐트 지원 v2"""
     context_section = build_context_section(req)
     
     return f"""You are a smart academic scheduler AI for Korean university students.
@@ -184,7 +201,7 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
 {context_section}
 
 [Rules]
-1. Intent Classification (EXTENDED):
+1. Intent Classification (EXTENDED v2):
    - "SCHEDULE_MUTATION": Create, Update, or Delete a schedule/task.
    - "SCHEDULE_QUERY": VIEW/SHOW schedules (e.g., "보여줘", "뭐야").
    - "PRIORITY_QUERY": High priority or recommendation requests.
@@ -196,6 +213,12 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
    - "RECURRING_SCHEDULE": User wants to create recurring schedules (e.g., "매주", "매일", "반복")
    - "AUTO_MODE_TOGGLE": User wants to toggle auto-add mode (e.g., "자동으로 추가해", "물어보지 마")
    - "SCHEDULE_UPDATE": User wants to modify existing schedule with natural language (e.g., "3시를 5시로 바꿔줘", "시간 변경")
+   - "DAILY_BRIEFING": User wants daily briefing/summary (e.g., "오늘 일정 요약해줘", "오늘 브리핑", "하루 정리")
+   - "WEEKLY_SUMMARY": User wants weekly summary (e.g., "이번 주 요약", "주간 정리", "한 주 리뷰")
+   - "CONFLICT_CHECK": User wants to check schedule conflicts (e.g., "겹치는 일정 있어?", "충돌 확인")
+   - "SMART_SUGGEST": User wants smart time/task suggestions (e.g., "언제 하면 좋을까?", "시간 추천해줘")
+   - "BATCH_CREATE": User wants to create multiple schedules at once (e.g., multiple items listed)
+   - "PRIORITY_ADJUST": User wants to auto-adjust priorities (e.g., "우선순위 조정해줘", "우선순위 자동 정리")
 
 2. Type Classification:
    - "EVENT": Has START TIME. Use 'start_at'.
@@ -225,6 +248,25 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
 8. For AUTO_MODE_TOGGLE intent:
    - Set preserved_info.auto_mode = true/false
 
+9. For DAILY_BRIEFING / WEEKLY_SUMMARY intent:
+   - Extract target date/period if mentioned
+   - Set preserved_info.target_date or preserved_info.period
+
+10. For CONFLICT_CHECK intent:
+    - Extract schedule info if checking specific schedule
+    - Set preserved_info.check_date for date-specific checks
+
+11. For SMART_SUGGEST intent:
+    - Extract category and duration if mentioned
+    - Set preserved_info.category, preserved_info.duration_minutes
+
+12. For BATCH_CREATE intent:
+    - Parse all schedules mentioned
+    - Create multiple actions array
+
+13. For PRIORITY_ADJUST intent:
+    - No additional info needed, will auto-adjust all
+
 [Output Format (JSON)]
 {{
     "intent": "INTENT_NAME",
@@ -246,7 +288,12 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
         }},
         "auto_mode": true | false,
         "original_time": "15:00",
-        "new_time": "17:00"
+        "new_time": "17:00",
+        "target_date": "today" | "tomorrow" | "YYYY-MM-DD",
+        "period": "week" | "month",
+        "category": "과제",
+        "duration_minutes": 60,
+        "check_all_conflicts": true | false
     }},
     "missingFields": [
         {{ "field": "field_name", "question": "질문" }}
@@ -285,6 +332,30 @@ JSON: {{ "intent": "SCHEDULE_UPDATE", "type": "EVENT", "actions": [{{ "op": "UPD
 # Example 8: Creation (기존)
 User: "내일 3시에 회의"
 JSON: {{ "intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [ {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "회의", "start_at": "2026-01-16T15:00:00+09:00", "end_at": "2026-01-16T16:00:00+09:00", "category": "기타"}} }} ] }}
+
+# Example 9: Daily Briefing
+User: "오늘 일정 요약해줘"
+JSON: {{ "intent": "DAILY_BRIEFING", "type": "TASK", "actions": [], "preserved_info": {{ "target_date": "today" }} }}
+
+# Example 10: Weekly Summary
+User: "이번 주 어땠어?"
+JSON: {{ "intent": "WEEKLY_SUMMARY", "type": "TASK", "actions": [], "preserved_info": {{ "period": "week" }} }}
+
+# Example 11: Conflict Check
+User: "겹치는 일정 있어?"
+JSON: {{ "intent": "CONFLICT_CHECK", "type": "EVENT", "actions": [], "preserved_info": {{ "check_all_conflicts": true }} }}
+
+# Example 12: Smart Suggest
+User: "과제 언제 하면 좋을까?"
+JSON: {{ "intent": "SMART_SUGGEST", "type": "TASK", "actions": [], "preserved_info": {{ "category": "과제", "duration_minutes": 60, "target_date": "today" }} }}
+
+# Example 13: Priority Adjust
+User: "우선순위 자동으로 조정해줘"
+JSON: {{ "intent": "PRIORITY_ADJUST", "type": "TASK", "actions": [], "preserved_info": {{}} }}
+
+# Example 14: Batch Create
+User: "내일 10시 회의, 2시 발표, 5시 스터디 추가해줘"
+JSON: {{ "intent": "BATCH_CREATE", "type": "EVENT", "actions": [{{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "회의", "start_at": "2026-01-16T10:00:00+09:00", "end_at": "2026-01-16T11:00:00+09:00", "category": "기타"}} }}, {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "발표", "start_at": "2026-01-16T14:00:00+09:00", "end_at": "2026-01-16T15:00:00+09:00", "category": "기타"}} }}, {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "스터디", "start_at": "2026-01-16T17:00:00+09:00", "end_at": "2026-01-16T18:00:00+09:00", "category": "기타"}} }}], "preserved_info": {{}} }}
 
 User Input: {req.text}
 """
@@ -844,6 +915,328 @@ def handle_schedule_update(ai_result: AIChatParsed, db: Session) -> str:
     
     return f"'{schedule.title}'의 시간을 {original_time} → {new_time}로 변경할까요?"
 
+
+# ============================================================
+# 🆕 스마트 기능 핸들러
+# ============================================================
+
+def handle_daily_briefing(ai_result: AIChatParsed, db: Session) -> str:
+    """DAILY_BRIEFING 처리 - 오늘 일정 브리핑"""
+    preserved = ai_result.preserved_info or {}
+    target_date_str = preserved.get('target_date', 'today')
+    
+    # 날짜 파싱
+    now = datetime.now()
+    if target_date_str == 'tomorrow':
+        target_date = (now + timedelta(days=1)).date()
+    elif target_date_str == 'today' or not target_date_str:
+        target_date = now.date()
+    else:
+        try:
+            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+        except:
+            target_date = now.date()
+    
+    briefing = generate_daily_briefing(db, TEST_USER_ID, target_date)
+    
+    summary = briefing.get('summary', {})
+    schedules = briefing.get('schedules', [])
+    lectures = briefing.get('lectures', [])
+    tasks = briefing.get('tasks', [])
+    
+    # 응답 구성
+    date_text = target_date.strftime("%m월 %d일 %A")
+    
+    response = f"📅 **{date_text} 브리핑**\n\n"
+    response += f"{briefing.get('briefing', '')}\n\n"
+    
+    if lectures:
+        response += "📚 **강의**\n"
+        for l in lectures:
+            response += f"• {l['time']} {l['title']}\n"
+        response += "\n"
+    
+    if schedules:
+        response += "📌 **일정**\n"
+        for s in schedules:
+            priority_emoji = "🔴" if s.get('priority', 0) >= 8 else "🟡" if s.get('priority', 0) >= 5 else "🟢"
+            response += f"• {s['time']} {s['title']} {priority_emoji}\n"
+        response += "\n"
+    
+    if tasks:
+        response += "✅ **할 일**\n"
+        done_count = len([t for t in tasks if t.get('is_done')])
+        response += f"완료: {done_count}/{len(tasks)}개\n"
+        for t in tasks[:5]:  # 최대 5개만 표시
+            check = "✅" if t.get('is_done') else "⬜"
+            response += f"{check} {t['title']}\n"
+        if len(tasks) > 5:
+            response += f"... 외 {len(tasks) - 5}개\n"
+        response += "\n"
+    
+    response += f"💡 **Tip:** {briefing.get('tip', '오늘도 화이팅!')}"
+    
+    # 결과 저장
+    ai_result.preserved_info = {
+        **(ai_result.preserved_info or {}),
+        "briefing_data": briefing
+    }
+    
+    return response
+
+
+def handle_weekly_summary(ai_result: AIChatParsed, db: Session) -> str:
+    """WEEKLY_SUMMARY 처리 - 주간 요약"""
+    summary = generate_weekly_summary(db, TEST_USER_ID)
+    
+    daily = summary.get('daily_stats', {})
+    categories = summary.get('category_stats', {})
+    busiest = summary.get('busiest_day', {})
+    
+    response = f"📊 **{summary.get('period', '이번 주')} 요약**\n\n"
+    
+    # 통계
+    response += f"📅 총 일정: {summary.get('total_schedules', 0)}개\n"
+    response += f"✅ 할 일 완료율: {summary.get('completion_rate', 0)}%\n"
+    response += f"({summary.get('completed_tasks', 0)}/{summary.get('total_tasks', 0)}개 완료)\n\n"
+    
+    # 요일별 현황
+    response += "📈 **요일별 현황**\n"
+    day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    day_korean = {'Mon': '월', 'Tue': '화', 'Wed': '수', 'Thu': '목', 'Fri': '금', 'Sat': '토', 'Sun': '일'}
+    
+    for day_en in day_order:
+        if day_en in daily:
+            d = daily[day_en]
+            bar = "█" * min(d['schedules'] + d['tasks'], 10)
+            response += f"{day_korean.get(day_en, day_en)}: {bar or '░'} ({d['schedules']}일정, {d['tasks']}할일)\n"
+    
+    response += "\n"
+    
+    # 카테고리별
+    if categories:
+        response += "📁 **카테고리별 일정**\n"
+        for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
+            response += f"• {translate_category(cat)}: {count}건\n"
+        response += "\n"
+    
+    # 가장 바쁜 날
+    if busiest:
+        response += f"🔥 가장 바쁜 날: {busiest.get('day', '')} ({busiest.get('count', 0)}건)\n"
+    
+    # 결과 저장
+    ai_result.preserved_info = {
+        **(ai_result.preserved_info or {}),
+        "weekly_summary": summary
+    }
+    
+    return response
+
+
+def handle_conflict_check(ai_result: AIChatParsed, db: Session) -> str:
+    """CONFLICT_CHECK 처리 - 일정 충돌 확인"""
+    preserved = ai_result.preserved_info or {}
+    check_all = preserved.get('check_all_conflicts', True)
+    
+    now = datetime.now()
+    
+    # 향후 2주간 일정 조회
+    schedules = db.query(Schedule).filter(
+        and_(
+            Schedule.user_id == TEST_USER_ID,
+            Schedule.start_at >= now,
+            Schedule.start_at <= now + timedelta(days=14)
+        )
+    ).order_by(Schedule.start_at.asc()).all()
+    
+    conflicts_found = []
+    
+    # 충돌 검사
+    for i, s1 in enumerate(schedules):
+        if not s1.start_at or not s1.end_at:
+            continue
+        for s2 in schedules[i+1:]:
+            if not s2.start_at or not s2.end_at:
+                continue
+            # 시간이 겹치는지 확인
+            if s1.start_at < s2.end_at and s2.start_at < s1.end_at:
+                conflicts_found.append({
+                    "schedule1": {
+                        "title": s1.title,
+                        "time": f"{s1.start_at.strftime('%m/%d %H:%M')}~{s1.end_at.strftime('%H:%M')}"
+                    },
+                    "schedule2": {
+                        "title": s2.title,
+                        "time": f"{s2.start_at.strftime('%m/%d %H:%M')}~{s2.end_at.strftime('%H:%M')}"
+                    }
+                })
+    
+    if not conflicts_found:
+        return "✅ 충돌하는 일정이 없어요! 깔끔하게 정리되어 있네요. 🎉"
+    
+    response = f"⚠️ **{len(conflicts_found)}건의 일정 충돌 발견!**\n\n"
+    
+    for i, conflict in enumerate(conflicts_found[:5], 1):
+        s1 = conflict['schedule1']
+        s2 = conflict['schedule2']
+        response += f"{i}. 🔴 충돌\n"
+        response += f"   • {s1['title']} ({s1['time']})\n"
+        response += f"   • {s2['title']} ({s2['time']})\n\n"
+    
+    if len(conflicts_found) > 5:
+        response += f"... 외 {len(conflicts_found) - 5}건 더 있어요.\n\n"
+    
+    response += "충돌된 일정 중 조정이 필요하면 말씀해주세요!"
+    
+    # 결과 저장
+    ai_result.preserved_info = {
+        **(ai_result.preserved_info or {}),
+        "conflicts": conflicts_found
+    }
+    
+    return response
+
+
+def handle_smart_suggest(ai_result: AIChatParsed, db: Session) -> str:
+    """SMART_SUGGEST 처리 - 스마트 시간 추천"""
+    preserved = ai_result.preserved_info or {}
+    category = preserved.get('category', 'other')
+    duration = preserved.get('duration_minutes', 60)
+    target_date_str = preserved.get('target_date', 'today')
+    
+    # 날짜 파싱
+    now = datetime.now()
+    if target_date_str == 'tomorrow':
+        target_date = (now + timedelta(days=1)).date()
+    elif target_date_str == 'today' or not target_date_str:
+        target_date = now.date()
+    else:
+        try:
+            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+        except:
+            target_date = now.date()
+    
+    suggestion = smart_time_suggestion(
+        db=db,
+        user_id=TEST_USER_ID,
+        category=category,
+        target_date=target_date,
+        duration_minutes=duration
+    )
+    
+    response = f"💡 **스마트 시간 추천**\n\n"
+    response += f"📅 {target_date.strftime('%m월 %d일')}\n"
+    response += f"📌 카테고리: {translate_category(category)}\n"
+    response += f"⏱️ 필요 시간: {duration}분\n\n"
+    
+    response += f"✨ **추천 시간: {suggestion.get('suggested_time', '')}**\n"
+    response += f"   {suggestion.get('reason', '')}\n\n"
+    
+    alternatives = suggestion.get('alternatives', [])
+    if alternatives:
+        response += "🔄 **대체 가능한 시간**\n"
+        for alt in alternatives[:3]:
+            response += f"• {alt['start']}~{alt['end']} ({alt['duration_minutes']}분 여유)\n"
+    
+    # 결과 저장
+    ai_result.preserved_info = {
+        **(ai_result.preserved_info or {}),
+        "suggestion": suggestion
+    }
+    
+    return response
+
+
+def handle_batch_create(ai_result: AIChatParsed, db: Session) -> str:
+    """BATCH_CREATE 처리 - 다중 일정 일괄 생성"""
+    if not ai_result.actions:
+        return "생성할 일정이 없어요."
+    
+    schedules_data = [action.payload for action in ai_result.actions]
+    
+    # 일괄 처리 (충돌 검사 포함)
+    result = batch_create_schedules(db, TEST_USER_ID, schedules_data)
+    
+    success = result.get('success', [])
+    conflicts = result.get('conflicts', [])
+    errors = result.get('errors', [])
+    
+    response = f"📋 **{len(schedules_data)}건 일정 일괄 처리 결과**\n\n"
+    
+    if success:
+        response += f"✅ **성공: {len(success)}건**\n"
+        for s in success:
+            adjusted_mark = " (시간 조정됨)" if s.get('adjusted') else ""
+            response += f"• {s.get('title', '')}{adjusted_mark}\n"
+        response += "\n"
+    
+    if conflicts:
+        response += f"⚠️ **충돌: {len(conflicts)}건**\n"
+        for c in conflicts:
+            conflict_titles = [cf['title'] for cf in c.get('conflicts', [])]
+            response += f"• {c.get('title', '')} - '{', '.join(conflict_titles)}'과 충돌\n"
+        response += "\n"
+    
+    if errors:
+        response += f"❌ **오류: {len(errors)}건**\n"
+        for e in errors:
+            response += f"• {e.get('title', '')}: {e.get('error', '')}\n"
+    
+    # 성공한 것만 액션에 남기기
+    ai_result.actions = []
+    for s in success:
+        ai_result.actions.append(Action(
+            op="CREATE",
+            target="SCHEDULE",
+            payload=s.get('data', {})
+        ))
+    
+    if success:
+        response += f"\n{len(success)}건을 추가할까요?"
+    
+    return response
+
+
+def handle_priority_adjust(ai_result: AIChatParsed, db: Session) -> str:
+    """PRIORITY_ADJUST 처리 - 우선순위 자동 조정"""
+    adjustments = auto_adjust_priorities(db, TEST_USER_ID)
+    
+    if not adjustments:
+        return "✅ 모든 일정의 우선순위가 적절해요! 조정할 필요가 없습니다. 🎉"
+    
+    response = f"🔄 **{len(adjustments)}건의 우선순위를 조정했어요!**\n\n"
+    
+    # 우선순위가 올라간 것과 내려간 것 분류
+    increased = [a for a in adjustments if a['new_priority'] > (a['old_priority'] or 0)]
+    decreased = [a for a in adjustments if a['new_priority'] < (a['old_priority'] or 0)]
+    
+    if increased:
+        response += "📈 **우선순위 상승**\n"
+        for a in increased[:5]:
+            days = a.get('days_until_deadline', 0)
+            response += f"• {a['title']}: {a['old_priority'] or '없음'} → {a['new_priority']} (D-{days})\n"
+        if len(increased) > 5:
+            response += f"... 외 {len(increased) - 5}건\n"
+        response += "\n"
+    
+    if decreased:
+        response += "📉 **우선순위 하락**\n"
+        for a in decreased[:5]:
+            days = a.get('days_until_deadline', 0)
+            response += f"• {a['title']}: {a['old_priority'] or '없음'} → {a['new_priority']} (D-{days})\n"
+        if len(decreased) > 5:
+            response += f"... 외 {len(decreased) - 5}건\n"
+    
+    response += "\n마감일이 가까운 일정은 우선순위가 자동으로 올라갔어요! ⏰"
+    
+    # 결과 저장
+    ai_result.preserved_info = {
+        **(ai_result.preserved_info or {}),
+        "priority_adjustments": adjustments
+    }
+    
+    return response
+
 # ============================================================
 # 메인 API 엔드포인트
 # ============================================================
@@ -873,7 +1266,7 @@ async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
             
         ai_result = AIChatParsed(**parsed_data)
         
-        # 4. Intent 처리 (확장)
+        # 4. Intent 처리 (확장 v2)
         intent_handlers = {
             "CLARIFY": handle_clarify,
             "SCHEDULE_MUTATION": handle_mutation,
@@ -886,6 +1279,13 @@ async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
             "RECURRING_SCHEDULE": handle_recurring_schedule,
             "AUTO_MODE_TOGGLE": handle_auto_mode_toggle,
             "SCHEDULE_UPDATE": handle_schedule_update,
+            # 🆕 스마트 기능 핸들러
+            "DAILY_BRIEFING": handle_daily_briefing,
+            "WEEKLY_SUMMARY": handle_weekly_summary,
+            "CONFLICT_CHECK": handle_conflict_check,
+            "SMART_SUGGEST": handle_smart_suggest,
+            "BATCH_CREATE": handle_batch_create,
+            "PRIORITY_ADJUST": handle_priority_adjust,
         }
         
         handler = intent_handlers.get(ai_result.intent)
@@ -900,3 +1300,157 @@ async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Chat API Error: {str(e)}")
         return APIResponse(status=500, message=f"AI 처리 중 오류가 발생했습니다: {str(e)}")
+
+
+@router.get("/ai/suggestions")
+async def get_ai_suggestions(db: Session = Depends(get_db)):
+    """
+    컨텍스트 기반 스마트 제안 API
+    현재 상황에 맞는 제안을 반환합니다.
+    """
+    try:
+        suggestions = get_contextual_suggestions(db, TEST_USER_ID, {})
+        return {
+            "status": 200,
+            "message": "Success",
+            "data": suggestions
+        }
+    except Exception as e:
+        logger.error(f"Suggestions API Error: {str(e)}")
+        return {
+            "status": 500,
+            "message": f"제안 조회 중 오류가 발생했습니다: {str(e)}",
+            "data": {"suggestions": [], "has_suggestions": False}
+        }
+
+
+@router.get("/ai/briefing")
+async def get_daily_briefing_api(target_date: str = None, db: Session = Depends(get_db)):
+    """
+    일일 브리핑 API
+    오늘 또는 특정 날짜의 일정 브리핑을 반환합니다.
+    """
+    try:
+        if target_date:
+            target = datetime.strptime(target_date, "%Y-%m-%d").date()
+        else:
+            target = date.today()
+        
+        briefing = generate_daily_briefing(db, TEST_USER_ID, target)
+        return {
+            "status": 200,
+            "message": "Success",
+            "data": briefing
+        }
+    except Exception as e:
+        logger.error(f"Briefing API Error: {str(e)}")
+        return {
+            "status": 500,
+            "message": f"브리핑 조회 중 오류가 발생했습니다: {str(e)}",
+            "data": None
+        }
+
+
+@router.get("/ai/weekly-summary")
+async def get_weekly_summary_api(db: Session = Depends(get_db)):
+    """
+    주간 요약 API
+    이번 주 일정 요약을 반환합니다.
+    """
+    try:
+        summary = generate_weekly_summary(db, TEST_USER_ID)
+        return {
+            "status": 200,
+            "message": "Success",
+            "data": summary
+        }
+    except Exception as e:
+        logger.error(f"Weekly Summary API Error: {str(e)}")
+        return {
+            "status": 500,
+            "message": f"주간 요약 조회 중 오류가 발생했습니다: {str(e)}",
+            "data": None
+        }
+
+
+@router.post("/ai/priority-adjust")
+async def adjust_priorities_api(db: Session = Depends(get_db)):
+    """
+    우선순위 자동 조정 API
+    마감일 기반으로 우선순위를 자동 조정합니다.
+    """
+    try:
+        adjustments = auto_adjust_priorities(db, TEST_USER_ID)
+        return {
+            "status": 200,
+            "message": f"{len(adjustments)}건의 우선순위가 조정되었습니다.",
+            "data": {
+                "adjustments": adjustments,
+                "count": len(adjustments)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Priority Adjust API Error: {str(e)}")
+        return {
+            "status": 500,
+            "message": f"우선순위 조정 중 오류가 발생했습니다: {str(e)}",
+            "data": None
+        }
+
+
+@router.get("/ai/conflict-check")
+async def check_conflicts_api(db: Session = Depends(get_db)):
+    """
+    일정 충돌 확인 API
+    향후 2주간 충돌하는 일정을 확인합니다.
+    """
+    try:
+        now = datetime.now()
+        
+        # 향후 2주간 일정 조회
+        schedules = db.query(Schedule).filter(
+            and_(
+                Schedule.user_id == TEST_USER_ID,
+                Schedule.start_at >= now,
+                Schedule.start_at <= now + timedelta(days=14)
+            )
+        ).order_by(Schedule.start_at.asc()).all()
+        
+        conflicts_found = []
+        
+        for i, s1 in enumerate(schedules):
+            if not s1.start_at or not s1.end_at:
+                continue
+            for s2 in schedules[i+1:]:
+                if not s2.start_at or not s2.end_at:
+                    continue
+                if s1.start_at < s2.end_at and s2.start_at < s1.end_at:
+                    conflicts_found.append({
+                        "schedule1": {
+                            "id": str(s1.schedule_id),
+                            "title": s1.title,
+                            "time": f"{s1.start_at.strftime('%m/%d %H:%M')}~{s1.end_at.strftime('%H:%M')}"
+                        },
+                        "schedule2": {
+                            "id": str(s2.schedule_id),
+                            "title": s2.title,
+                            "time": f"{s2.start_at.strftime('%m/%d %H:%M')}~{s2.end_at.strftime('%H:%M')}"
+                        }
+                    })
+        
+        return {
+            "status": 200,
+            "message": f"{len(conflicts_found)}건의 충돌이 발견되었습니다." if conflicts_found else "충돌하는 일정이 없습니다.",
+            "data": {
+                "conflicts": conflicts_found,
+                "count": len(conflicts_found),
+                "has_conflicts": len(conflicts_found) > 0
+            }
+        }
+    except Exception as e:
+        logger.error(f"Conflict Check API Error: {str(e)}")
+        return {
+            "status": 500,
+            "message": f"충돌 확인 중 오류가 발생했습니다: {str(e)}",
+            "data": None
+        }

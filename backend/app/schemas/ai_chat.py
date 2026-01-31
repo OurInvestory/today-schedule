@@ -18,7 +18,29 @@ class Action(BaseModel):
 
 # 3) Parsed payload
 class AIChatParsed(BaseModel):
-    intent: Literal["SCHEDULE_MUTATION", "SCHEDULE_QUERY", "CLARIFY", "NOTIFICATION_REQUEST", "PRIORITY_QUERY"]
+    intent: Literal[
+        # 기존 인텐트
+        "SCHEDULE_MUTATION", 
+        "SCHEDULE_QUERY", 
+        "CLARIFY", 
+        "NOTIFICATION_REQUEST", 
+        "PRIORITY_QUERY",
+        # 확장 인텐트 v1
+        "SUBTASK_RECOMMEND",
+        "SCHEDULE_BREAKDOWN",
+        "GAP_FILL",
+        "PATTERN_ANALYSIS",
+        "RECURRING_SCHEDULE",
+        "AUTO_MODE_TOGGLE",
+        "SCHEDULE_UPDATE",
+        # 스마트 기능 인텐트 v2
+        "DAILY_BRIEFING",
+        "WEEKLY_SUMMARY",
+        "CONFLICT_CHECK",
+        "SMART_SUGGEST",
+        "BATCH_CREATE",
+        "PRIORITY_ADJUST",
+    ]
     type: Literal["EVENT", "TASK", "UNKNOWN"] = "UNKNOWN"
     confidence: float = 0.0
     actions: List[Action] = Field(default_factory=list)

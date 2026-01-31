@@ -4,13 +4,16 @@ import ChatInput from './ChatInput';
 import { getRandomLoadingMessage } from '../../hooks/useChatbot';
 import './ChatbotWindow.css';
 
-// 추천 질문 목록 (5개)
+// 추천 질문 목록 - 확장 (스마트 기능 포함)
 const suggestedQuestions = [
-  { id: 1, text: '내일 3시에 회의, 5시에 미팅 추가해줘', icon: '📅' },
-  { id: 2, text: '오늘 6시까지 보고서 작성 추가해줘', icon: '✅' },
-  { id: 3, text: '회의 10분 전에 알림 예약해줘', icon: '🔔' },
-  { id: 4, text: '시간표 사진에 있는 강의 추가해줘', icon: '📸' },
-  { id: 5, text: '우선순위 높은 일정 추천해줘', icon: '🎯' },
+  { id: 1, text: '오늘 일정 요약해줘', icon: '📋', category: 'briefing' },
+  { id: 2, text: '이번 주 어땠어?', icon: '📊', category: 'analysis' },
+  { id: 3, text: '겹치는 일정 있어?', icon: '⚠️', category: 'conflict' },
+  { id: 4, text: '과제 언제 하면 좋을까?', icon: '💡', category: 'suggest' },
+  { id: 5, text: '빈 시간 채워줘', icon: '⏰', category: 'gap' },
+  { id: 6, text: '우선순위 자동 조정해줘', icon: '🔄', category: 'priority' },
+  { id: 7, text: '할 일 추천해줘', icon: '✅', category: 'recommend' },
+  { id: 8, text: '내일 3시에 회의 추가해줘', icon: '📅', category: 'create' },
 ];
 
 const ChatbotWindow = ({
