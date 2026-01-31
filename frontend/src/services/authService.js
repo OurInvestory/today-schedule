@@ -74,6 +74,41 @@ export const changePassword = async (currentPassword, newPassword, newPasswordCo
   return response.data;
 };
 
+/**
+ * 프로필 업데이트
+ */
+export const updateProfile = async (profileData) => {
+  const response = await api.put('/api/auth/profile', profileData);
+  
+  // 성공 시 로컬 스토리지의 사용자 정보도 업데이트
+  if (response.data.status === 200 && response.data.data) {
+    const currentUser = getUser();
+    if (currentUser) {
+      const updatedUser = { ...currentUser, ...response.data.data };
+      setUser(updatedUser);
+    }
+  }
+  
+  return response.data;
+};
+
+/**
+ * 계정 삭제
+ */
+export const deleteAccount = async (password) => {
+  const response = await api.delete('/api/auth/account', {
+    data: { password },
+  });
+  
+  // 성공 시 로컬 스토리지 정리
+  if (response.data.status === 200) {
+    removeToken();
+    removeUser();
+  }
+  
+  return response.data;
+};
+
 // ===== 토큰 관리 =====
 
 /**
@@ -134,6 +169,8 @@ export default {
   logout,
   getMe,
   changePassword,
+  updateProfile,
+  deleteAccount,
   setToken,
   getToken,
   removeToken,

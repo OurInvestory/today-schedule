@@ -11,7 +11,10 @@ import {
   getMe,
   getToken,
   getUser,
+  setUser as setStoredUser,
   isAuthenticated as checkAuth,
+  updateProfile as updateProfileApi,
+  deleteAccount as deleteAccountApi,
 } from '../services/authService';
 
 // Context 생성
@@ -80,6 +83,38 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   }, []);
 
+  // 프로필 업데이트
+  const updateProfile = useCallback(async (profileData) => {
+    const response = await updateProfileApi(profileData);
+    if (response.status === 200 && response.data) {
+      setUser(prev => ({ ...prev, ...response.data }));
+    }
+    return response;
+  }, []);
+
+  // 계정 삭제
+  const deleteAccount = useCallback(async (password) => {
+    const response = await deleteAccountApi(password);
+    if (response.status === 200) {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+    return response;
+  }, []);
+
+  // 사용자 정보 갱신
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await getMe();
+      if (response.status === 200 && response.data) {
+        setUser(response.data);
+        setStoredUser(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  }, []);
+
   // 로그인 필요 액션 처리
   const requireAuth = useCallback((action) => {
     if (!isAuthenticated) {
@@ -110,6 +145,9 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
+    updateProfile,
+    deleteAccount,
+    refreshUser,
     requireAuth,
     openLoginModal,
     closeLoginModal,

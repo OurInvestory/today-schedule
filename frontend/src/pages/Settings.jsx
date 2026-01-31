@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNotificationSettings, updateNotificationSettings, triggerDailyBriefing } from '../services/notificationService';
 import { getGoogleAuthStatus, initiateGoogleAuth, disconnectGoogleCalendar } from '../services/calendarService';
+import { changePassword } from '../services/authService';
 import { t, getCurrentLanguage } from '../utils/i18n';
 import { useAuth } from '../context/AuthContext';
 import './Settings.css';
@@ -47,12 +48,26 @@ const formatBytes = (bytes) => {
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, user, logout, updateProfile, deleteAccount } = useAuth();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [cacheSize, setCacheSize] = useState(0);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    school: '',
+    department: '',
+    grade: '',
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    newPasswordConfirm: '',
+  });
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [settings, setSettings] = useState({
     pushNotification: true,
     notificationSound: true,
@@ -86,6 +101,18 @@ const Settings = () => {
       navigate('/login');
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // 사용자 정보가 변경될 때 프로필 폼 업데이트
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || '',
+        school: user.school || '',
+        department: user.department || '',
+        grade: user.grade || '',
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchSettings();
@@ -277,32 +304,116 @@ const Settings = () => {
   };
 
   // 로그아웃 핸들러
-  const handleLogout = () => {
-    // 모든 인증 관련 데이터 삭제
-    localStorage.removeItem('google-auth-status');
-    localStorage.removeItem('auth-token');
-    localStorage.removeItem('user-data');
-    
-    // 연결된 계정 상태 초기화
-    setConnectedAccounts({
-      google: { connected: false, email: null },
-      kakao: { connected: false },
-      naver: { connected: false },
-    });
-    
-    setShowLogoutModal(false);
-    alert('로그아웃되었습니다. 👋');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowLogoutModal(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      alert('로그아웃 중 오류가 발생했습니다.');
+    }
   };
 
   // 계정 삭제 핸들러
-  const handleDeleteAccount = () => {
-    // 모든 localStorage 데이터 삭제
-    localStorage.clear();
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      alert('비밀번호를 입력해주세요.');
+      return;
+    }
     
-    setShowDeleteAccountModal(false);
-    alert('계정이 삭제되었습니다. 이용해 주셔서 감사합니다. 🙏');
-    navigate('/');
+    setIsSubmitting(true);
+    try {
+      const response = await deleteAccount(deletePassword);
+      if (response.status === 200) {
+        setShowDeleteAccountModal(false);
+        alert('계정이 삭제되었습니다. 이용해 주셔서 감사합니다. 🙏');
+        navigate('/');
+      } else {
+        alert(response.message || '계정 삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Delete account failed:', error);
+      const message = error.response?.data?.detail || '계정 삭제 중 오류가 발생했습니다.';
+      alert(message);
+    } finally {
+      setIsSubmitting(false);
+      setDeletePassword('');
+    }
+  };
+
+  // 프로필 저장 핸들러
+  const handleSaveProfile = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await updateProfile(profileForm);
+      if (response.status === 200) {
+        alert('프로필이 저장되었습니다! 👤');
+        setShowProfileModal(false);
+      } else {
+        alert(response.message || '프로필 저장에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      alert('프로필 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 비밀번호 변경 핸들러
+  const handleChangePassword = async () => {
+    const { currentPassword, newPassword, newPasswordConfirm } = passwordForm;
+    
+    if (!currentPassword || !newPassword || !newPasswordConfirm) {
+      alert('모든 필드를 입력해주세요.');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      alert('새 비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+    
+    if (newPassword !== newPasswordConfirm) {
+      alert('새 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const response = await changePassword(currentPassword, newPassword, newPasswordConfirm);
+      if (response.status === 200) {
+        alert('비밀번호가 변경되었습니다! 🔒');
+        setShowPasswordModal(false);
+        setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+      } else {
+        alert(response.message || '비밀번호 변경에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Password change failed:', error);
+      const message = error.response?.data?.detail || '비밀번호 변경 중 오류가 발생했습니다.';
+      alert(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 프로필 폼 핸들러
+  const handleProfileFormChange = (field, value) => {
+    setProfileForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // 비밀번호 폼 핸들러
+  const handlePasswordFormChange = (field, value) => {
+    setPasswordForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // 사용자 이름의 첫 글자 추출
+  const getInitial = () => {
+    if (user?.name) return user.name.charAt(0);
+    if (user?.email) return user.email.charAt(0).toUpperCase();
+    return '?';
   };
 
   const ToggleSwitch = ({ checked, onChange }) => (
@@ -352,10 +463,12 @@ const Settings = () => {
           <div className="settings__card">
             <div className="profile-info">
               <div className="profile-info__avatar">
-                <span>김</span>
+                <span>{getInitial()}</span>
               </div>
               <div className="profile-info__details">
-                <h3 className="profile-info__name">김학생</h3>
+                <h3 className="profile-info__name">{user?.name || user?.email || '사용자'}</h3>
+                <p className="profile-info__email">{user?.email}</p>
+                {user?.department && <p className="profile-info__dept">{user.school ? `${user.school} ` : ''}{user.department}</p>}
                 <button className="profile-info__manage-button" onClick={() => setShowProfileModal(true)}>내 정보 관리</button>
               </div>
             </div>
@@ -698,6 +811,9 @@ const Settings = () => {
               캐시 삭제
               <span className="settings__action-info">({formatBytes(cacheSize)})</span>
             </button>
+            <button className="settings__action-btn" onClick={() => setShowPasswordModal(true)}>
+              비밀번호 변경
+            </button>
             <button className="settings__action-btn settings__action-btn--danger" onClick={() => setShowLogoutModal(true)}>
               로그아웃
             </button>
@@ -752,14 +868,31 @@ const Settings = () => {
             <div className="license-modal__content">
               <p className="confirm-modal__message">
                 ⚠️ 계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.<br/>
-                정말 삭제하시겠습니까?
+                계속하려면 비밀번호를 입력하세요.
               </p>
+              <div className="profile-modal__field">
+                <label className="profile-modal__label">비밀번호 확인</label>
+                <input 
+                  type="password" 
+                  className="profile-modal__input" 
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="현재 비밀번호를 입력하세요"
+                />
+              </div>
               <div className="confirm-modal__buttons">
-                <button className="confirm-modal__btn confirm-modal__btn--cancel" onClick={() => setShowDeleteAccountModal(false)}>
+                <button className="confirm-modal__btn confirm-modal__btn--cancel" onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeletePassword('');
+                }}>
                   취소
                 </button>
-                <button className="confirm-modal__btn confirm-modal__btn--danger" onClick={handleDeleteAccount}>
-                  삭제
+                <button 
+                  className="confirm-modal__btn confirm-modal__btn--danger" 
+                  onClick={handleDeleteAccount}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '삭제 중...' : '삭제'}
                 </button>
               </div>
             </div>
@@ -860,29 +993,29 @@ const Settings = () => {
             <div className="license-modal__content">
               <div className="profile-modal__avatar-section">
                 <div className="profile-modal__avatar">
-                  <span>김</span>
+                  <span>{getInitial()}</span>
                 </div>
-                <button className="profile-modal__avatar-btn">사진 변경</button>
               </div>
               
               <div className="profile-modal__form">
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">이메일</label>
+                  <input 
+                    type="email" 
+                    className="profile-modal__input profile-modal__input--disabled" 
+                    value={user?.email || ''}
+                    disabled
+                  />
+                </div>
+                
                 <div className="profile-modal__field">
                   <label className="profile-modal__label">이름</label>
                   <input 
                     type="text" 
                     className="profile-modal__input" 
-                    defaultValue="김학생"
+                    value={profileForm.name}
+                    onChange={(e) => handleProfileFormChange('name', e.target.value)}
                     placeholder="이름을 입력하세요"
-                  />
-                </div>
-                
-                <div className="profile-modal__field">
-                  <label className="profile-modal__label">이메일</label>
-                  <input 
-                    type="email" 
-                    className="profile-modal__input" 
-                    defaultValue="student@university.ac.kr"
-                    placeholder="이메일을 입력하세요"
                   />
                 </div>
                 
@@ -891,7 +1024,8 @@ const Settings = () => {
                   <input 
                     type="text" 
                     className="profile-modal__input" 
-                    defaultValue="한국대학교"
+                    value={profileForm.school}
+                    onChange={(e) => handleProfileFormChange('school', e.target.value)}
                     placeholder="학교 또는 소속을 입력하세요"
                   />
                 </div>
@@ -901,19 +1035,26 @@ const Settings = () => {
                   <input 
                     type="text" 
                     className="profile-modal__input" 
-                    defaultValue="컴퓨터공학과"
+                    value={profileForm.department}
+                    onChange={(e) => handleProfileFormChange('department', e.target.value)}
                     placeholder="학과 또는 전공을 입력하세요"
                   />
                 </div>
                 
                 <div className="profile-modal__field">
                   <label className="profile-modal__label">학년</label>
-                  <select className="profile-modal__select" defaultValue="3">
+                  <select 
+                    className="profile-modal__select" 
+                    value={profileForm.grade}
+                    onChange={(e) => handleProfileFormChange('grade', e.target.value)}
+                  >
+                    <option value="">선택</option>
                     <option value="1">1학년</option>
                     <option value="2">2학년</option>
                     <option value="3">3학년</option>
                     <option value="4">4학년</option>
                     <option value="grad">대학원생</option>
+                    <option value="other">기타</option>
                   </select>
                 </div>
               </div>
@@ -922,11 +1063,81 @@ const Settings = () => {
                 <button className="profile-modal__btn profile-modal__btn--cancel" onClick={() => setShowProfileModal(false)}>
                   취소
                 </button>
-                <button className="profile-modal__btn profile-modal__btn--save" onClick={() => {
-                  alert('프로필이 저장되었습니다! 👤');
-                  setShowProfileModal(false);
+                <button 
+                  className="profile-modal__btn profile-modal__btn--save" 
+                  onClick={handleSaveProfile}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 비밀번호 변경 모달 */}
+      {showPasswordModal && (
+        <div className="license-modal__overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="license-modal license-modal--profile" onClick={(e) => e.stopPropagation()}>
+            <div className="license-modal__header">
+              <h2 className="license-modal__title">비밀번호 변경</h2>
+              <button className="license-modal__close" onClick={() => setShowPasswordModal(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="license-modal__content">
+              <div className="profile-modal__form">
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">현재 비밀번호</label>
+                  <input 
+                    type="password" 
+                    className="profile-modal__input" 
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => handlePasswordFormChange('currentPassword', e.target.value)}
+                    placeholder="현재 비밀번호를 입력하세요"
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">새 비밀번호</label>
+                  <input 
+                    type="password" 
+                    className="profile-modal__input" 
+                    value={passwordForm.newPassword}
+                    onChange={(e) => handlePasswordFormChange('newPassword', e.target.value)}
+                    placeholder="새 비밀번호 (8자 이상)"
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">새 비밀번호 확인</label>
+                  <input 
+                    type="password" 
+                    className="profile-modal__input" 
+                    value={passwordForm.newPasswordConfirm}
+                    onChange={(e) => handlePasswordFormChange('newPasswordConfirm', e.target.value)}
+                    placeholder="새 비밀번호를 다시 입력하세요"
+                  />
+                </div>
+              </div>
+              
+              <div className="profile-modal__actions">
+                <button className="profile-modal__btn profile-modal__btn--cancel" onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
                 }}>
-                  저장
+                  취소
+                </button>
+                <button 
+                  className="profile-modal__btn profile-modal__btn--save" 
+                  onClick={handleChangePassword}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '변경 중...' : '변경'}
                 </button>
               </div>
             </div>

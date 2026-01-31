@@ -38,6 +38,10 @@ def get_seed_user():
         "password": get_password_hash(TEST_USER_PASSWORD),  # bcrypt 해시 적용
         "create_at": now,
         "update_at": now,
+        "name": "테스트 사용자",
+        "school": "한국대학교",
+        "department": "컴퓨터공학과",
+        "grade": "3",
     }
 
 def get_seed_schedules():

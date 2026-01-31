@@ -16,6 +16,8 @@ from app.schemas.auth import (
     UserInfo,
     UserResponse,
     ChangePasswordRequest,
+    ProfileUpdateRequest,
+    DeleteAccountRequest,
 )
 from app.schemas.common import ResponseDTO
 from app.core.security import (
@@ -124,6 +126,10 @@ def login(request: LoginRequest):
                 user=UserInfo(
                     user_id=user.user_id,
                     email=user.email,
+                    name=user.name,
+                    school=user.school,
+                    department=user.department,
+                    grade=user.grade,
                     created_at=user.create_at,
                 ),
             ).model_dump(),
@@ -149,10 +155,62 @@ def get_me(current_user: User = Depends(get_current_user)):
         data=UserResponse(
             user_id=current_user.user_id,
             email=current_user.email,
+            name=current_user.name,
+            school=current_user.school,
+            department=current_user.department,
+            grade=current_user.grade,
             created_at=current_user.create_at,
             updated_at=current_user.update_at,
         ).model_dump(),
     )
+
+
+@router.put("/profile", response_model=ResponseDTO)
+def update_profile(
+    request: ProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """프로필 업데이트"""
+    db = db_session()
+    try:
+        user = db.query(User).filter(User.user_id == current_user.user_id).first()
+        
+        if request.name is not None:
+            user.name = request.name
+        if request.school is not None:
+            user.school = request.school
+        if request.department is not None:
+            user.department = request.department
+        if request.grade is not None:
+            user.grade = request.grade
+        
+        user.update_at = datetime.now()
+        db.commit()
+        db.refresh(user)
+        
+        return ResponseDTO(
+            status=200,
+            message="프로필이 업데이트되었습니다.",
+            data=UserResponse(
+                user_id=user.user_id,
+                email=user.email,
+                name=user.name,
+                school=user.school,
+                department=user.department,
+                grade=user.grade,
+                created_at=user.create_at,
+                updated_at=user.update_at,
+            ).model_dump(),
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"프로필 업데이트 중 오류가 발생했습니다: {str(e)}",
+        )
+    finally:
+        db.close()
 
 
 @router.put("/password", response_model=ResponseDTO)
@@ -206,3 +264,45 @@ def logout(current_user: User = Depends(get_current_user)):
         message="로그아웃 되었습니다.",
         data=None,
     )
+
+
+@router.delete("/account", response_model=ResponseDTO)
+def delete_account(
+    request: DeleteAccountRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """계정 삭제"""
+    # 비밀번호 확인
+    password_valid = False
+    try:
+        password_valid = verify_password(request.password, current_user.password)
+    except Exception:
+        # 레거시 평문 비밀번호 지원
+        password_valid = (request.password == current_user.password)
+    
+    if not password_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="비밀번호가 올바르지 않습니다.",
+        )
+    
+    db = db_session()
+    try:
+        user = db.query(User).filter(User.user_id == current_user.user_id).first()
+        db.delete(user)
+        db.commit()
+        
+        return ResponseDTO(
+            status=200,
+            message="계정이 삭제되었습니다.",
+            data=None,
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"계정 삭제 중 오류가 발생했습니다: {str(e)}",
+        )
+    finally:
+        db.close()
