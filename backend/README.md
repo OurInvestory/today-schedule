@@ -115,6 +115,8 @@ backend/
 │   │   ├── event_bus.py         # Redis Pub/Sub 이벤트 버스
 │   │   └── monitoring.py        # Prometheus 메트릭
 │   ├── services/            # 비즈니스 로직
+│   │   ├── smart_schedule_service.py    # 🆕 AI 스마트 일정 관리
+│   │   ├── subtask_recommend_service.py # AI 할일 추천/세분화
 │   │   ├── challenge_service.py     # 학습 챌린지 추천
 │   │   ├── report_service.py        # 학습 리포트 생성
 │   │   ├── syllabus_service.py      # Syllabus OCR
@@ -150,7 +152,18 @@ backend/
 ### AI 챗봇 (`/api/chat`)
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| POST | `/api/chat` | AI 챗봇 메시지 처리 (자연어 → 일정/알림) |
+| POST | `/api/chat` | AI 챗봇 메시지 처리 (17개 인텐트 지원) |
+
+**지원 인텐트**: `SCHEDULE_MUTATION`, `SCHEDULE_QUERY`, `CLARIFY`, `NOTIFICATION_REQUEST`, `PRIORITY_QUERY`, `SUBTASK_RECOMMEND`, `SCHEDULE_BREAKDOWN`, `GAP_FILL`, `PATTERN_ANALYSIS`, `RECURRING_SCHEDULE`, `AUTO_MODE_TOGGLE`, `SCHEDULE_UPDATE`, `DAILY_BRIEFING`, `WEEKLY_SUMMARY`, `CONFLICT_CHECK`, `SMART_SUGGEST`, `BATCH_CREATE`, `PRIORITY_ADJUST`
+
+### AI 스마트 기능 (`/api/ai`)
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/ai/briefing` | 일일 브리핑 (오늘 일정 요약) |
+| GET | `/api/ai/weekly-summary` | 주간 요약 (통계, 완료율) |
+| GET | `/api/ai/suggestions` | 컨텍스트 기반 스마트 제안 |
+| GET | `/api/ai/conflict-check` | 일정 충돌 확인 |
+| POST | `/api/ai/priority-adjust` | 우선순위 자동 조정 |
 
 ### 일정 (`/api/schedules`)
 | Method | Endpoint | 설명 |
