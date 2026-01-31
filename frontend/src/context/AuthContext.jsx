@@ -87,10 +87,12 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = useCallback(async (profileData) => {
     const response = await updateProfileApi(profileData);
     if (response.status === 200 && response.data) {
-      setUser(prev => ({ ...prev, ...response.data }));
+      const updatedUser = { ...user, ...response.data };
+      setUser(updatedUser);
+      setStoredUser(updatedUser);  // 로컬 스토리지에도 저장
     }
     return response;
-  }, []);
+  }, [user]);
 
   // 계정 삭제
   const deleteAccount = useCallback(async (password) => {
