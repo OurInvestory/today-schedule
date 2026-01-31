@@ -54,25 +54,6 @@ const LoginModal = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const response = await login('demo@five-today.com', 'demo1234');
-      if (response.status === 200) {
-        setFormData({ email: '', password: '' });
-        closeLoginModal();
-      } else {
-        setError(response.message || '데모 로그인에 실패했습니다.');
-      }
-    } catch (err) {
-      const errorMessage = err.response?.data?.detail || '데모 로그인 중 오류가 발생했습니다.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoToSignup = () => {
     closeLoginModal();
     navigate('/signup');
@@ -129,20 +110,6 @@ const LoginModal = () => {
             disabled={loading}
           >
             로그인
-          </Button>
-
-          <div className="auth-divider">
-            <span>또는</span>
-          </div>
-
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth
-            onClick={handleDemoLogin}
-            disabled={loading}
-          >
-            🎯 데모 계정으로 시작하기
           </Button>
         </form>
 

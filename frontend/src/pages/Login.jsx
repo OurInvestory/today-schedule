@@ -48,32 +48,29 @@ const Login = () => {
     }
   };
 
-  // 테스트 계정으로 빠른 로그인
-  const handleDemoLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const response = await login('demo@five-today.com', 'demo1234');
-      if (response.status === 200) {
-        navigate('/');
-      } else {
-        setError(response.message || '데모 로그인에 실패했습니다.');
-      }
-    } catch (err) {
-      const errorMessage = err.response?.data?.detail || '데모 로그인 중 오류가 발생했습니다.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="auth-page">
       <div className="auth-container">
         <div className="auth-header">
           <div className="auth-logo">
-            <span className="auth-logo-icon">📅</span>
-            <h1 className="auth-title">5늘의 일정</h1>
+            <div className="auth-logo-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
+            <h1 className="auth-title">오늘의 일정</h1>
           </div>
           <p className="auth-subtitle">AI 학업 스케줄 도우미</p>
         </div>
@@ -114,20 +111,6 @@ const Login = () => {
           >
             로그인
           </Button>
-
-          <div className="auth-divider">
-            <span>또는</span>
-          </div>
-
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth
-            onClick={handleDemoLogin}
-            disabled={loading}
-          >
-            🎯 데모 계정으로 시작하기
-          </Button>
         </form>
 
         <div className="auth-footer">
@@ -138,7 +121,7 @@ const Login = () => {
             </Link>
           </p>
           <Link to="/" className="auth-back-link">
-            ← 홈으로 돌아가기
+            홈으로 돌아가기
           </Link>
         </div>
       </div>

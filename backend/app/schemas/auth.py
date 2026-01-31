@@ -11,7 +11,7 @@ from datetime import datetime
 class SignupRequest(BaseModel):
     """회원가입 요청"""
     email: EmailStr = Field(..., description="이메일 주소")
-    password: str = Field(..., min_length=6, max_length=100, description="비밀번호 (6자 이상)")
+    password: str = Field(..., min_length=8, max_length=100, description="비밀번호 (8자 이상, 영문+숫자)")
     password_confirm: str = Field(..., description="비밀번호 확인")
 
 
@@ -56,7 +56,7 @@ class UserResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     """비밀번호 변경 요청"""
     current_password: str = Field(..., description="현재 비밀번호")
-    new_password: str = Field(..., min_length=6, max_length=100, description="새 비밀번호 (6자 이상)")
+    new_password: str = Field(..., min_length=8, max_length=100, description="새 비밀번호 (8자 이상, 영문+숫자)")
     new_password_confirm: str = Field(..., description="새 비밀번호 확인")
 
 

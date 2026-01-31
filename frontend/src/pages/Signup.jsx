@@ -2,7 +2,7 @@
  * 회원가입 페이지
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -29,23 +29,68 @@ const Signup = () => {
     setError('');
   };
 
-  const validateForm = () => {
-    if (formData.password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
-      return false;
+  // 비밀번호 유효성 검사 (실시간)
+  const passwordValidation = useMemo(() => {
+    const { password, passwordConfirm } = formData;
+    const validations = {
+      minLength: password.length >= 8,
+      hasNumber: /\d/.test(password),
+      hasLetter: /[a-zA-Z]/.test(password),
+      passwordMatch: password === passwordConfirm && passwordConfirm.length > 0,
+    };
+    
+    const isValid = validations.minLength && validations.hasNumber && validations.hasLetter && validations.passwordMatch;
+    
+    return { ...validations, isValid };
+  }, [formData.password, formData.passwordConfirm]);
+
+  // 비밀번호 힌트 메시지
+  const getPasswordHint = () => {
+    const { password, passwordConfirm } = formData;
+    
+    if (password.length === 0) return null;
+    
+    if (!passwordValidation.minLength) {
+      return { type: 'error', message: '비밀번호는 8자 이상이어야 합니다.' };
     }
-    if (formData.password !== formData.passwordConfirm) {
-      setError('비밀번호가 일치하지 않습니다.');
-      return false;
+    if (!passwordValidation.hasLetter) {
+      return { type: 'error', message: '영문자를 포함해야 합니다.' };
     }
-    return true;
+    if (!passwordValidation.hasNumber) {
+      return { type: 'error', message: '숫자를 포함해야 합니다.' };
+    }
+    
+    return { type: 'success', message: '사용 가능한 비밀번호입니다.' };
   };
+
+  // 비밀번호 확인 힌트 메시지
+  const getPasswordConfirmHint = () => {
+    const { passwordConfirm } = formData;
+    
+    if (passwordConfirm.length === 0) return null;
+    
+    if (!passwordValidation.passwordMatch) {
+      return { type: 'error', message: '비밀번호가 일치하지 않습니다.' };
+    }
+    
+    return { type: 'success', message: '비밀번호가 일치합니다.' };
+  };
+
+  const passwordHint = getPasswordHint();
+  const passwordConfirmHint = getPasswordConfirmHint();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!validateForm()) {
+    if (!passwordValidation.isValid) {
+      if (!passwordValidation.minLength) {
+        setError('비밀번호는 8자 이상이어야 합니다.');
+      } else if (!passwordValidation.hasLetter || !passwordValidation.hasNumber) {
+        setError('비밀번호는 영문자와 숫자를 포함해야 합니다.');
+      } else if (!passwordValidation.passwordMatch) {
+        setError('비밀번호가 일치하지 않습니다.');
+      }
       return;
     }
 
@@ -83,8 +128,24 @@ const Signup = () => {
       <div className="auth-container">
         <div className="auth-header">
           <div className="auth-logo">
-            <span className="auth-logo-icon">📅</span>
-            <h1 className="auth-title">5늘의 일정</h1>
+            <div className="auth-logo-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
+            <h1 className="auth-title">오늘의 일정</h1>
           </div>
           <p className="auth-subtitle">AI 학업 스케줄 도우미</p>
         </div>
@@ -105,28 +166,41 @@ const Signup = () => {
             fullWidth
           />
 
-          <Input
-            type="password"
-            name="password"
-            label="비밀번호"
-            placeholder="비밀번호를 입력하세요 (6자 이상)"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            fullWidth
-            helper="비밀번호는 6자 이상이어야 합니다."
-          />
+          <div className="auth-input-wrapper">
+            <Input
+              type="password"
+              name="password"
+              label="비밀번호"
+              placeholder="비밀번호를 입력하세요"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              fullWidth
+            />
+            {passwordHint && (
+              <p className={`auth-hint auth-hint--${passwordHint.type}`}>
+                {passwordHint.message}
+              </p>
+            )}
+          </div>
 
-          <Input
-            type="password"
-            name="passwordConfirm"
-            label="비밀번호 확인"
-            placeholder="비밀번호를 다시 입력하세요"
-            value={formData.passwordConfirm}
-            onChange={handleChange}
-            required
-            fullWidth
-          />
+          <div className="auth-input-wrapper">
+            <Input
+              type="password"
+              name="passwordConfirm"
+              label="비밀번호 확인"
+              placeholder="비밀번호를 다시 입력하세요"
+              value={formData.passwordConfirm}
+              onChange={handleChange}
+              required
+              fullWidth
+            />
+            {passwordConfirmHint && (
+              <p className={`auth-hint auth-hint--${passwordConfirmHint.type}`}>
+                {passwordConfirmHint.message}
+              </p>
+            )}
+          </div>
 
           <Button
             type="submit"
@@ -147,7 +221,7 @@ const Signup = () => {
             </Link>
           </p>
           <Link to="/" className="auth-back-link">
-            ← 홈으로 돌아가기
+            홈으로 돌아가기
           </Link>
         </div>
       </div>

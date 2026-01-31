@@ -98,8 +98,15 @@ def login(request: LoginRequest):
                 detail="이메일 또는 비밀번호가 올바르지 않습니다.",
             )
         
-        # 비밀번호 검증
-        if not verify_password(request.password, user.password):
+        # 비밀번호 검증 (해시 또는 평문 둘 다 지원 - 마이그레이션 호환)
+        password_valid = False
+        try:
+            password_valid = verify_password(request.password, user.password)
+        except Exception:
+            # bcrypt 해시가 아닌 경우 평문 비교 (레거시 지원)
+            password_valid = (request.password == user.password)
+        
+        if not password_valid:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="이메일 또는 비밀번호가 올바르지 않습니다.",

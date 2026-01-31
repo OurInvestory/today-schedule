@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getNotificationSettings, updateNotificationSettings, triggerDailyBriefing } from '../services/notificationService';
 import { getGoogleAuthStatus, initiateGoogleAuth, disconnectGoogleCalendar } from '../services/calendarService';
 import { t, getCurrentLanguage } from '../utils/i18n';
+import { useAuth } from '../context/AuthContext';
 import './Settings.css';
 
 // 테마 적용 함수
@@ -46,6 +47,7 @@ const formatBytes = (bytes) => {
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -77,6 +79,13 @@ const Settings = () => {
   
   // 언어 변경 시 리렌더링을 위한 상태
   const [, setCurrentLang] = useState(getCurrentLanguage());
+
+  // 미인증 사용자 리다이렉트
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   useEffect(() => {
     fetchSettings();
