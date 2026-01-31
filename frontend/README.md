@@ -47,6 +47,15 @@ docker-compose up frontend
 - 알림 예약 (일정 선택 후 N분 전 알림)
 - 시간표 이미지 분석 및 강의 추가
 
+### 🧠 AI 스마트 기능 (v2)
+- **일일 브리핑**: "오늘 일정 요약해줘" → 오늘 일정 AI 분석
+- **주간 요약**: "이번 주 어땠어?" → 완료율, 통계 분석
+- **일정 충돌 감지**: "겹치는 일정 있어?" → 충돌 자동 탐지
+- **스마트 시간 추천**: "과제 언제 하면 좋을까?" → 패턴 기반 추천
+- **다중 일정 일괄 생성**: 여러 일정 한 번에 등록
+- **우선순위 자동 조정**: 마감일 기반 자동 재계산
+- **빈 시간대 채우기**: 공강 분석 후 할 일 추천
+
 ### 🔔 알림 시스템
 - 백엔드 API 폴링 (1분 간격)
 - 브라우저 푸시 알림
@@ -88,7 +97,7 @@ src/
 │   └── TaskDetail.jsx    # 할 일 상세
 ├── services/             # API 서비스
 │   ├── api.js            # Axios 인스턴스
-│   ├── aiService.js      # AI 챗봇 API (sendChatMessage, analyzeTimetableImage)
+│   ├── aiService.js      # AI 챗봇 API (sendChatMessage, analyzeTimetableImage, getDailyBriefing, getWeeklySummary, checkConflicts, getSmartSuggestion, adjustPriorities 등 12개 함수)
 │   ├── todoService.js    # 할 일 CRUD API
 │   ├── calendarService.js# 캘린더/Google 연동 API
 │   ├── lectureService.js # 강의/시간표 API
