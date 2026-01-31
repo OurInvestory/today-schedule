@@ -5,7 +5,8 @@ from app.models.user import User
 from app.db.database import engine, Base, db_session
 from app.db.seed_data import seed_database
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
-from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router, tasks_router
+from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router, tasks_router, auth_router, events_router
+from app.core.event_bus import event_bus
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -23,6 +24,11 @@ async def lifespan(app: FastAPI):
         # 시드 데이터 삽입 (사용자, 일정, 할 일)
         seed_database(db)
         print("✅ 데이터베이스 초기화 완료")
+        
+        # 이벤트 버스 시작 (Redis Pub/Sub)
+        if event_bus.is_available:
+            event_bus.start_listening()
+            print("✅ 이벤트 버스 시작 완료")
 
     except Exception as e:
         db.rollback()
@@ -31,6 +37,10 @@ async def lifespan(app: FastAPI):
         db.close()
     
     yield
+    
+    # [Shutdown] 서버 종료 시 실행
+    event_bus.stop_listening()
+    print("✅ 이벤트 버스 종료")
 
 
 # 앱 인스턴스 생성
@@ -62,6 +72,8 @@ app.include_router(calendar_router.router)
 app.include_router(vision_router.router, prefix="/api", tags=["Vision"])
 app.include_router(notification_router.router)
 app.include_router(tasks_router.router)  # 비동기 작업 API
+app.include_router(auth_router.router)  # 인증/권한 API
+app.include_router(events_router.router)  # SSE 이벤트 스트림
 
 
 # 서버 확인 테스트 용도 (추후 삭제 예정)

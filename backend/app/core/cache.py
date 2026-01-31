@@ -207,6 +207,14 @@ class CacheService:
         key = CacheKeys.LECTURES.format(user_id=user_id)
         return self.set(key, lectures, self.LONG_TTL)
     
+    def invalidate_lectures(self, user_id: str):
+        """강의 캐시 무효화 (날짜별 캐시 포함)"""
+        # 기본 강의 캐시
+        key = CacheKeys.LECTURES.format(user_id=user_id)
+        self.delete(key)
+        # 날짜별 강의 캐시도 무효화
+        self.delete_pattern(f"lectures:{user_id}:*")
+    
     # =========================================================
     # AI 분석 결과 캐시
     # =========================================================
