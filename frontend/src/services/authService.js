@@ -339,6 +339,77 @@ export const hasPermission = (permission) => {
 };
 
 // =========================================================
+// 프로필 관리
+// =========================================================
+
+/**
+ * 사용자 프로필 조회
+ */
+export const getProfile = async (userId) => {
+  try {
+    const response = await api.get(`/api/users/${userId}/profile`);
+    
+    if (response.data.status === 200) {
+      return { success: true, data: response.data.data };
+    }
+    
+    return { success: false, message: response.data.message };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error.response?.data?.message || '프로필 조회에 실패했습니다.' 
+    };
+  }
+};
+
+/**
+ * 사용자 프로필 업데이트
+ */
+export const updateProfile = async (userId, profileData) => {
+  try {
+    const response = await api.put(`/api/users/${userId}/profile`, profileData);
+    
+    if (response.data.status === 200) {
+      // 로컬 스토리지의 사용자 정보 업데이트
+      const currentUser = getStoredUser();
+      if (currentUser && currentUser.user_id === userId) {
+        saveUser({ ...currentUser, ...response.data.data });
+      }
+      
+      return { success: true, data: response.data.data };
+    }
+    
+    return { success: false, message: response.data.message };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error.response?.data?.message || '프로필 업데이트에 실패했습니다.' 
+    };
+  }
+};
+
+/**
+ * 계정 삭제 (탈퇴)
+ */
+export const deleteAccount = async (userId) => {
+  try {
+    const response = await api.delete(`/api/users/${userId}`);
+    
+    if (response.data.status === 200) {
+      clearTokens();
+      return { success: true, message: '계정이 삭제되었습니다.' };
+    }
+    
+    return { success: false, message: response.data.message };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error.response?.data?.message || '계정 삭제에 실패했습니다.' 
+    };
+  }
+};
+
+// =========================================================
 // Axios 인터셉터 설정
 // =========================================================
 
@@ -397,6 +468,9 @@ export default {
   isAdmin,
   isPremium,
   hasPermission,
+  getProfile,
+  updateProfile,
+  deleteAccount,
   setupAuthInterceptor,
   getAccessToken,
   getRefreshToken,

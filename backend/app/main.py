@@ -8,6 +8,7 @@ from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
 from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router, tasks_router, auth_router, events_router, advanced_router
 from app.core.event_bus import event_bus
 from app.core.monitoring import setup_prometheus
+from sqlalchemy import text
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -79,6 +80,62 @@ app.include_router(advanced_router.router)  # 고급 기능 API
 
 # Prometheus 메트릭 설정
 setup_prometheus(app)
+
+
+# ===== Health Check API =====
+@app.get("/health", tags=["System"])
+def health_check():
+    """
+    시스템 헬스체크 API
+    - 데이터베이스 연결 상태
+    - Redis 연결 상태
+    - 이벤트 버스 상태
+    """
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0",
+        "components": {}
+    }
+    
+    # 데이터베이스 연결 확인
+    try:
+        db = db_session()
+        db.execute(text("SELECT 1"))
+        health_status["components"]["database"] = {"status": "healthy"}
+        db.close()
+    except Exception as e:
+        health_status["status"] = "degraded"
+        health_status["components"]["database"] = {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+    
+    # 이벤트 버스 (Redis) 상태 확인
+    health_status["components"]["event_bus"] = {
+        "status": "healthy" if event_bus.is_available else "unavailable",
+        "listening": event_bus.listening if hasattr(event_bus, 'listening') else False
+    }
+    
+    return health_status
+
+
+@app.get("/health/live", tags=["System"])
+def liveness_check():
+    """Kubernetes liveness probe용 간단한 체크"""
+    return {"status": "alive", "timestamp": datetime.now().isoformat()}
+
+
+@app.get("/health/ready", tags=["System"])
+def readiness_check():
+    """Kubernetes readiness probe용 체크 (DB 연결 포함)"""
+    try:
+        db = db_session()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "ready", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        return {"status": "not_ready", "error": str(e), "timestamp": datetime.now().isoformat()}
 
 
 # 서버 확인 테스트 용도 (추후 삭제 예정)
