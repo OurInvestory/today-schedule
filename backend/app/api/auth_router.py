@@ -8,7 +8,6 @@
 
 import os
 import re
-import hashlib
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional
@@ -27,6 +26,7 @@ from app.core.auth import (
     TokenService, UserRole, TokenPayload, Permission,
     get_current_user_required, RBACChecker, AdminOnly
 )
+from app.core.security import get_password_hash, verify_password
 
 load_dotenv()
 
@@ -82,16 +82,6 @@ class ChangeRoleRequest(BaseModel):
 # 유틸리티 함수
 # =========================================================
 
-def hash_password(password: str) -> str:
-    """비밀번호 해시"""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """비밀번호 검증"""
-    return hash_password(plain_password) == hashed_password
-
-
 def check_account_locked(user: User) -> bool:
     """계정 잠금 상태 확인"""
     if user.locked_until and user.locked_until > datetime.now():
@@ -134,7 +124,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     # 새 사용자 생성
     new_user = User(
         email=req.email,
-        password=hash_password(req.password),
+        password=get_password_hash(req.password),
         role=UserRole.USER.value,
         create_at=datetime.now(),
         update_at=datetime.now()
@@ -365,7 +355,7 @@ async def google_callback(
         # 새 사용자 생성
         user = User(
             email=email,
-            password=hash_password(secrets.token_urlsafe(32)),  # 랜덤 비밀번호
+            password=get_password_hash(secrets.token_urlsafe(32)),  # 랜덤 비밀번호
             role=UserRole.USER.value,
             oauth_provider="google",
             oauth_id=google_id,
@@ -470,7 +460,7 @@ async def kakao_callback(
     else:
         user = User(
             email=email,
-            password=hash_password(secrets.token_urlsafe(32)),
+            password=get_password_hash(secrets.token_urlsafe(32)),
             role=UserRole.USER.value,
             oauth_provider="kakao",
             oauth_id=kakao_id,

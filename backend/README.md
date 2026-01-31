@@ -37,11 +37,32 @@ pip install -r requirements.txt
 
 3. .env 파일 설정
 ```env
+# MySQL Database
 DATABASE_URL=mysql+pymysql://root:password@localhost:3306/five_schedule_db
+
+# Redis
 REDIS_URL=redis://localhost:6379/0
-GOOGLE_API_KEY=your_google_api_key
-GEMINI_MODEL_NAME=gemini-2.5-flash-preview-04-17
-SECRET_KEY=your-jwt-secret-key
+CELERY_BROKER_URL=redis://localhost:6379/1
+CELERY_RESULT_BACKEND=redis://localhost:6379/2
+
+# JWT Authentication
+SECRET_KEY=your-secret-key-change-in-production-very-long-and-secure
+JWT_SECRET_KEY=your-jwt-secret-key-change-in-production
+
+# Google Gemini API
+GOOGLE_API_KEY=your_google_api_key_here
+GEMINI_MODEL_NAME=gemini-2.5-flash
+
+# Google OAuth (소셜 로그인)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Kakao OAuth (소셜 로그인)
+KAKAO_CLIENT_ID=your_kakao_client_id
+KAKAO_CLIENT_SECRET=your_kakao_client_secret
+
+# Frontend
+FRONTEND_URL=http://localhost:5173
 ```
 
 4. DB 마이그레이션 (Alembic)

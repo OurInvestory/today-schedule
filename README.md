@@ -123,11 +123,11 @@ docker-compose up -d --build
 
 ```env
 # MySQL Database
-MYSQL_ROOT_PASSWORD=root_password
+MYSQL_ROOT_PASSWORD=root_password_change_this
 MYSQL_DATABASE=five_schedule_db
 MYSQL_USER=five_user
-MYSQL_PASSWORD=five_password
-DATABASE_URL=mysql+pymysql://five_user:five_password@db:3306/five_schedule_db
+MYSQL_PASSWORD=five_password_change_this
+DATABASE_URL=mysql+pymysql://five_user:five_password_change_this@db:3306/five_schedule_db
 
 # Redis (캐싱 및 Celery 브로커)
 REDIS_URL=redis://redis:6379/0
@@ -135,11 +135,20 @@ CELERY_BROKER_URL=redis://redis:6379/1
 CELERY_RESULT_BACKEND=redis://redis:6379/2
 
 # JWT Authentication
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=your-secret-key-change-in-production-very-long-and-secure
+JWT_SECRET_KEY=your-jwt-secret-key-change-in-production
 
 # Google Gemini API
-GOOGLE_API_KEY=your_google_api_key
-GEMINI_MODEL_NAME=gemini-2.5-flash-preview-04-17
+GOOGLE_API_KEY=your_google_api_key_here
+GEMINI_MODEL_NAME=gemini-2.5-flash
+
+# Google OAuth (소셜 로그인)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Kakao OAuth (소셜 로그인)
+KAKAO_CLIENT_ID=your_kakao_client_id
+KAKAO_CLIENT_SECRET=your_kakao_client_secret
 
 # Google Calendar API (선택)
 GOOGLE_CALENDAR_CLIENT_ID=
@@ -149,13 +158,13 @@ GOOGLE_CALENDAR_CLIENT_SECRET=
 VITE_API_URL=http://localhost:8000
 FRONTEND_URL=http://localhost:5173
 
-# External Integrations (선택)
+# External Integrations (외부 서비스 연동)
 SLACK_WEBHOOK_URL=
 DISCORD_WEBHOOK_URL=
 NOTION_API_KEY=
 NOTION_DATABASE_ID=
 
-# Grafana (모니터링)
+# Grafana (모니터링 대시보드)
 GF_SECURITY_ADMIN_USER=admin
 GF_SECURITY_ADMIN_PASSWORD=admin123
 ```
