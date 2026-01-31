@@ -8,6 +8,7 @@
 
 from datetime import datetime, timedelta, date
 import uuid
+from app.core.security import get_password_hash
 
 # 테스트 사용자 ID (고정)
 TEST_USER_ID = "7822a162-788d-4f36-9366-c956a68393e1"
@@ -34,9 +35,13 @@ def get_seed_user():
     return {
         "user_id": TEST_USER_ID,
         "email": TEST_USER_EMAIL,
-        "password": TEST_USER_PASSWORD,
+        "password": get_password_hash(TEST_USER_PASSWORD),  # bcrypt 해시 적용
         "create_at": now,
         "update_at": now,
+        "name": "테스트 사용자",
+        "school": "한국대학교",
+        "department": "컴퓨터공학과",
+        "grade": "3",
     }
 
 def get_seed_schedules():

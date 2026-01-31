@@ -1,4 +1,4 @@
-from app.db.database import Base
+﻿from app.db.database import Base
 
 from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Boolean, Date, Time, Text
 from sqlalchemy.dialects.mysql import CHAR
@@ -15,6 +15,12 @@ class User(Base):
     password = Column(String(255), nullable=False)
     create_at = Column(DateTime, nullable=False)
     update_at = Column(DateTime, nullable=False)
+    
+    # 프로필 정보
+    name = Column(String(100), nullable=True)
+    school = Column(String(200), nullable=True)
+    department = Column(String(200), nullable=True)
+    grade = Column(String(20), nullable=True)
     
     # RBAC 관련 컬럼
     role = Column(String(20), nullable=False, default="user")  # guest, user, premium, admin

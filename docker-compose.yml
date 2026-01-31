@@ -14,6 +14,7 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME}
+      - SECRET_KEY=${SECRET_KEY:-default-secret-key-change-in-production}
       - GOOGLE_CALENDAR_CLIENT_ID=${GOOGLE_CALENDAR_CLIENT_ID:-default_client_id}
       - GOOGLE_CALENDAR_CLIENT_SECRET=${GOOGLE_CALENDAR_CLIENT_SECRET:-default_client_secret}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}

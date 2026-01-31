@@ -9,9 +9,13 @@ import Archive from './pages/Archive';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import Timetable from './pages/Timetable';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { ToastProvider } from './components/common/Toast';
 import NetworkStatus from './components/common/NetworkStatus';
+import LoginModal from './components/common/LoginModal';
+import { AuthProvider } from './context/AuthContext';
 import {
   initNotificationService,
   cleanupNotificationService,
@@ -92,18 +96,24 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <BrowserRouter>
-          <NetworkStatus />
-          <div className="app">
-            <Routes>
-              {/* 헤더가 있는 레이아웃 */}
-              <Route
-                path="/"
-                element={
-                  <>
-                    <Header hasNotification={hasUnreadNotifications} />
-                    <div className="app__content">
+      <AuthProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <NetworkStatus />
+            <LoginModal />
+            <div className="app">
+              <Routes>
+                {/* 인증 페이지 (헤더 없음) */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                
+                {/* 헤더가 있는 레이아웃 */}
+                <Route
+                  path="/"
+                  element={
+                    <>
+                      <Header hasNotification={hasUnreadNotifications} />
+                      <div className="app__content">
                       <Home />
                     </div>
                   </>
@@ -152,7 +162,8 @@ function App() {
           </div>
         </BrowserRouter>
       </ToastProvider>
-    </ErrorBoundary>
+    </AuthProvider>
+  </ErrorBoundary>
   );
 }
 

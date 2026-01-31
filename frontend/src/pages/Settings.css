@@ -742,6 +742,13 @@
   color: #b0b8c1;
 }
 
+.profile-modal__input--disabled,
+.profile-modal__input:disabled {
+  background: #e5e8eb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
 .profile-modal__select {
   cursor: pointer;
   appearance: none;
@@ -786,4 +793,14 @@
 
 .profile-modal__btn--save:hover {
   background: #1b64da;
+}
+.profile-modal__btn--save:disabled,
+.profile-modal__btn--cancel:disabled,
+.confirm-modal__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.profile-modal__btn--save:disabled:hover {
+  background: #3182f6;
 }

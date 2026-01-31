@@ -1,7 +1,19 @@
 // 간단한 국제화 (i18n) 유틸리티
+// 최적화: 필요한 번역만 로드하고, 동적 import 가능하도록 구조화
 
 const translations = {
   ko: {
+    // 공통
+    save: '저장',
+    cancel: '취소',
+    confirm: '확인',
+    delete: '삭제',
+    edit: '편집',
+    close: '닫기',
+    loading: '로딩 중...',
+    error: '오류가 발생했습니다',
+    success: '성공',
+    
     // 설정 페이지
     settings: '설정',
     profile: '프로필',
@@ -35,6 +47,9 @@ const translations = {
     dailyBriefingDesc: '매일 아침 AI가 일정을 정리해서 알려줍니다',
     briefingTime: '브리핑 시간',
     briefingTimeDesc: '매일 이 시간에 일정 요약을 받습니다',
+    briefingTest: '브리핑 테스트',
+    briefingTestDesc: '지금 바로 브리핑 알림을 받아봅니다',
+    test: '테스트',
     privacy: '개인정보',
     autoLock: '자동 잠금',
     autoLockDesc: '일정 시간 후 자동으로 잠급니다',
@@ -48,24 +63,62 @@ const translations = {
     license: '라이선스',
     view: '보기',
     clearCache: '캐시 삭제',
+    changePassword: '비밀번호 변경',
     logout: '로그아웃',
     deleteAccount: '계정 삭제',
-    cancel: '취소',
-    confirm: '확인',
-    delete: '삭제',
     logoutConfirm: '정말 로그아웃 하시겠습니까?',
-    deleteAccountWarning: '⚠️ 계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.\n정말 삭제하시겠습니까?',
-    cacheCleared: '캐시가 삭제되었습니다. 📦',
-    loggedOut: '로그아웃되었습니다. 👋',
-    accountDeleted: '계정이 삭제되었습니다. 이용해 주셔서 감사합니다. 🙏',
-    loading: '설정을 불러오는 중...',
+    deleteAccountWarning: '계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.',
+    deleteAccountConfirm: '계속하려면 비밀번호를 입력하세요.',
+    passwordConfirm: '비밀번호 확인',
+    currentPassword: '현재 비밀번호',
+    newPassword: '새 비밀번호',
+    newPasswordConfirm: '새 비밀번호 확인',
+    profileSaved: '프로필이 저장되었습니다!',
+    passwordChanged: '비밀번호가 변경되었습니다!',
+    cacheCleared: '캐시가 삭제되었습니다.',
+    accountDeleted: '계정이 삭제되었습니다. 이용해 주셔서 감사합니다.',
+    
+    // 프로필 모달
+    email: '이메일',
+    name: '이름',
+    namePlaceholder: '이름을 입력하세요',
+    school: '학교/소속',
+    schoolPlaceholder: '학교 또는 소속을 입력하세요',
+    department: '학과/전공',
+    departmentPlaceholder: '학과 또는 전공을 입력하세요',
+    grade: '학년',
+    gradePlaceholder: '선택',
+    grade1: '1학년',
+    grade2: '2학년',
+    grade3: '3학년',
+    grade4: '4학년',
+    gradeGrad: '대학원생',
+    gradeOther: '기타',
+    
+    // 시간 단위
     minute: '분',
     hour: '시간',
     day: '일',
     before: '전',
     notUsed: '사용 안함',
+    min15: '15분 전',
+    min30: '30분 전',
+    hour1: '1시간 전',
+    hour2: '2시간 전',
+    day1: '1일 전',
   },
   en: {
+    // Common
+    save: 'Save',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    delete: 'Delete',
+    edit: 'Edit',
+    close: 'Close',
+    loading: 'Loading...',
+    error: 'An error occurred',
+    success: 'Success',
+    
     // Settings page
     settings: 'Settings',
     profile: 'Profile',
@@ -89,8 +142,8 @@ const translations = {
     vibrationDesc: 'Vibrate when notified',
     doNotDisturb: 'Do Not Disturb',
     doNotDisturbDesc: 'Mute notifications during set hours',
-    doNotDisturbStart: 'Do Not Disturb Start Time',
-    doNotDisturbEnd: 'Do Not Disturb End Time',
+    doNotDisturbStart: 'Do Not Disturb Start',
+    doNotDisturbEnd: 'Do Not Disturb End',
     deadlineAlert: 'Deadline Alerts',
     deadlineAlertDesc: 'Get notified before task deadlines',
     deadlineAlertTime: 'Deadline Alert Time',
@@ -99,6 +152,9 @@ const translations = {
     dailyBriefingDesc: 'AI summarizes your daily schedule each morning',
     briefingTime: 'Briefing Time',
     briefingTimeDesc: 'Receive daily summary at this time',
+    briefingTest: 'Test Briefing',
+    briefingTestDesc: 'Send a test briefing notification now',
+    test: 'Test',
     privacy: 'Privacy',
     autoLock: 'Auto Lock',
     autoLockDesc: 'Lock app after inactivity',
@@ -112,22 +168,49 @@ const translations = {
     license: 'License',
     view: 'View',
     clearCache: 'Clear Cache',
+    changePassword: 'Change Password',
     logout: 'Logout',
     deleteAccount: 'Delete Account',
-    cancel: 'Cancel',
-    confirm: 'Confirm',
-    delete: 'Delete',
     logoutConfirm: 'Are you sure you want to logout?',
-    deleteAccountWarning: '⚠️ Deleting your account will permanently remove all data.\nAre you sure?',
-    cacheCleared: 'Cache cleared successfully. 📦',
-    loggedOut: 'You have been logged out. 👋',
-    accountDeleted: 'Account deleted. Thank you for using our app. 🙏',
-    loading: 'Loading settings...',
+    deleteAccountWarning: 'Deleting your account will permanently remove all data.',
+    deleteAccountConfirm: 'Enter your password to continue.',
+    passwordConfirm: 'Confirm Password',
+    currentPassword: 'Current Password',
+    newPassword: 'New Password',
+    newPasswordConfirm: 'Confirm New Password',
+    profileSaved: 'Profile saved!',
+    passwordChanged: 'Password changed!',
+    cacheCleared: 'Cache cleared.',
+    accountDeleted: 'Account deleted. Thank you for using our app.',
+    
+    // Profile modal
+    email: 'Email',
+    name: 'Name',
+    namePlaceholder: 'Enter your name',
+    school: 'School/Organization',
+    schoolPlaceholder: 'Enter your school or organization',
+    department: 'Department/Major',
+    departmentPlaceholder: 'Enter your department or major',
+    grade: 'Grade',
+    gradePlaceholder: 'Select',
+    grade1: 'Freshman',
+    grade2: 'Sophomore',
+    grade3: 'Junior',
+    grade4: 'Senior',
+    gradeGrad: 'Graduate',
+    gradeOther: 'Other',
+    
+    // Time units
     minute: 'min',
     hour: 'hour',
     day: 'day',
     before: 'before',
     notUsed: 'Not used',
+    min15: '15 min before',
+    min30: '30 min before',
+    hour1: '1 hour before',
+    hour2: '2 hours before',
+    day1: '1 day before',
   }
 };
 
@@ -137,16 +220,21 @@ export const getCurrentLanguage = () => {
 };
 
 // 번역 가져오기
-export const t = (key) => {
+export const t = (key, fallback = null) => {
   const lang = getCurrentLanguage();
-  return translations[lang]?.[key] || translations['ko']?.[key] || key;
+  return translations[lang]?.[key] || translations['ko']?.[key] || fallback || key;
 };
 
 // 언어 변경
 export const setLanguage = (lang) => {
   localStorage.setItem('app-language', lang);
-  // 페이지 새로고침 없이 적용하려면 상태 관리 필요
   window.dispatchEvent(new CustomEvent('languageChange', { detail: lang }));
 };
+
+// 지원하는 언어 목록
+export const supportedLanguages = [
+  { code: 'ko', name: '한국어' },
+  { code: 'en', name: 'English' },
+];
 
 export default translations;

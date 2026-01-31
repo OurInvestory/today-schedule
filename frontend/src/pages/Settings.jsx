@@ -2,7 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getNotificationSettings, updateNotificationSettings, triggerDailyBriefing } from '../services/notificationService';
 import { getGoogleAuthStatus, initiateGoogleAuth, disconnectGoogleCalendar } from '../services/calendarService';
-import { t, getCurrentLanguage } from '../utils/i18n';
+import { changePassword } from '../services/authService';
+import { t, getCurrentLanguage, supportedLanguages } from '../utils/i18n';
+import { useAuth } from '../context/AuthContext';
 import './Settings.css';
 
 // 테마 적용 함수
@@ -46,11 +48,26 @@ const formatBytes = (bytes) => {
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, loading: authLoading, user, logout, updateProfile, deleteAccount } = useAuth();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [cacheSize, setCacheSize] = useState(0);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    school: '',
+    department: '',
+    grade: '',
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    newPasswordConfirm: '',
+  });
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [settings, setSettings] = useState({
     pushNotification: true,
     notificationSound: true,
@@ -77,6 +94,25 @@ const Settings = () => {
   
   // 언어 변경 시 리렌더링을 위한 상태
   const [, setCurrentLang] = useState(getCurrentLanguage());
+
+  // 미인증 사용자 리다이렉트
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  // 사용자 정보가 변경될 때 프로필 폼 업데이트
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || '',
+        school: user.school || '',
+        department: user.department || '',
+        grade: user.grade || '',
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchSettings();
@@ -164,9 +200,13 @@ const Settings = () => {
       applyTheme(value);
     }
     
-    // 언어 변경 시 localStorage 저장
+    // 언어 변경 시 즉시 적용
     if (key === 'language') {
       localStorage.setItem('app-language', value);
+      // 이벤트 발생시켜 컴포넌트 리렌더링
+      window.dispatchEvent(new CustomEvent('languageChange', { detail: value }));
+      // 페이지 새로고침으로 완전히 적용 (선택적)
+      // window.location.reload();
     }
     
     try {
@@ -264,36 +304,120 @@ const Settings = () => {
     if (notificationSettings) localStorage.setItem('notification-settings', notificationSettings);
     
     setCacheSize(calculateCacheSize());
-    alert('캐시가 삭제되었습니다. 📦');
+    alert(t('cacheCleared') + ' 📦');
   };
 
   // 로그아웃 핸들러
-  const handleLogout = () => {
-    // 모든 인증 관련 데이터 삭제
-    localStorage.removeItem('google-auth-status');
-    localStorage.removeItem('auth-token');
-    localStorage.removeItem('user-data');
-    
-    // 연결된 계정 상태 초기화
-    setConnectedAccounts({
-      google: { connected: false, email: null },
-      kakao: { connected: false },
-      naver: { connected: false },
-    });
-    
-    setShowLogoutModal(false);
-    alert('로그아웃되었습니다. 👋');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowLogoutModal(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      alert(t('error'));
+    }
   };
 
   // 계정 삭제 핸들러
-  const handleDeleteAccount = () => {
-    // 모든 localStorage 데이터 삭제
-    localStorage.clear();
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      alert(t('error'));
+      return;
+    }
     
-    setShowDeleteAccountModal(false);
-    alert('계정이 삭제되었습니다. 이용해 주셔서 감사합니다. 🙏');
-    navigate('/');
+    setIsSubmitting(true);
+    try {
+      const response = await deleteAccount(deletePassword);
+      if (response.status === 200) {
+        setShowDeleteAccountModal(false);
+        alert(t('accountDeleted') + ' 🙏');
+        navigate('/');
+      } else {
+        alert(response.message || t('error'));
+      }
+    } catch (error) {
+      console.error('Delete account failed:', error);
+      const message = error.response?.data?.detail || t('error');
+      alert(message);
+    } finally {
+      setIsSubmitting(false);
+      setDeletePassword('');
+    }
+  };
+
+  // 프로필 저장 핸들러
+  const handleSaveProfile = async () => {
+    setIsSubmitting(true);
+    try {
+      const response = await updateProfile(profileForm);
+      if (response.status === 200) {
+        alert(t('profileSaved') + ' 👤');
+        setShowProfileModal(false);
+      } else {
+        alert(response.message || t('error'));
+      }
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      alert(t('error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 비밀번호 변경 핸들러
+  const handleChangePassword = async () => {
+    const { currentPassword, newPassword, newPasswordConfirm } = passwordForm;
+    
+    if (!currentPassword || !newPassword || !newPasswordConfirm) {
+      alert(t('error'));
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      alert(t('error'));
+      return;
+    }
+    
+    if (newPassword !== newPasswordConfirm) {
+      alert(t('error'));
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const response = await changePassword(currentPassword, newPassword, newPasswordConfirm);
+      if (response.status === 200) {
+        alert(t('passwordChanged') + ' 🔒');
+        setShowPasswordModal(false);
+        setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+      } else {
+        alert(response.message || t('error'));
+      }
+    } catch (error) {
+      console.error('Password change failed:', error);
+      const message = error.response?.data?.detail || t('error');
+      alert(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 프로필 폼 핸들러
+  const handleProfileFormChange = (field, value) => {
+    setProfileForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // 비밀번호 폼 핸들러
+  const handlePasswordFormChange = (field, value) => {
+    setPasswordForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // 사용자 이름의 첫 글자 추출
+  const getInitial = () => {
+    if (user?.name) return user.name.charAt(0);
+    if (user?.email) return user.email.charAt(0).toUpperCase();
+    return '?';
   };
 
   const ToggleSwitch = ({ checked, onChange }) => (
@@ -339,15 +463,17 @@ const Settings = () => {
       <div className="settings__content">
         {/* 프로필 섹션 */}
         <section className="settings__section">
-          <h2 className="settings__section-title">프로필</h2>
+          <h2 className="settings__section-title">{t('profile')}</h2>
           <div className="settings__card">
             <div className="profile-info">
               <div className="profile-info__avatar">
-                <span>김</span>
+                <span>{getInitial()}</span>
               </div>
               <div className="profile-info__details">
-                <h3 className="profile-info__name">김학생</h3>
-                <button className="profile-info__manage-button" onClick={() => setShowProfileModal(true)}>내 정보 관리</button>
+                <h3 className="profile-info__name">{user?.name || user?.email || ''}</h3>
+                <p className="profile-info__email">{user?.email}</p>
+                {user?.department && <p className="profile-info__dept">{user.school ? `${user.school} ` : ''}{user.department}</p>}
+                <button className="profile-info__manage-button" onClick={() => setShowProfileModal(true)}>{t('manageInfo')}</button>
               </div>
             </div>
           </div>
@@ -355,7 +481,7 @@ const Settings = () => {
 
         {/* 계정 연결 섹션 */}
         <section className="settings__section">
-          <h2 className="settings__section-title">계정 연결</h2>
+          <h2 className="settings__section-title">{t('accountConnection')}</h2>
           <div className="settings__card">
             <div className="account-item">
               <div className="account-item__info">
@@ -424,38 +550,37 @@ const Settings = () => {
 
         {/* 일반 설정 섹션 */}
         <section className="settings__section">
-          <h2 className="settings__section-title">일반</h2>
+          <h2 className="settings__section-title">{t('general')}</h2>
           <div className="settings__card">
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">언어</span>
-                <span className="settings-item__desc">앱에서 사용할 언어를 선택합니다</span>
+                <span className="settings-item__label">{t('language')}</span>
+                <span className="settings-item__desc">{t('languageDesc')}</span>
               </div>
               <select
                 className="settings-item__select"
                 value={settings.language}
                 onChange={(e) => handleSelectChange('language', e.target.value)}
               >
-                <option value="ko">한국어</option>
-                <option value="en">English</option>
-                <option value="ja">日本語</option>
-                <option value="zh">中文</option>
+                {supportedLanguages.map(lang => (
+                  <option key={lang.code} value={lang.code}>{lang.name}</option>
+                ))}
               </select>
             </div>
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">화면 테마</span>
-                <span className="settings-item__desc">앱의 테마를 선택합니다</span>
+                <span className="settings-item__label">{t('theme')}</span>
+                <span className="settings-item__desc">{t('themeDesc')}</span>
               </div>
               <select
                 className="settings-item__select"
                 value={settings.theme}
                 onChange={(e) => handleSelectChange('theme', e.target.value)}
               >
-                <option value="light">화이트 모드</option>
-                <option value="dark">다크 모드</option>
-                <option value="system">시스템 설정</option>
+                <option value="light">{t('lightMode')}</option>
+                <option value="dark">{t('darkMode')}</option>
+                <option value="system">{t('systemTheme')}</option>
               </select>
             </div>
           </div>
@@ -463,12 +588,12 @@ const Settings = () => {
 
         {/* 알림 섹션 */}
         <section className="settings__section">
-          <h2 className="settings__section-title">알림</h2>
+          <h2 className="settings__section-title">{t('notifications')}</h2>
           <div className="settings__card">
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">푸시 알림 허용</span>
-                <span className="settings-item__desc">새로운 일정과 알림을 받습니다</span>
+                <span className="settings-item__label">{t('pushNotification')}</span>
+                <span className="settings-item__desc">{t('pushNotificationDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.pushNotification}
@@ -478,8 +603,8 @@ const Settings = () => {
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">알림음</span>
-                <span className="settings-item__desc">알림 시 소리를 재생합니다</span>
+                <span className="settings-item__label">{t('notificationSound')}</span>
+                <span className="settings-item__desc">{t('notificationSoundDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.notificationSound}
@@ -489,8 +614,8 @@ const Settings = () => {
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">진동</span>
-                <span className="settings-item__desc">알림 시 진동을 사용합니다</span>
+                <span className="settings-item__label">{t('vibration')}</span>
+                <span className="settings-item__desc">{t('vibrationDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.vibration}
@@ -500,8 +625,8 @@ const Settings = () => {
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">방해 금지 모드</span>
-                <span className="settings-item__desc">설정한 시간에는 알림을 받지 않습니다</span>
+                <span className="settings-item__label">{t('doNotDisturb')}</span>
+                <span className="settings-item__desc">{t('doNotDisturbDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.doNotDisturb}
@@ -538,8 +663,8 @@ const Settings = () => {
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">마감 전 알림</span>
-                <span className="settings-item__desc">할 일 마감 전에 알림을 받습니다</span>
+                <span className="settings-item__label">{t('deadlineAlert')}</span>
+                <span className="settings-item__desc">{t('deadlineAlertDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.deadlineAlert}
@@ -550,27 +675,27 @@ const Settings = () => {
             {settings.deadlineAlert && (
               <div className="settings-item settings-item--sub">
                 <div className="settings-item__text">
-                  <span className="settings-item__label">마감 전 알림 시간</span>
-                  <span className="settings-item__desc">마감 몇 분 전에 알림을 받을지 설정</span>
+                  <span className="settings-item__label">{t('deadlineAlertTime')}</span>
+                  <span className="settings-item__desc">{t('deadlineAlertTimeDesc')}</span>
                 </div>
                 <select
                   className="settings-item__select"
                   value={settings.deadlineAlertMinutes || 60}
                   onChange={(e) => handleSelectChange('deadlineAlertMinutes', Number(e.target.value))}
                 >
-                  <option value={15}>15분 전</option>
-                  <option value={30}>30분 전</option>
-                  <option value={60}>1시간 전</option>
-                  <option value={120}>2시간 전</option>
-                  <option value={1440}>1일 전</option>
+                  <option value={15}>{t('min15')}</option>
+                  <option value={30}>{t('min30')}</option>
+                  <option value={60}>{t('hour1')}</option>
+                  <option value={120}>{t('hour2')}</option>
+                  <option value={1440}>{t('day1')}</option>
                 </select>
               </div>
             )}
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">AI 데일리 브리핑</span>
-                <span className="settings-item__desc">매일 아침 AI가 일정을 정리해서 알려줍니다</span>
+                <span className="settings-item__label">{t('dailyBriefing')}</span>
+                <span className="settings-item__desc">{t('dailyBriefingDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.dailySummary}
@@ -581,8 +706,8 @@ const Settings = () => {
             {settings.dailySummary && (
               <div className="settings-item settings-item--sub">
                 <div className="settings-item__text">
-                  <span className="settings-item__label">브리핑 시간</span>
-                  <span className="settings-item__desc">매일 이 시간에 일정 요약을 받습니다</span>
+                  <span className="settings-item__label">{t('briefingTime')}</span>
+                  <span className="settings-item__desc">{t('briefingTimeDesc')}</span>
                 </div>
                 <input
                   type="time"
@@ -596,21 +721,21 @@ const Settings = () => {
             {settings.dailySummary && (
               <div className="settings-item settings-item--sub">
                 <div className="settings-item__text">
-                  <span className="settings-item__label">브리핑 테스트</span>
-                  <span className="settings-item__desc">지금 바로 브리핑 알림을 받아봅니다</span>
+                  <span className="settings-item__label">{t('briefingTest')}</span>
+                  <span className="settings-item__desc">{t('briefingTestDesc')}</span>
                 </div>
                 <button
                   className="settings-item__button"
                   onClick={async () => {
                     const result = await triggerDailyBriefing();
                     if (result) {
-                      alert('브리핑 전송 완료! 알림을 확인하세요.');
+                      alert(t('success'));
                     } else {
-                      alert('브리핑 전송 실패. 알림 권한을 확인하세요.');
+                      alert(t('error'));
                     }
                   }}
                 >
-                  테스트
+                  {t('test')}
                 </button>
               </div>
             )}
@@ -619,30 +744,30 @@ const Settings = () => {
 
         {/* 개인정보 섹션 */}
         <section className="settings__section">
-          <h2 className="settings__section-title">개인정보</h2>
+          <h2 className="settings__section-title">{t('privacy')}</h2>
           <div className="settings__card">
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">자동 잠금</span>
-                <span className="settings-item__desc">일정 시간 후 자동으로 잠급니다</span>
+                <span className="settings-item__label">{t('autoLock')}</span>
+                <span className="settings-item__desc">{t('autoLockDesc')}</span>
               </div>
               <select
                 className="settings-item__select"
                 value={settings.autoLock}
                 onChange={(e) => handleSelectChange('autoLock', e.target.value)}
               >
-                <option value="1">1분</option>
-                <option value="5">5분</option>
-                <option value="10">10분</option>
-                <option value="30">30분</option>
-                <option value="never">사용 안함</option>
+                <option value="1">1{t('minute')}</option>
+                <option value="5">5{t('minute')}</option>
+                <option value="10">10{t('minute')}</option>
+                <option value="30">30{t('minute')}</option>
+                <option value="never">{t('notUsed')}</option>
               </select>
             </div>
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">사용 분석 데이터</span>
-                <span className="settings-item__desc">앱 개선을 위한 익명 데이터 수집</span>
+                <span className="settings-item__label">{t('analyticsData')}</span>
+                <span className="settings-item__desc">{t('analyticsDataDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.analyticsData}
@@ -652,8 +777,8 @@ const Settings = () => {
 
             <div className="settings-item">
               <div className="settings-item__text">
-                <span className="settings-item__label">오류 보고서</span>
-                <span className="settings-item__desc">앱 오류 발생 시 자동으로 보고합니다</span>
+                <span className="settings-item__label">{t('errorReport')}</span>
+                <span className="settings-item__desc">{t('errorReportDesc')}</span>
               </div>
               <ToggleSwitch
                 checked={settings.errorReport}
@@ -665,19 +790,19 @@ const Settings = () => {
 
         {/* 앱 정보 섹션 */}
         <section className="settings__section">
-          <h2 className="settings__section-title">앱 정보</h2>
+          <h2 className="settings__section-title">{t('appInfo')}</h2>
           <div className="settings__card">
             <div className="settings-item settings-item--info">
-              <span className="settings-item__label">버전</span>
+              <span className="settings-item__label">{t('version')}</span>
               <span className="settings-item__value">1.0.0</span>
             </div>
             <div className="settings-item settings-item--info">
-              <span className="settings-item__label">개발자</span>
+              <span className="settings-item__label">{t('developer')}</span>
               <span className="settings-item__value">Team F5</span>
             </div>
             <div className="settings-item settings-item--info">
-              <span className="settings-item__label">라이선스</span>
-              <button className="settings-item__link" onClick={() => setShowLicenseModal(true)}>보기</button>
+              <span className="settings-item__label">{t('license')}</span>
+              <button className="settings-item__link" onClick={() => setShowLicenseModal(true)}>{t('view')}</button>
             </div>
           </div>
         </section>
@@ -686,14 +811,17 @@ const Settings = () => {
         <section className="settings__section">
           <div className="settings__actions">
             <button className="settings__action-btn" onClick={handleClearCache}>
-              캐시 삭제
+              {t('clearCache')}
               <span className="settings__action-info">({formatBytes(cacheSize)})</span>
             </button>
+            <button className="settings__action-btn" onClick={() => setShowPasswordModal(true)}>
+              {t('changePassword')}
+            </button>
             <button className="settings__action-btn settings__action-btn--danger" onClick={() => setShowLogoutModal(true)}>
-              로그아웃
+              {t('logout')}
             </button>
             <button className="settings__action-btn settings__action-btn--danger" onClick={() => setShowDeleteAccountModal(true)}>
-              계정 삭제
+              {t('deleteAccount')}
             </button>
           </div>
         </section>
@@ -704,7 +832,7 @@ const Settings = () => {
         <div className="license-modal__overlay" onClick={() => setShowLogoutModal(false)}>
           <div className="license-modal license-modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="license-modal__header">
-              <h2 className="license-modal__title">로그아웃</h2>
+              <h2 className="license-modal__title">{t('logout')}</h2>
               <button className="license-modal__close" onClick={() => setShowLogoutModal(false)}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -713,13 +841,13 @@ const Settings = () => {
               </button>
             </div>
             <div className="license-modal__content">
-              <p className="confirm-modal__message">정말 로그아웃 하시겠습니까?</p>
+              <p className="confirm-modal__message">{t('logoutConfirm')}</p>
               <div className="confirm-modal__buttons">
                 <button className="confirm-modal__btn confirm-modal__btn--cancel" onClick={() => setShowLogoutModal(false)}>
-                  취소
+                  {t('cancel')}
                 </button>
                 <button className="confirm-modal__btn confirm-modal__btn--confirm" onClick={handleLogout}>
-                  로그아웃
+                  {t('logout')}
                 </button>
               </div>
             </div>
@@ -732,7 +860,7 @@ const Settings = () => {
         <div className="license-modal__overlay" onClick={() => setShowDeleteAccountModal(false)}>
           <div className="license-modal license-modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="license-modal__header">
-              <h2 className="license-modal__title">계정 삭제</h2>
+              <h2 className="license-modal__title">{t('deleteAccount')}</h2>
               <button className="license-modal__close" onClick={() => setShowDeleteAccountModal(false)}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -742,15 +870,32 @@ const Settings = () => {
             </div>
             <div className="license-modal__content">
               <p className="confirm-modal__message">
-                ⚠️ 계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다.<br/>
-                정말 삭제하시겠습니까?
+                ⚠️ {t('deleteAccountWarning')}<br/>
+                {t('deleteAccountConfirm')}
               </p>
+              <div className="profile-modal__field">
+                <label className="profile-modal__label">{t('passwordConfirm')}</label>
+                <input 
+                  type="password" 
+                  className="profile-modal__input" 
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder={t('currentPassword')}
+                />
+              </div>
               <div className="confirm-modal__buttons">
-                <button className="confirm-modal__btn confirm-modal__btn--cancel" onClick={() => setShowDeleteAccountModal(false)}>
-                  취소
+                <button className="confirm-modal__btn confirm-modal__btn--cancel" onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeletePassword('');
+                }}>
+                  {t('cancel')}
                 </button>
-                <button className="confirm-modal__btn confirm-modal__btn--danger" onClick={handleDeleteAccount}>
-                  삭제
+                <button 
+                  className="confirm-modal__btn confirm-modal__btn--danger" 
+                  onClick={handleDeleteAccount}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? t('loading') : t('delete')}
                 </button>
               </div>
             </div>
@@ -840,7 +985,7 @@ const Settings = () => {
         <div className="license-modal__overlay" onClick={() => setShowProfileModal(false)}>
           <div className="license-modal license-modal--profile" onClick={(e) => e.stopPropagation()}>
             <div className="license-modal__header">
-              <h2 className="license-modal__title">내 정보 관리</h2>
+              <h2 className="license-modal__title">{t('manageInfo')}</h2>
               <button className="license-modal__close" onClick={() => setShowProfileModal(false)}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -851,73 +996,151 @@ const Settings = () => {
             <div className="license-modal__content">
               <div className="profile-modal__avatar-section">
                 <div className="profile-modal__avatar">
-                  <span>김</span>
+                  <span>{getInitial()}</span>
                 </div>
-                <button className="profile-modal__avatar-btn">사진 변경</button>
               </div>
               
               <div className="profile-modal__form">
                 <div className="profile-modal__field">
-                  <label className="profile-modal__label">이름</label>
-                  <input 
-                    type="text" 
-                    className="profile-modal__input" 
-                    defaultValue="김학생"
-                    placeholder="이름을 입력하세요"
-                  />
-                </div>
-                
-                <div className="profile-modal__field">
-                  <label className="profile-modal__label">이메일</label>
+                  <label className="profile-modal__label">{t('email')}</label>
                   <input 
                     type="email" 
-                    className="profile-modal__input" 
-                    defaultValue="student@university.ac.kr"
-                    placeholder="이메일을 입력하세요"
+                    className="profile-modal__input profile-modal__input--disabled" 
+                    value={user?.email || ''}
+                    disabled
                   />
                 </div>
                 
                 <div className="profile-modal__field">
-                  <label className="profile-modal__label">학교/소속</label>
+                  <label className="profile-modal__label">{t('name')}</label>
                   <input 
                     type="text" 
                     className="profile-modal__input" 
-                    defaultValue="한국대학교"
-                    placeholder="학교 또는 소속을 입력하세요"
+                    value={profileForm.name}
+                    onChange={(e) => handleProfileFormChange('name', e.target.value)}
+                    placeholder={t('namePlaceholder')}
                   />
                 </div>
                 
                 <div className="profile-modal__field">
-                  <label className="profile-modal__label">학과/전공</label>
+                  <label className="profile-modal__label">{t('school')}</label>
                   <input 
                     type="text" 
                     className="profile-modal__input" 
-                    defaultValue="컴퓨터공학과"
-                    placeholder="학과 또는 전공을 입력하세요"
+                    value={profileForm.school}
+                    onChange={(e) => handleProfileFormChange('school', e.target.value)}
+                    placeholder={t('schoolPlaceholder')}
                   />
                 </div>
                 
                 <div className="profile-modal__field">
-                  <label className="profile-modal__label">학년</label>
-                  <select className="profile-modal__select" defaultValue="3">
-                    <option value="1">1학년</option>
-                    <option value="2">2학년</option>
-                    <option value="3">3학년</option>
-                    <option value="4">4학년</option>
-                    <option value="grad">대학원생</option>
+                  <label className="profile-modal__label">{t('department')}</label>
+                  <input 
+                    type="text" 
+                    className="profile-modal__input" 
+                    value={profileForm.department}
+                    onChange={(e) => handleProfileFormChange('department', e.target.value)}
+                    placeholder={t('departmentPlaceholder')}
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">{t('grade')}</label>
+                  <select 
+                    className="profile-modal__select" 
+                    value={profileForm.grade}
+                    onChange={(e) => handleProfileFormChange('grade', e.target.value)}
+                  >
+                    <option value="">{t('gradePlaceholder')}</option>
+                    <option value="1">{t('grade1')}</option>
+                    <option value="2">{t('grade2')}</option>
+                    <option value="3">{t('grade3')}</option>
+                    <option value="4">{t('grade4')}</option>
+                    <option value="grad">{t('gradeGrad')}</option>
+                    <option value="other">{t('gradeOther')}</option>
                   </select>
                 </div>
               </div>
               
               <div className="profile-modal__actions">
                 <button className="profile-modal__btn profile-modal__btn--cancel" onClick={() => setShowProfileModal(false)}>
-                  취소
+                  {t('cancel')}
                 </button>
-                <button className="profile-modal__btn profile-modal__btn--save" onClick={() => {
-                  alert('프로필이 저장되었습니다! 👤');
-                  setShowProfileModal(false);
+                <button 
+                  className="profile-modal__btn profile-modal__btn--save" 
+                  onClick={handleSaveProfile}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? t('loading') : t('save')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 비밀번호 변경 모달 */}
+      {showPasswordModal && (
+        <div className="license-modal__overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="license-modal license-modal--profile" onClick={(e) => e.stopPropagation()}>
+            <div className="license-modal__header">
+              <h2 className="license-modal__title">{t('changePassword')}</h2>
+              <button className="license-modal__close" onClick={() => setShowPasswordModal(false)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="license-modal__content">
+              <div className="profile-modal__form">
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">{t('currentPassword')}</label>
+                  <input 
+                    type="password" 
+                    className="profile-modal__input" 
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => handlePasswordFormChange('currentPassword', e.target.value)}
+                    placeholder={t('currentPassword')}
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">{t('newPassword')}</label>
+                  <input 
+                    type="password" 
+                    className="profile-modal__input" 
+                    value={passwordForm.newPassword}
+                    onChange={(e) => handlePasswordFormChange('newPassword', e.target.value)}
+                    placeholder={t('newPassword')}
+                  />
+                </div>
+                
+                <div className="profile-modal__field">
+                  <label className="profile-modal__label">{t('newPasswordConfirm')}</label>
+                  <input 
+                    type="password" 
+                    className="profile-modal__input" 
+                    value={passwordForm.newPasswordConfirm}
+                    onChange={(e) => handlePasswordFormChange('newPasswordConfirm', e.target.value)}
+                    placeholder={t('newPasswordConfirm')}
+                  />
+                </div>
+              </div>
+              
+              <div className="profile-modal__actions">
+                <button className="profile-modal__btn profile-modal__btn--cancel" onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
                 }}>
-                  저장
+                  {t('cancel')}
+                </button>
+                <button 
+                  className="profile-modal__btn profile-modal__btn--save" 
+                  onClick={handleChangePassword}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? t('loading') : t('confirm')}
                 </button>
               </div>
             </div>
