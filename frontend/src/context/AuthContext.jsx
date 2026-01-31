@@ -62,8 +62,8 @@ export const AuthProvider = ({ children }) => {
   // 로그인
   const login = useCallback(async (email, password) => {
     const response = await loginApi(email, password);
-    if (response.status === 200 && response.data) {
-      setUser(response.data.user);
+    if (response.success && response.data) {
+      setUser(response.data);
       setIsAuthenticated(true);
       setShowLoginModal(false);
     }
