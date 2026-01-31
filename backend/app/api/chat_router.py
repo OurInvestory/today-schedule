@@ -1,8 +1,20 @@
+"""
+AI 챗봇 라우터 - 확장 버전
+지원 기능:
+- 일정 CRUD (생성/조회/수정/삭제)
+- 할 일 추천 및 세분화
+- 자동 추가 모드
+- 빈 시간대 채우기
+- 학습 패턴 분석
+- 반복 일정 설정
+- 알림 예약
+"""
+
 import os
 import json
 import re
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -23,6 +35,15 @@ from app.schemas.ai_chat import (
 )
 from app.db.database import get_db
 from app.models.schedule import Schedule
+from app.models.sub_task import SubTask
+from app.services.subtask_recommend_service import (
+    recommend_subtasks_for_schedule,
+    breakdown_schedule_to_subtasks,
+    get_gap_times,
+    recommend_tasks_for_gap_time,
+    analyze_learning_pattern,
+    create_recurring_schedules
+)
 
 load_dotenv()
 
@@ -34,8 +55,8 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-# 채팅은 속도와 논리력이 중요하므로 Flash 모델 권장 (Pro도 가능)
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+# 채팅은 속도와 논리력이 중요하므로 Flash 모델 권장
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash")
 
 if not GOOGLE_API_KEY:
     logger.error("GOOGLE_API_KEY is missing. Chat features will fail.")
@@ -93,7 +114,7 @@ def search_schedules_by_keyword(db: Session, keyword: str, limit: int = 5) -> li
             Schedule.user_id == TEST_USER_ID,
             Schedule.title.ilike(f"%{keyword}%"),
             Schedule.start_at >= now - timedelta(days=30),
-            Schedule.start_at <= now + timedelta(days=14)
+            Schedule.start_at <= now + timedelta(days=60)
         )
     ).order_by(Schedule.start_at.asc()).limit(limit).all()
 
@@ -147,26 +168,34 @@ INSTRUCTION:
 
 
 def build_system_prompt(req: ChatRequest, current_date_str: str) -> str:
-    """시스템 프롬프트 생성"""
+    """시스템 프롬프트 생성 - 확장된 인텐트 지원"""
     context_section = build_context_section(req)
     
-    return f"""You are a smart academic scheduler AI.
+    return f"""You are a smart academic scheduler AI for Korean university students.
 Your ONLY task is to analyze the input and output valid JSON.
 DO NOT provide any explanations, intro text, or markdown formatting. Just the JSON.
 
 [Current Environment]
 - Today: {current_date_str}
 - Timezone: {req.timezone}
-- Selected Schedule ID: {req.selected_schedule_id or "None"} 
+- Selected Schedule ID: {req.selected_schedule_id or "None"}
+- Auto Mode: {req.user_context.get('auto_mode', False) if req.user_context else False}
 
 {context_section}
 
 [Rules]
-1. Intent Classification:
+1. Intent Classification (EXTENDED):
    - "SCHEDULE_MUTATION": Create, Update, or Delete a schedule/task.
    - "SCHEDULE_QUERY": VIEW/SHOW schedules (e.g., "보여줘", "뭐야").
    - "PRIORITY_QUERY": High priority or recommendation requests.
    - "CLARIFY": If essential info (like Date) is missing.
+   - "SUBTASK_RECOMMEND": User asks for task recommendations for a schedule (e.g., "할 일 추천해줘", "준비할 거 뭐야")
+   - "SCHEDULE_BREAKDOWN": User wants to break down a schedule into subtasks (e.g., "세분화해줘", "쪼개줘", "나눠줘")
+   - "GAP_FILL": User wants to fill empty time slots (e.g., "빈 시간 채워줘", "공강에 뭐할까")
+   - "PATTERN_ANALYSIS": User asks for learning pattern analysis (e.g., "분석해줘", "패턴 알려줘", "통계 보여줘")
+   - "RECURRING_SCHEDULE": User wants to create recurring schedules (e.g., "매주", "매일", "반복")
+   - "AUTO_MODE_TOGGLE": User wants to toggle auto-add mode (e.g., "자동으로 추가해", "물어보지 마")
+   - "SCHEDULE_UPDATE": User wants to modify existing schedule with natural language (e.g., "3시를 5시로 바꿔줘", "시간 변경")
 
 2. Type Classification:
    - "EVENT": Has START TIME. Use 'start_at'.
@@ -176,18 +205,86 @@ DO NOT provide any explanations, intro text, or markdown formatting. Just the JS
    - "importance_score" (1-10)
    - "category": [수업, 과제, 시험, 공모전, 대외활동, 기타]
 
-4. Output Format (JSON):
-   - "CLARIFY": Fill 'preserved_info' + 'missingFields'
-   - "SCHEDULE_MUTATION": Fill 'actions' list
+4. For SUBTASK_RECOMMEND intent:
+   - Extract the target schedule title or ID from user's message
+   - Set preserved_info with "target_schedule" and "category"
+
+5. For SCHEDULE_BREAKDOWN intent:
+   - Must have a specific schedule to break down
+   - Ask for clarification if schedule is not specified
+
+6. For RECURRING_SCHEDULE intent:
+   - Extract recurrence pattern (weekly, daily, monthly)
+   - Extract days if weekly (mon, tue, wed, etc.)
+   - Set preserved_info with recurrence details
+
+7. For SCHEDULE_UPDATE intent:
+   - Extract original time/date and new time/date
+   - Set op: "UPDATE" in action
+
+8. For AUTO_MODE_TOGGLE intent:
+   - Set preserved_info.auto_mode = true/false
+
+[Output Format (JSON)]
+{{
+    "intent": "INTENT_NAME",
+    "type": "EVENT" | "TASK",
+    "actions": [
+        {{
+            "op": "CREATE" | "UPDATE" | "DELETE",
+            "target": "SCHEDULE" | "SUB_TASK" | "NOTIFICATION",
+            "payload": {{ ... }}
+        }}
+    ],
+    "preserved_info": {{
+        "query_range": "today" | "tomorrow" | "this_week" | "YYYY-MM-DD",
+        "target_schedule": "schedule title or id",
+        "recurrence": {{
+            "type": "weekly" | "daily" | "monthly",
+            "days": ["mon", "wed", "fri"],
+            "count": 10
+        }},
+        "auto_mode": true | false,
+        "original_time": "15:00",
+        "new_time": "17:00"
+    }},
+    "missingFields": [
+        {{ "field": "field_name", "question": "질문" }}
+    ]
+}}
 
 [Examples]
-# Example 1: Creation
+# Example 1: Task Recommendation
+User: "중간고사 준비 할 일 추천해줘"
+JSON: {{ "intent": "SUBTASK_RECOMMEND", "type": "TASK", "actions": [], "preserved_info": {{ "target_schedule": "중간고사", "category": "시험" }} }}
+
+# Example 2: Schedule Breakdown
+User: "해커톤 발표 준비 쪼개줘"
+JSON: {{ "intent": "SCHEDULE_BREAKDOWN", "type": "TASK", "actions": [], "preserved_info": {{ "target_schedule": "해커톤 발표" }} }}
+
+# Example 3: Gap Fill
+User: "내일 빈 시간에 할 일 채워줘"
+JSON: {{ "intent": "GAP_FILL", "type": "TASK", "actions": [], "preserved_info": {{ "target_date": "tomorrow" }} }}
+
+# Example 4: Pattern Analysis
+User: "이번 주 학습 패턴 분석해줘"
+JSON: {{ "intent": "PATTERN_ANALYSIS", "type": "TASK", "actions": [], "preserved_info": {{ "period": "week" }} }}
+
+# Example 5: Recurring Schedule
+User: "매주 월요일 10시에 스터디 넣어줘"
+JSON: {{ "intent": "RECURRING_SCHEDULE", "type": "EVENT", "actions": [{{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "스터디", "start_at": "2026-01-19T10:00:00+09:00", "end_at": "2026-01-19T11:00:00+09:00", "category": "기타" }} }}], "preserved_info": {{ "recurrence": {{ "type": "weekly", "days": ["mon"], "count": 10 }} }} }}
+
+# Example 6: Auto Mode Toggle
+User: "앞으로 일정은 물어보지 말고 바로 추가해"
+JSON: {{ "intent": "AUTO_MODE_TOGGLE", "type": "EVENT", "actions": [], "preserved_info": {{ "auto_mode": true }} }}
+
+# Example 7: Schedule Update
+User: "내일 회의를 3시에서 5시로 바꿔줘"
+JSON: {{ "intent": "SCHEDULE_UPDATE", "type": "EVENT", "actions": [{{ "op": "UPDATE", "target": "SCHEDULE", "payload": {{ "title": "회의", "original_time": "15:00", "new_time": "17:00" }} }}], "preserved_info": {{ "target_date": "tomorrow" }} }}
+
+# Example 8: Creation (기존)
 User: "내일 3시에 회의"
 JSON: {{ "intent": "SCHEDULE_MUTATION", "type": "EVENT", "actions": [ {{ "op": "CREATE", "target": "SCHEDULE", "payload": {{ "title": "회의", "start_at": "2026-01-16T15:00:00+09:00", "end_at": "2026-01-16T16:00:00+09:00", "category": "기타"}} }} ] }}
-
-# Example 2: Query
-User: "오늘 일정 보여줘"
-JSON: {{ "intent": "SCHEDULE_QUERY", "type": "TASK", "actions": [], "preserved_info": {{ "query_range": "today" }} }}
 
 User Input: {req.text}
 """
@@ -272,8 +369,22 @@ def handle_mutation(ai_result: AIChatParsed, db: Session) -> str:
     if op_type == "UPDATE":
         return "일정을 변경할까요?"
     
+    # 자동 모드 확인
+    user_context = ai_result.preserved_info or {}
+    auto_mode = user_context.get('auto_mode', False)
+    
     schedule_count = sum(1 for a in actions if getattr(a, 'target', 'SCHEDULE') == 'SCHEDULE')
     sub_task_count = sum(1 for a in actions if getattr(a, 'target', 'SCHEDULE') == 'SUB_TASK')
+    
+    if auto_mode:
+        # 자동 모드면 바로 추가 플래그 설정
+        ai_result.preserved_info = ai_result.preserved_info or {}
+        ai_result.preserved_info['auto_confirm'] = True
+        if schedule_count > 0 and sub_task_count > 0:
+            return f"✅ 자동 추가 모드로 일정 {schedule_count}건과 할 일 {sub_task_count}건을 추가합니다!"
+        elif sub_task_count > 0:
+            return f"✅ 자동 추가 모드로 할 일 {sub_task_count}건을 추가합니다!"
+        return f"✅ 자동 추가 모드로 일정 {schedule_count}건을 추가합니다!"
     
     if schedule_count > 0 and sub_task_count > 0:
         return f"일정 {schedule_count}건과 할 일 {sub_task_count}건을 등록할까요?"
@@ -418,6 +529,321 @@ def handle_schedule_query(ai_result: AIChatParsed, db: Session) -> str:
         return f"{period_text} 일정이에요! 📅\n\n{schedule_text}\n\n총 {len(schedules)}건의 일정이 있어요."
     return f"{period_text}은 등록된 일정이 없어요."
 
+
+# ============================================================
+# 확장 Intent 핸들러
+# ============================================================
+
+def handle_subtask_recommend(ai_result: AIChatParsed, db: Session) -> str:
+    """SUBTASK_RECOMMEND 처리 - 할 일 추천"""
+    preserved = ai_result.preserved_info or {}
+    target_schedule = preserved.get('target_schedule', '')
+    category = preserved.get('category', '')
+    
+    result = recommend_subtasks_for_schedule(
+        db=db,
+        user_id=TEST_USER_ID,
+        schedule_title=target_schedule,
+        category=category
+    )
+    
+    recommendations = result.get('recommendations', [])
+    
+    if not recommendations:
+        return f"'{target_schedule}'에 대한 할 일을 추천하기 어려워요. 좀 더 구체적으로 알려주세요!"
+    
+    # 액션으로 변환
+    ai_result.actions = []
+    for rec in recommendations:
+        action = Action(
+            op="CREATE",
+            target="SUB_TASK",
+            payload={
+                "title": rec.get("title"),
+                "estimated_minute": rec.get("estimated_minute", 60),
+                "priority": rec.get("priority", "medium"),
+                "category": rec.get("category", "기타"),
+                "tip": rec.get("tip", ""),
+                "date": rec.get("date"),
+                "schedule_id": rec.get("schedule_id")
+            }
+        )
+        ai_result.actions.append(action)
+    
+    # 응답 메시지 생성
+    task_list = "\n".join([
+        f"• {r['title']} ({r.get('estimated_minute', 60)}분, {r.get('priority', 'medium')})"
+        for r in recommendations
+    ])
+    
+    return f"'{target_schedule}'에 대해 다음 할 일을 추천드려요! 📋\n\n{task_list}\n\n{result.get('summary', '')}\n\n추가할까요?"
+
+
+def handle_schedule_breakdown(ai_result: AIChatParsed, db: Session) -> str:
+    """SCHEDULE_BREAKDOWN 처리 - 일정 세분화"""
+    preserved = ai_result.preserved_info or {}
+    target_schedule = preserved.get('target_schedule', '')
+    
+    # 일정 검색
+    schedules = search_schedules_by_keyword(db, target_schedule, limit=1)
+    
+    if not schedules:
+        return f"'{target_schedule}' 일정을 찾지 못했어요. 정확한 일정 이름을 알려주세요!"
+    
+    schedule = schedules[0]
+    result = breakdown_schedule_to_subtasks(
+        db=db,
+        user_id=TEST_USER_ID,
+        schedule_id=str(schedule.schedule_id)
+    )
+    
+    subtasks = result.get('subtasks', [])
+    
+    if not subtasks:
+        return f"'{schedule.title}' 일정을 세분화하기 어려워요."
+    
+    # 액션으로 변환
+    ai_result.actions = []
+    for task in subtasks:
+        action = Action(
+            op="CREATE",
+            target="SUB_TASK",
+            payload={
+                "title": task.get("title"),
+                "estimated_minute": task.get("estimated_minute", 30),
+                "priority": task.get("priority", "medium"),
+                "category": task.get("category", schedule.category or "기타"),
+                "tip": task.get("tip", ""),
+                "date": task.get("date"),
+                "schedule_id": str(schedule.schedule_id)
+            }
+        )
+        ai_result.actions.append(action)
+    
+    task_list = "\n".join([
+        f"{i+1}. {t['title']} ({t.get('estimated_minute', 30)}분)"
+        for i, t in enumerate(subtasks)
+    ])
+    
+    total_time = result.get('total_estimated_minute', sum(t.get('estimated_minute', 30) for t in subtasks))
+    
+    return f"'{schedule.title}'을 다음과 같이 세분화했어요! 🎯\n\n{task_list}\n\n총 예상 소요 시간: {total_time}분\n\n추가할까요?"
+
+
+def handle_gap_fill(ai_result: AIChatParsed, db: Session) -> str:
+    """GAP_FILL 처리 - 빈 시간대 채우기"""
+    preserved = ai_result.preserved_info or {}
+    target_date_str = preserved.get('target_date', '')
+    
+    # 날짜 파싱
+    now = datetime.now()
+    if target_date_str == 'tomorrow':
+        target_date = (now + timedelta(days=1)).date()
+    elif target_date_str == 'today' or not target_date_str:
+        target_date = now.date()
+    else:
+        try:
+            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+        except:
+            target_date = now.date()
+    
+    # 빈 시간대 조회
+    gap_times = get_gap_times(db, TEST_USER_ID, target_date)
+    
+    if not gap_times:
+        return f"{target_date.strftime('%m월 %d일')}은 빈 시간대가 없어요! 일정이 꽉 찼네요. 💪"
+    
+    # 가장 긴 빈 시간대에 할 일 추천
+    longest_gap = max(gap_times, key=lambda x: x['duration_minutes'])
+    
+    result = recommend_tasks_for_gap_time(
+        db=db,
+        user_id=TEST_USER_ID,
+        target_date=target_date,
+        gap_time=longest_gap
+    )
+    
+    recommendations = result.get('recommendations', [])
+    
+    # 액션으로 변환
+    ai_result.actions = []
+    for rec in recommendations:
+        action = Action(
+            op="CREATE",
+            target="SUB_TASK",
+            payload={
+                "title": rec.get("title"),
+                "estimated_minute": rec.get("estimated_minute", 30),
+                "priority": rec.get("priority", "medium"),
+                "category": rec.get("category", "기타"),
+                "tip": rec.get("tip", ""),
+                "date": rec.get("date")
+            }
+        )
+        ai_result.actions.append(action)
+    
+    # 빈 시간대 목록
+    gap_list = "\n".join([
+        f"• {g['start']} ~ {g['end']} ({g['duration_minutes']}분)"
+        for g in gap_times
+    ])
+    
+    # 추천 할 일 목록
+    task_list = "\n".join([
+        f"• {r['title']} ({r.get('estimated_minute', 30)}분)"
+        for r in recommendations
+    ]) if recommendations else "추천할 할 일이 없어요."
+    
+    return f"📅 {target_date.strftime('%m월 %d일')} 빈 시간대:\n{gap_list}\n\n💡 {longest_gap['start']}~{longest_gap['end']} 시간대에 추천:\n{task_list}\n\n추가할까요?"
+
+
+def handle_pattern_analysis(ai_result: AIChatParsed, db: Session) -> str:
+    """PATTERN_ANALYSIS 처리 - 학습 패턴 분석"""
+    preserved = ai_result.preserved_info or {}
+    period = preserved.get('period', 'week')
+    
+    days = 7 if period == 'week' else 30 if period == 'month' else 7
+    
+    result = analyze_learning_pattern(db, TEST_USER_ID, days)
+    
+    stats = result.get('statistics', {})
+    analysis = result.get('analysis', {})
+    
+    # 응답 메시지 구성
+    stats_text = f"""📊 **{result.get('period', '최근')} 학습 분석**
+
+✅ 완료율: {stats.get('completion_rate', 0)}%
+📝 완료한 할 일: {stats.get('completed_count', 0)}개
+⏳ 미완료 할 일: {stats.get('incomplete_count', 0)}개
+📅 일정 수: {stats.get('total_schedules', 0)}개"""
+    
+    if stats.get('most_delayed_category'):
+        stats_text += f"\n⚠️ 가장 미룬 카테고리: {stats.get('most_delayed_category')}"
+    
+    feedback = analysis.get('overall_feedback', '')
+    strengths = analysis.get('strengths', [])
+    improvements = analysis.get('improvements', [])
+    motivation = analysis.get('motivation', '화이팅! 💪')
+    
+    strengths_text = "\n".join([f"• {s}" for s in strengths]) if strengths else ""
+    improvements_text = "\n".join([
+        f"• {i.get('area', '')}: {i.get('suggestion', '')}"
+        for i in improvements
+    ]) if improvements else ""
+    
+    response = f"{stats_text}\n\n"
+    
+    if feedback:
+        response += f"💬 {feedback}\n\n"
+    
+    if strengths_text:
+        response += f"👍 잘한 점:\n{strengths_text}\n\n"
+    
+    if improvements_text:
+        response += f"💡 개선 제안:\n{improvements_text}\n\n"
+    
+    response += f"🔥 {motivation}"
+    
+    # preserved_info에 분석 결과 저장
+    ai_result.preserved_info = {
+        **(ai_result.preserved_info or {}),
+        "analysis_result": result
+    }
+    
+    return response
+
+
+def handle_recurring_schedule(ai_result: AIChatParsed, db: Session) -> str:
+    """RECURRING_SCHEDULE 처리 - 반복 일정"""
+    preserved = ai_result.preserved_info or {}
+    recurrence = preserved.get('recurrence', {})
+    
+    if not ai_result.actions:
+        return "반복 일정 정보가 부족해요. 무슨 일정을 반복할까요?"
+    
+    base_action = ai_result.actions[0]
+    base_schedule = base_action.payload
+    
+    recurrence_type = recurrence.get('type', 'weekly')
+    days = recurrence.get('days', [])
+    count = recurrence.get('count', 10)
+    
+    # 반복 일정 생성
+    recurring_schedules = create_recurring_schedules(
+        db=db,
+        user_id=TEST_USER_ID,
+        base_schedule=base_schedule,
+        recurrence=recurrence
+    )
+    
+    # 액션 업데이트
+    ai_result.actions = []
+    for sched in recurring_schedules:
+        action = Action(
+            op="CREATE",
+            target="SCHEDULE",
+            payload=sched
+        )
+        ai_result.actions.append(action)
+    
+    # 반복 패턴 설명
+    if recurrence_type == 'weekly':
+        day_names = {'mon': '월', 'tue': '화', 'wed': '수', 'thu': '목', 'fri': '금', 'sat': '토', 'sun': '일'}
+        days_text = ', '.join([day_names.get(d, d) for d in days]) if days else '매주'
+        pattern_text = f"매주 {days_text}요일"
+    elif recurrence_type == 'daily':
+        pattern_text = "매일"
+    else:
+        pattern_text = "매월"
+    
+    return f"🔄 '{base_schedule.get('title')}' 반복 일정을 생성했어요!\n\n• 패턴: {pattern_text}\n• 횟수: {len(recurring_schedules)}회\n\n추가할까요?"
+
+
+def handle_auto_mode_toggle(ai_result: AIChatParsed, db: Session) -> str:
+    """AUTO_MODE_TOGGLE 처리 - 자동 추가 모드"""
+    preserved = ai_result.preserved_info or {}
+    auto_mode = preserved.get('auto_mode', False)
+    
+    if auto_mode:
+        return "🚀 **자동 추가 모드 ON!**\n\n앞으로 일정/할 일 추가 요청 시 확인 없이 바로 추가합니다.\n\n'자동 모드 꺼줘'라고 하면 다시 확인 모드로 돌아갑니다."
+    else:
+        return "⏸️ **자동 추가 모드 OFF**\n\n앞으로 일정/할 일 추가 전 확인을 받습니다."
+
+
+def handle_schedule_update(ai_result: AIChatParsed, db: Session) -> str:
+    """SCHEDULE_UPDATE 처리 - 자연어 일정 수정"""
+    if not ai_result.actions:
+        return "수정할 일정 정보가 부족해요."
+    
+    payload = ai_result.actions[0].payload
+    title = payload.get('title', '')
+    original_time = payload.get('original_time', '')
+    new_time = payload.get('new_time', '')
+    
+    # 일정 검색
+    schedules = search_schedules_by_keyword(db, title, limit=5)
+    
+    if not schedules:
+        return f"'{title}' 일정을 찾지 못했어요."
+    
+    if len(schedules) > 1:
+        choices = [f"{s.title} ({s.start_at.strftime('%m/%d %H:%M') if s.start_at else ''})" for s in schedules]
+        ai_result.intent = "CLARIFY"
+        ai_result.missingFields = [
+            MissingField(
+                field="schedule_id",
+                question="어떤 일정을 수정할까요?",
+                choices=choices
+            )
+        ]
+        choice_text = "\n".join([f"• {c}" for c in choices])
+        return f"'{title}' 관련 일정이 여러 개 있어요:\n\n{choice_text}\n\n어떤 걸 수정할까요?"
+    
+    schedule = schedules[0]
+    payload['schedule_id'] = str(schedule.schedule_id)
+    
+    return f"'{schedule.title}'의 시간을 {original_time} → {new_time}로 변경할까요?"
+
 # ============================================================
 # 메인 API 엔드포인트
 # ============================================================
@@ -447,12 +873,19 @@ async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
             
         ai_result = AIChatParsed(**parsed_data)
         
-        # 4. Intent 처리 (기존 로직 동일)
+        # 4. Intent 처리 (확장)
         intent_handlers = {
             "CLARIFY": handle_clarify,
             "SCHEDULE_MUTATION": handle_mutation,
             "PRIORITY_QUERY": handle_priority_query,
             "SCHEDULE_QUERY": handle_schedule_query,
+            "SUBTASK_RECOMMEND": handle_subtask_recommend,
+            "SCHEDULE_BREAKDOWN": handle_schedule_breakdown,
+            "GAP_FILL": handle_gap_fill,
+            "PATTERN_ANALYSIS": handle_pattern_analysis,
+            "RECURRING_SCHEDULE": handle_recurring_schedule,
+            "AUTO_MODE_TOGGLE": handle_auto_mode_toggle,
+            "SCHEDULE_UPDATE": handle_schedule_update,
         }
         
         handler = intent_handlers.get(ai_result.intent)

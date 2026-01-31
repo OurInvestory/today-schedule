@@ -19,6 +19,7 @@ import { deleteCalendarEvent } from '../services/calendarService';
 // localStorage 키
 const CHAT_STORAGE_KEY = 'chatbot_messages';
 const CHAT_GREETED_KEY = 'chatbot_has_greeted';
+const CHAT_AUTO_MODE_KEY = 'chatbot_auto_mode';
 
 // 10가지 랜덤 인사 템플릿
 const greetingTemplates = [
@@ -159,6 +160,13 @@ export const useChatbot = () => {
   const [conversationId, setConversationId] = useState(null);
   const [hasGreeted, setHasGreeted] = useState(() => loadGreetedFromStorage());
   const [lastUserMessage, setLastUserMessage] = useState(null); // 재시도용 마지막 메시지 저장
+  const [autoMode, setAutoMode] = useState(() => {
+    try {
+      return localStorage.getItem(CHAT_AUTO_MODE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const messagesEndRef = useRef(null);
 
   // 메시지 변경 시 localStorage에 저장
@@ -345,7 +353,7 @@ export const useChatbot = () => {
       }
 
       // 이전 CLARIFY 컨텍스트 확인 (마지막 assistant 메시지에서)
-      let userContext = {};
+      let userContext = { auto_mode: autoMode };
       const lastAssistantMsg = messages
         .filter((m) => m.role === 'assistant')
         .slice(-1)[0];
@@ -355,6 +363,7 @@ export const useChatbot = () => {
           ...lastAssistantMsg.parsedResult.preserved_info,
           previous_intent: 'CLARIFY',
           previous_type: lastAssistantMsg.parsedResult.type,
+          auto_mode: autoMode,
         };
       }
 
@@ -396,7 +405,33 @@ export const useChatbot = () => {
           parsedResult?.missingFields || parsedResult?.missing_fields || [],
       };
 
-      setMessages((prev) => [...prev, newAssistantMessage]);
+      // AUTO_MODE_TOGGLE 인텐트 처리 - 자동 모드 상태 업데이트
+      if (parsedResult?.intent === 'AUTO_MODE_TOGGLE') {
+        const newAutoMode = parsedResult?.preserved_info?.auto_mode || false;
+        setAutoMode(newAutoMode);
+        try {
+          localStorage.setItem(CHAT_AUTO_MODE_KEY, String(newAutoMode));
+        } catch (e) {
+          console.error('Failed to save auto mode:', e);
+        }
+      }
+
+      // 자동 확인 모드이고 액션이 있을 경우 바로 실행
+      const shouldAutoConfirm = parsedResult?.preserved_info?.auto_confirm || 
+                                (autoMode && parsedResult?.actions?.length > 0 && 
+                                 ['SCHEDULE_MUTATION', 'SUBTASK_RECOMMEND', 'SCHEDULE_BREAKDOWN', 'GAP_FILL', 'RECURRING_SCHEDULE'].includes(parsedResult?.intent));
+      
+      if (shouldAutoConfirm && parsedResult?.actions?.length > 0) {
+        // 메시지 먼저 추가
+        setMessages((prev) => [...prev, newAssistantMessage]);
+        
+        // 자동으로 모든 액션 실행
+        for (let i = 0; i < parsedResult.actions.length; i++) {
+          await confirmAction(newAssistantMessage.id, parsedResult.actions[i], parsedResult, i);
+        }
+      } else {
+        setMessages((prev) => [...prev, newAssistantMessage]);
+      }
 
       // 대화 ID 저장
       if (apiResponse.conversationId) {
@@ -1071,10 +1106,12 @@ export const useChatbot = () => {
 
   // 빠른 액션 (자주 사용하는 명령어)
   const quickActions = [
-    { label: '오늘 할 일', message: '오늘 할 일 보여줘' },
+    { label: '📅 오늘 할 일', message: '오늘 할 일 보여줘' },
     { label: '🔥 우선순위 높은 일정', message: '우선순위 높은 일정 추천해줘' },
     { label: '📷 시간표 추가', message: '시간표 사진에 있는 강의 추가해줘' },
-    { label: '이번 주 일정', message: '이번 주 일정 정리해줘' },
+    { label: '📊 학습 패턴 분석', message: '이번 주 학습 패턴 분석해줘' },
+    { label: '⏰ 빈 시간 채우기', message: '오늘 빈 시간에 할 일 추천해줘' },
+    { label: '🔄 자동 모드 토글', message: autoMode ? '자동 모드 꺼줘' : '자동으로 추가해' },
   ];
 
   const sendQuickAction = (action) => {
@@ -1102,5 +1139,7 @@ export const useChatbot = () => {
     lastUserMessage,
     selectScheduleForNotification,
     handleChoiceSelect,
+    autoMode,
+    setAutoMode,
   };
 };
