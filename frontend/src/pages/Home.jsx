@@ -11,12 +11,14 @@ import SearchableSelect from '../components/common/SearchableSelect';
 import { useTodo } from '../hooks/useTodo';
 import { useChatbot } from '../hooks/useChatbot';
 import { useCalendar } from '../hooks/useCalendar';
+import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
 import { calculatePriority } from '../utils/priorityUtils';
 import { CATEGORY_LABELS } from '../utils/constants';
 import './Home.css';
 
 const Home = () => {
+  const { isAuthenticated, requireAuth } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -161,10 +163,11 @@ const Home = () => {
             <TodoList
               todos={todos}
               loading={loading}
-              onToggle={toggleComplete}
-              onEdit={handleOpenEditModal}
-              onDelete={removeTodo}
+              onToggle={(id) => requireAuth(() => toggleComplete(id))}
+              onEdit={(todo) => requireAuth(() => handleOpenEditModal(todo))}
+              onDelete={(id) => requireAuth(() => removeTodo(id))}
               onAdd={() => {
+                if (!requireAuth()) return;
                 // 선택된 날짜를 기본값으로 설정
                 const year = selectedDate.getFullYear();
                 const month = String(selectedDate.getMonth() + 1).padStart(
@@ -187,7 +190,7 @@ const Home = () => {
       </div>
 
       {/* Chatbot */}
-      <ChatbotButton onClick={toggleChatbot} />
+      <ChatbotButton onClick={() => requireAuth(() => toggleChatbot())} />
       <ChatbotWindow
         isOpen={isChatOpen}
         onClose={toggleChatbot}

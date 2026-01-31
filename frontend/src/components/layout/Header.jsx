@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
 const Header = ({ hasNotification = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, user, logout, openLoginModal } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,13 +28,16 @@ const Header = ({ hasNotification = false }) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsMenuOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
     };
 
-    if (isMenuOpen) {
+    if (isMenuOpen || isUserMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMenuOpen]);
+  }, [isMenuOpen, isUserMenuOpen]);
 
   const handleNotificationClick = () => {
     navigate('/notifications');
@@ -52,6 +59,20 @@ const Header = ({ hasNotification = false }) => {
     } else {
       navigate(path);
     }
+  };
+
+  const handleUserMenuToggle = () => {
+    setIsUserMenuOpen(!isUserMenuOpen);
+  };
+
+  const handleLogout = async () => {
+    setIsUserMenuOpen(false);
+    await logout();
+    navigate('/');
+  };
+
+  const handleLoginClick = () => {
+    openLoginModal();
   };
 
   return (
@@ -190,6 +211,49 @@ const Header = ({ hasNotification = false }) => {
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
           </button>
+
+          {/* 사용자 메뉴 */}
+          {isAuthenticated ? (
+            <div className="header__user-wrapper" ref={userMenuRef}>
+              <button
+                className="header__user-btn"
+                onClick={handleUserMenuToggle}
+                aria-label="사용자 메뉴"
+              >
+                <div className="header__avatar">
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              </button>
+              {isUserMenuOpen && (
+                <div className="header__user-menu">
+                  <div className="header__user-info">
+                    <span className="header__user-email">{user?.email}</span>
+                  </div>
+                  <button className="header__menu-item" onClick={handleLogout}>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <polyline points="16 17 21 12 16 7" />
+                      <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span>로그아웃</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button className="header__login-btn" onClick={handleLoginClick}>
+              로그인
+            </button>
+          )}
         </div>
       </div>
     </header>
