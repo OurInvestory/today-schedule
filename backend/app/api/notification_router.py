@@ -9,6 +9,7 @@ from app.models.notification import Notification
 from app.models.schedule import Schedule
 from app.schemas.notification import CreateNotificationRequest, NotificationResponse, CheckNotificationRequest
 from app.schemas.common import ResponseDTO
+from app.core.cache import cache_service
 
 
 router = APIRouter(prefix="/api/notifications", tags=["Notification"])
@@ -55,6 +56,9 @@ def create_notification(
         db.commit()
         db.refresh(new_notification)
         
+        # 알림 캐시 무효화
+        cache_service.invalidate_notifications(TEST_USER_ID)
+        
         return ResponseDTO(
             status=200,
             message="알림이 등록되었습니다.",
@@ -65,16 +69,25 @@ def create_notification(
         return ResponseDTO(status=500, message=f"알림 등록에 실패했습니다: {str(e)}", data=None)
 
 
-# 대기 중인 알림 조회 (발송할 알림들)
+# 대기 중인 알림 조회 (발송할 알림들) - 캐싱 적용
 @router.get("/pending", response_model=ResponseDTO)
 def get_pending_notifications(
     db: Session = Depends(get_db)
 ):
     """
     현재 시간 기준으로 발송해야 할 알림 조회 (is_sent=False, notify_at <= now)
-    프론트에서 폴링으로 호출
+    프론트에서 폴링으로 호출 - Redis 캐싱으로 DB 부하 감소
     """
     try:
+        # 캐시 먼저 확인 (30초 TTL)
+        cached = cache_service.get_pending_notifications(TEST_USER_ID)
+        if cached is not None:
+            return ResponseDTO(
+                status=200,
+                message=f"{len(cached)}건의 알림이 있습니다. (cached)",
+                data=cached
+            )
+        
         now = datetime.now()
         
         notifications = db.query(Notification).filter(
@@ -90,10 +103,14 @@ def get_pending_notifications(
             n.is_sent = True
         db.commit()
         
+        # 결과를 캐시에 저장 (빈 리스트도 캐싱하여 DB 호출 방지)
+        result = [NotificationResponse.model_validate(n).model_dump() for n in notifications]
+        cache_service.set_pending_notifications(TEST_USER_ID, result)
+        
         return ResponseDTO(
             status=200,
             message=f"{len(notifications)}건의 알림이 있습니다.",
-            data=[NotificationResponse.model_validate(n) for n in notifications]
+            data=result
         )
     except Exception as e:
         return ResponseDTO(status=500, message=f"알림 조회에 실패했습니다: {str(e)}", data=None)

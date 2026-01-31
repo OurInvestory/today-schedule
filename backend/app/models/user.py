@@ -1,4 +1,4 @@
-from app.db.database import Base
+﻿from app.db.database import Base
 
 from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Boolean, Date, Time, Text
 from sqlalchemy.dialects.mysql import CHAR
@@ -21,6 +21,20 @@ class User(Base):
     school = Column(String(200), nullable=True)
     department = Column(String(200), nullable=True)
     grade = Column(String(20), nullable=True)
+    
+    # RBAC 관련 컬럼
+    role = Column(String(20), nullable=False, default="user")  # guest, user, premium, admin
+    
+    # JWT 리프레시 토큰
+    refresh_token = Column(String(500), nullable=True)
+    
+    # OAuth2.0 소셜 로그인
+    oauth_provider = Column(String(50), nullable=True)  # google, kakao, naver
+    oauth_id = Column(String(255), nullable=True)
+    
+    # 보안 관련
+    login_attempts = Column(Integer, nullable=False, default=0)
+    locked_until = Column(DateTime, nullable=True)
     
     # 관계 설정
     schedules = relationship("Schedule", back_populates="user", cascade="all, delete-orphan")

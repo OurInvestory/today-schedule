@@ -1,11 +1,13 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.models import user, lecture, schedule, sub_task, notification
 from app.models.user import User
 from app.db.database import engine, Base, db_session
 from app.db.seed_data import seed_database
 from app.schemas.ai_chat import ChatRequest, APIResponse, ChatResponseData
-from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router, auth_router
+from app.api import user_router, schedule_router, chat_router, lecture_router, sub_task_router, calendar_router, vision_router, notification_router, tasks_router, auth_router, events_router, advanced_router
+from app.core.event_bus import event_bus
+from app.core.monitoring import setup_prometheus
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -22,21 +24,30 @@ async def lifespan(app: FastAPI):
     try:
         # 시드 데이터 삽입 (사용자, 일정, 할 일)
         seed_database(db)
-        print("✅ 데이터베이스 초기화 완료")
+        print(" 데이터베이스 초기화 완료")
+        
+        # 이벤트 버스 시작 (Redis Pub/Sub)
+        if event_bus.is_available:
+            event_bus.start_listening()
+            print(" 이벤트 버스 시작 완료")
 
     except Exception as e:
         db.rollback()
-        print(f"❌ 데이터베이스 초기화 실패: {e}")
+        print(f" 데이터베이스 초기화 실패: {e}")
     finally:
         db.close()
     
     yield
+    
+    # [Shutdown] 서버 종료 시 실행
+    event_bus.stop_listening()
+    print(" 이벤트 버스 종료")
 
 
 # 앱 인스턴스 생성
 app = FastAPI(
     title="5늘의 일정",
-    description="watsonx.ai 기반 대학생 맞춤형 AI 학업 스케줄 도우미",
+    description="Gemini AI 기반 대학생 맞춤형 AI 학업 스케줄 도우미",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -53,7 +64,7 @@ app.add_middleware(
 
 
 # 라우터 등록
-app.include_router(auth_router.router)
+app.include_router(auth_router.router)  # 인증/권한 API
 app.include_router(user_router.router)
 app.include_router(schedule_router.router)
 app.include_router(chat_router.router, prefix="/api", tags=["AI"])
@@ -62,6 +73,12 @@ app.include_router(sub_task_router.router)
 app.include_router(calendar_router.router)
 app.include_router(vision_router.router, prefix="/api", tags=["Vision"])
 app.include_router(notification_router.router)
+app.include_router(tasks_router.router)  # 비동기 작업 API
+app.include_router(events_router.router)  # SSE 이벤트 스트림
+app.include_router(advanced_router.router)  # 고급 기능 API
+
+# Prometheus 메트릭 설정
+setup_prometheus(app)
 
 
 # 서버 확인 테스트 용도 (추후 삭제 예정)
