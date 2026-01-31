@@ -409,6 +409,34 @@ export const deleteAccount = async (userId) => {
   }
 };
 
+/**
+ * 비밀번호 변경
+ */
+export const changePassword = async (currentPassword, newPassword) => {
+  try {
+    const user = getStoredUser();
+    if (!user?.user_id) {
+      return { success: false, message: '로그인이 필요합니다.' };
+    }
+    
+    const response = await api.put(`/api/users/${user.user_id}/password`, {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    
+    if (response.data.status === 200) {
+      return { success: true, message: '비밀번호가 변경되었습니다.' };
+    }
+    
+    return { success: false, message: response.data.message };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: error.response?.data?.message || '비밀번호 변경에 실패했습니다.' 
+    };
+  }
+};
+
 // =========================================================
 // Axios 인터셉터 설정
 // =========================================================
@@ -471,8 +499,12 @@ export default {
   getProfile,
   updateProfile,
   deleteAccount,
+  changePassword,
   setupAuthInterceptor,
   getAccessToken,
   getRefreshToken,
   getStoredUser,
+  saveUser,
+  saveTokens,
+  clearTokens,
 };
