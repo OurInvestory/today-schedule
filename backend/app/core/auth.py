@@ -373,3 +373,6 @@ PremiumOnly = RBACChecker(roles=[UserRole.PREMIUM, UserRole.ADMIN])
 
 # 편의 함수: 일반 사용자 이상
 UserOnly = RBACChecker(roles=[UserRole.USER, UserRole.PREMIUM, UserRole.ADMIN])
+
+# 별칭: get_current_user_optional (토큰이 없어도 None 반환)
+get_current_user_optional = get_current_user

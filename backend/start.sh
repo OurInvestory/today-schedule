@@ -3,7 +3,7 @@ set -e
 
 echo "Waiting for database to be ready..."
 
-# DB 연결 대기 (최대 30초)
+# DB ?곌껐 ?湲?(理쒕? 30珥?
 for i in {1..30}; do
     if python -c "
 import pymysql
