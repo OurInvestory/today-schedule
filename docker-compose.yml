@@ -18,11 +18,14 @@ services:
       - GOOGLE_CALENDAR_CLIENT_SECRET=${GOOGLE_CALENDAR_CLIENT_SECRET:-default_client_secret}
     volumes:
       - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
       - ./backend/tests:/app/tests
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   frontend:
     build:
@@ -43,6 +46,7 @@ services:
       - backend
     networks:
       - app-network
+
   db:
     image: mysql:8.0
     container_name: five-schedule-db
@@ -58,6 +62,12 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   mysql_data:

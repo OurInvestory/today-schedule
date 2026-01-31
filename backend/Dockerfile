@@ -18,10 +18,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir "fastapi[standard]"
 
-# 소스 코드 복사
+# 소스 코드 복사 (개발 모드에서는 volume으로 마운트되므로 생략 가능)
 COPY . .
 
 EXPOSE 8000
 
-# Ensure the server runs on 0.0.0.0 and port 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 개발 모드: --reload 옵션으로 코드 변경 시 자동 재시작
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
