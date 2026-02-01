@@ -103,10 +103,10 @@ const Signup = () => {
         formData.passwordConfirm
       );
       
-      if (response.status === 201) {
+      if (response.success) {
         // 회원가입 성공 후 자동 로그인
         const loginResponse = await login(formData.email, formData.password);
-        if (loginResponse.status === 200) {
+        if (loginResponse.success) {
           navigate('/');
         } else {
           // 자동 로그인 실패 시 로그인 페이지로
