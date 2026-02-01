@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
+import ChatbotButton from './components/chatbot/ChatbotButton';
+import ChatbotWindow from './components/chatbot/ChatbotWindow';
+import { useChatbot } from './hooks/useChatbot';
+import { useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import FullCalendar from './pages/FullCalendar';
 import TaskDetail from './pages/TaskDetail';
@@ -45,6 +49,54 @@ const requestNotificationPermission = async () => {
   }
 
   return false;
+};
+
+// 챗봇을 전역으로 렌더링하는 컴포넌트 (로그인/회원가입 페이지 제외)
+const GlobalChatbot = () => {
+  const location = useLocation();
+  const { requireAuth } = useAuth();
+  const {
+    isOpen: isChatOpen,
+    messages,
+    loading: chatLoading,
+    messagesEndRef,
+    toggleChatbot,
+    sendMessage,
+    confirmAction,
+    cancelAction,
+    clearMessages,
+    retryLastMessage,
+    lastUserMessage,
+    selectScheduleForNotification,
+    handleChoiceSelect,
+  } = useChatbot();
+
+  // 로그인/회원가입 페이지에서는 챗봇 숨김
+  const hiddenPaths = ['/login', '/signup'];
+  if (hiddenPaths.includes(location.pathname)) {
+    return null;
+  }
+
+  return (
+    <>
+      <ChatbotButton onClick={() => requireAuth(() => toggleChatbot())} />
+      <ChatbotWindow
+        isOpen={isChatOpen}
+        onClose={toggleChatbot}
+        messages={messages}
+        onSendMessage={sendMessage}
+        loading={chatLoading}
+        messagesEndRef={messagesEndRef}
+        onConfirmAction={confirmAction}
+        onCancelAction={cancelAction}
+        onClearHistory={clearMessages}
+        onRetry={retryLastMessage}
+        canRetry={!!lastUserMessage}
+        onSelectScheduleForNotification={selectScheduleForNotification}
+        onChoiceSelect={handleChoiceSelect}
+      />
+    </>
+  );
 };
 
 function App() {
@@ -101,6 +153,7 @@ function App() {
           <BrowserRouter>
             <NetworkStatus />
             <LoginModal />
+            <GlobalChatbot />
             <div className="app">
               <Routes>
                 {/* 인증 페이지 (헤더 없음) */}
