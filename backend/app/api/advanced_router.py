@@ -357,3 +357,140 @@ async def get_integration_status():
             "available": ["slack", "discord", "notion"]
         }
     )
+
+
+# =========================================================
+# URL 학사일정 파싱 API
+# =========================================================
+
+@router.post("/parse-url", response_model=ResponseDTO)
+async def parse_url_schedule(
+    url: str = Query(..., description="학사일정 또는 공지사항 URL"),
+    db: Session = Depends(get_db)
+):
+    """
+    URL에서 학사일정/이벤트 정보 추출
+    
+    지원 URL:
+    - 대학교 학사일정 페이지
+    - 공모전 공고 페이지
+    - 채용/대외활동 공고
+    """
+    import aiohttp
+    import re
+    from bs4 import BeautifulSoup
+    import google.generativeai as genai
+    import json
+    import os
+    
+    try:
+        # 1. URL에서 HTML 가져오기
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            async with session.get(url, headers=headers, timeout=30) as response:
+                if response.status != 200:
+                    return ResponseDTO(
+                        status=400,
+                        message=f"URL 접근 실패: HTTP {response.status}",
+                        data=None
+                    )
+                html = await response.text()
+        
+        # 2. HTML 파싱하여 텍스트 추출
+        soup = BeautifulSoup(html, 'html.parser')
+        
+        # 불필요한 태그 제거
+        for tag in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
+            tag.decompose()
+        
+        # 본문 텍스트 추출 (최대 5000자)
+        text = soup.get_text(separator='\n', strip=True)[:5000]
+        title = soup.title.string if soup.title else "제목 없음"
+        
+        # 3. Gemini로 일정 정보 추출
+        genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel(
+            model_name=os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash"),
+            generation_config={"temperature": 0.1, "response_mime_type": "application/json"}
+        )
+        
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        
+        prompt = f"""
+        현재 날짜: {today_str}
+        페이지 제목: {title}
+        URL: {url}
+        
+        아래 웹페이지 내용에서 일정 정보를 추출해주세요.
+        
+        [추출 대상]
+        - 학사일정 (수강신청, 개강, 휴강, 시험기간 등)
+        - 공모전/대회 마감일
+        - 채용/대외활동 마감일
+        - 행사 일정
+        
+        [웹페이지 내용]
+        {text}
+        
+        [출력 형식 - JSON]
+        {{
+            "schedules": [
+                {{
+                    "title": "일정 제목",
+                    "category": "class|exam|assignment|contest|activity|other",
+                    "start_at": "YYYY-MM-DDTHH:MM:SS",  // 시작일시 (없으면 null)
+                    "end_at": "YYYY-MM-DDTHH:MM:SS",    // 마감일시 (필수)
+                    "description": "상세 설명",
+                    "priority_score": 5  // 1-10 중요도
+                }}
+            ],
+            "summary": "페이지 요약 (1-2문장)",
+            "source_type": "academic_calendar|contest|job|event|other"
+        }}
+        
+        주의:
+        - 날짜가 불명확하면 현재 연도({datetime.now().year}) 기준으로 추정
+        - 시간이 없으면 23:59:59로 설정
+        - 이미 지난 일정은 제외
+        """
+        
+        response = model.generate_content(prompt)
+        result = json.loads(response.text)
+        
+        schedules = result.get("schedules", [])
+        summary = result.get("summary", "")
+        source_type = result.get("source_type", "other")
+        
+        # 4. 일정 데이터 정리
+        parsed_schedules = []
+        for s in schedules:
+            parsed_schedules.append({
+                "title": s.get("title", ""),
+                "category": s.get("category", "other"),
+                "start_at": s.get("start_at"),
+                "end_at": s.get("end_at"),
+                "description": s.get("description", ""),
+                "priority_score": s.get("priority_score", 5),
+                "source": url
+            })
+        
+        return ResponseDTO(
+            status=200,
+            message=f"URL에서 {len(parsed_schedules)}건의 일정을 발견했습니다.",
+            data={
+                "schedules": parsed_schedules,
+                "summary": summary,
+                "source_type": source_type,
+                "source_url": url,
+                "page_title": title
+            }
+        )
+        
+    except aiohttp.ClientError as e:
+        return ResponseDTO(status=400, message=f"URL 접근 실패: {str(e)}", data=None)
+    except json.JSONDecodeError as e:
+        return ResponseDTO(status=500, message=f"AI 응답 파싱 실패: {str(e)}", data=None)
+    except Exception as e:
+        return ResponseDTO(status=500, message=f"URL 파싱 실패: {str(e)}", data=None)
