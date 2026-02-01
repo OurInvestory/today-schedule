@@ -55,7 +55,7 @@ const getMultiDayEventsForWeek = (weekDates, events) => {
   return multiDayEvents;
 };
 
-// 카테고리별 색상 매핑
+// 카테고리별 색상 매핑 (일정 색상이 없을 때 기본값)
 const getCategoryColor = (category) => {
   const colors = {
     assignment: '#3b82f6',
@@ -66,6 +66,13 @@ const getCategoryColor = (category) => {
     other: '#6b7280',
   };
   return colors[category] || colors.other;
+};
+
+// 이벤트 색상 가져오기 (event.color 우선, 없으면 카테고리 색상)
+const getEventColor = (event) => {
+  if (event.source === 'google') return '#ea4335';
+  if (event.color) return event.color;
+  return getCategoryColor(event.category);
 };
 
 const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, hasEventsOnDate, hasCompletedOnDate, hasPendingOnDate, hasGoogleEventsOnDate = () => false, isFullMode = false, getEventsForDate, getTodosForDate, allEvents = [] }) => {
@@ -132,7 +139,7 @@ const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, has
                     className={`calendar-grid__multiday-bar ${event.isStart ? 'calendar-grid__multiday-bar--start' : ''} ${event.isEnd ? 'calendar-grid__multiday-bar--end' : ''}`}
                     style={{
                       gridColumn: `${event.startCol + 1} / span ${event.span}`,
-                      backgroundColor: event.source === 'google' ? '#ea4335' : getCategoryColor(event.category),
+                      backgroundColor: getEventColor(event),
                     }}
                     title={`${event.title} (${formatDate(new Date(event.start_at || event.startDate), 'MM/DD')} ~ ${formatDate(new Date(event.end_at || event.endDate), 'MM/DD')})`}
                   >

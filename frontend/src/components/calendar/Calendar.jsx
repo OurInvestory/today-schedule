@@ -335,6 +335,22 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
   const [category, setCategory] = useState('');
   const [priorityScore, setPriorityScore] = useState(5);
   const [estimatedMinute, setEstimatedMinute] = useState('');
+  const [color, setColor] = useState('');
+
+  // 일정 색상 옵션 (부드러운 파스텔톤 10가지)
+  const COLOR_OPTIONS = [
+    { value: '', label: '기본', color: '#4F8CFF' },
+    { value: '#FF6B6B', label: '코랄', color: '#FF6B6B' },
+    { value: '#FFB347', label: '오렌지', color: '#FFB347' },
+    { value: '#FFE066', label: '옐로우', color: '#FFE066' },
+    { value: '#7ED957', label: '그린', color: '#7ED957' },
+    { value: '#4ECDC4', label: '민트', color: '#4ECDC4' },
+    { value: '#4F8CFF', label: '블루', color: '#4F8CFF' },
+    { value: '#9B7EFF', label: '퍼플', color: '#9B7EFF' },
+    { value: '#FF8ED4', label: '핑크', color: '#FF8ED4' },
+    { value: '#A0A0A0', label: '그레이', color: '#A0A0A0' },
+    { value: '#8B6F47', label: '브라운', color: '#8B6F47' },
+  ];
 
   // initialEvents가 변경되면 localEvents 업데이트
   useEffect(() => {
@@ -363,6 +379,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
     setCategory('');
     setPriorityScore(5);
     setEstimatedMinute('');
+    setColor('');
     setShowForm(true);
   };
 
@@ -386,6 +403,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
       isAllDay,
       type: 'schedule',
       category: category.trim(),
+      color: color || null,
       priority_score: parseInt(priorityScore) || 5,
       estimated_minute: estimatedMinute ? parseInt(estimatedMinute) : null,
     };
@@ -415,6 +433,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
           endTime: scheduleData.endTime,
           isAllDay: scheduleData.isAllDay,
           description: savedEvent.original_text || scheduleData.description,
+          color: savedEvent.color || scheduleData.color,
         };
         
         setLocalEvents(prev => [...prev, newEvent]);
@@ -428,6 +447,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
       setCategory('');
       setPriorityScore(5);
       setEstimatedMinute('');
+      setColor('');
     } catch (error) {
       console.error('일정 저장 실패:', error);
       alert('일정 저장에 실패했습니다. 다시 시도해주세요.');
@@ -568,6 +588,29 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
               </select>
             </div>
 
+            {/* 색상 선택 */}
+            <div className="schedule-modal__field">
+              <label className="schedule-modal__label">색상</label>
+              <div className="schedule-modal__color-picker">
+                {COLOR_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`schedule-modal__color-option ${color === option.value ? 'schedule-modal__color-option--selected' : ''}`}
+                    style={{ backgroundColor: option.color }}
+                    onClick={() => setColor(option.value)}
+                    title={option.label}
+                  >
+                    {color === option.value && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* 우선순위 */}
             <div className="schedule-modal__field">
               <label className="schedule-modal__label">우선순위 (1-10)</label>
@@ -666,7 +709,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
             </div>
 
             {/* 메모 */}
-            <div className="schedule-modal__field">
+            <div className="schedule-modal__field schedule-modal__field--memo">
               <div className="schedule-modal__memo-header">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />

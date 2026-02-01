@@ -106,6 +106,7 @@ export const createCalendarEvent = async (eventData) => {
       title: eventData.title,
       type: eventData.type || 'schedule',
       category: eventData.category || '일정',
+      color: eventData.color || null,
       start_at:
         eventData.startDate && eventData.startTime
           ? `${eventData.startDate}T${eventData.startTime}:00`
@@ -167,6 +168,8 @@ export const updateCalendarEvent = async (id, eventData) => {
       payload.update_text = eventData.description;
     if (eventData.estimated_minute !== undefined)
       payload.estimated_minute = eventData.estimated_minute;
+    if (eventData.color !== undefined)
+      payload.color = eventData.color;
 
     const response = await api.put(`/api/schedules/${id}`, payload);
     return response;

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 import datetime
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict, Any
 
 
 # 할 일 저장 요청 스키마
@@ -37,6 +37,7 @@ class SubTaskResponse(BaseModel):
     priority: Optional[str] = None
     category: Optional[str] = None
     tip: Optional[str] = None
+    schedule: Optional[Dict[str, Any]] = None  # 일정 정보 (색상 등)
 
     class Config:
         from_attributes = True

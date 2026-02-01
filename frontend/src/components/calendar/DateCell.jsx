@@ -95,8 +95,8 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasMultiDayEven
           if (item.type === 'event') {
             const event = item.data;
             const isGoogleEvent = event.source === 'google';
-            // 구글 일정: 빨간색, 일반 일정: 파란색
-            const eventColor = isGoogleEvent ? '#ea4335' : '#3b82f6';
+            // 이벤트 색상: 구글=빨강, 사용자 지정 색상 우선, 없으면 파란색
+            const eventColor = isGoogleEvent ? '#ea4335' : (event.color || '#3b82f6');
             
             return (
               <div
