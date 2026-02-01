@@ -110,15 +110,17 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasMultiDayEven
               </div>
             );
           } else {
-            // 할일: 완료=초록색, 미완료=노란색
+            // 할일: 일정 색상 사용 (없으면 완료=초록색, 미완료=노란색)
             const todo = item.data;
-            const todoColor = todo.completed ? '#10b981' : '#eab308';
+            // schedule 객체에서 color 가져오기 (schedule.color 또는 todo.schedule_color)
+            const scheduleColor = todo.schedule?.color || todo.schedule_color;
+            const todoColor = scheduleColor || (todo.completed ? '#10b981' : '#eab308');
             
             return (
               <div
                 key={`todo-${todo.id || idx}`}
                 className="date-cell__todo-item"
-                style={{ color: todoColor }}
+                style={{ color: todoColor, '--todo-bar-color': todoColor }}
                 title={todo.title}
               >
                 <span className="todo-item__title">{todo.title}</span>

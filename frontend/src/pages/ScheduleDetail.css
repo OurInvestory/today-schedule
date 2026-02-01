@@ -98,6 +98,37 @@
   resize: none;
 }
 
+/* 색상 선택기 */
+.schedule-detail__color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.schedule-detail__color-option {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.schedule-detail__color-option:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.schedule-detail__color-option--selected {
+  border-color: var(--color-gray-800);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color-gray-400);
+}
+
 .schedule-detail__time-row {
   display: flex;
   gap: var(--spacing-md);
@@ -143,6 +174,18 @@
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 색상 뱃지 */
+.schedule-detail__color-badge {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* 종일 토글 */

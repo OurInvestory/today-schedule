@@ -246,24 +246,12 @@ const MonthPicker = ({ currentDate, onSelect, onClose }) => {
 
 // 일정 편집 모달 컴포넌트 (갤럭시 캘린더 스타일)
 const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleClick, refetch }) => {
-  // 일정별 색상 팔레트
-  const eventColors = [
-    '#3b82f6', // 파랑
-    '#10b981', // 초록
-    '#f59e0b', // 주황
-    '#ef4444', // 빨강
-    '#8b5cf6', // 보라
-    '#ec4899', // 핑크
-    '#06b6d4', // 시안
-    '#f97316', // 오렌지
-  ];
+  // 기본 색상 (일정에 색상이 설정되지 않은 경우)
+  const DEFAULT_EVENT_COLOR = '#4F8CFF';
 
-  // 일정 ID를 기반으로 색상 선택
-  const getEventColor = (eventId, index) => {
-    if (!eventId) return eventColors[index % eventColors.length];
-    // ID를 숫자로 변환하여 색상 선택
-    const hash = eventId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return eventColors[hash % eventColors.length];
+  // 일정 색상 가져오기 - event.color가 있으면 사용, 없으면 기본 파란색
+  const getEventColor = (event) => {
+    return event?.color || DEFAULT_EVENT_COLOR;
   };
 
   // start_at/end_at에서 시간 추출 함수
@@ -515,7 +503,7 @@ const ScheduleEditModal = ({ date, events: initialEvents, onClose, onScheduleCli
                     >
                       <div 
                         className="schedule-modal__event-indicator" 
-                        style={{ backgroundColor: getEventColor(event.id, index) }}
+                        style={{ backgroundColor: getEventColor(event) }}
                       />
                       <div className="schedule-modal__event-content">
                         <span className="schedule-modal__event-title">{event.title}</span>
