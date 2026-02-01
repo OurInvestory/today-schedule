@@ -41,6 +41,7 @@ from app.schemas.ai_chat import (
 from app.db.database import get_db
 from app.models.schedule import Schedule
 from app.models.sub_task import SubTask
+from app.core.auth import get_current_user_optional, TokenPayload
 from app.services.subtask_recommend_service import (
     recommend_subtasks_for_schedule,
     breakdown_schedule_to_subtasks,
@@ -81,8 +82,9 @@ if not GOOGLE_API_KEY:
 # Gemini 설정
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# 테스트용 고정 사용자 ID (나중에 실제 인증으로 교체 필요)
-TEST_USER_ID = "7822a162-788d-4f36-9366-c956a68393e1"
+# 전역 사용자 ID (요청마다 설정됨)
+# 로그인하지 않으면 None
+TEST_USER_ID: Optional[str] = None
 
 # 카테고리 영어→한국어 매핑
 CATEGORY_MAP = {
@@ -1242,7 +1244,24 @@ def handle_priority_adjust(ai_result: AIChatParsed, db: Session) -> str:
 # ============================================================
 
 @router.post("/chat", response_model=APIResponse)
-async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
+async def chat_with_ai(
+    req: ChatRequest, 
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
+):
+    global TEST_USER_ID
+    
+    # 로그인 확인
+    if not current_user:
+        return APIResponse(
+            status=401, 
+            message="로그인이 필요합니다. 로그인 후 다시 시도해주세요.",
+            data=None
+        )
+    
+    # 전역 user_id 설정 (핸들러에서 사용)
+    TEST_USER_ID = current_user.sub
+    
     try:
         model = get_gemini_model()
         now = datetime.now()
@@ -1303,13 +1322,19 @@ async def chat_with_ai(req: ChatRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/ai/suggestions")
-async def get_ai_suggestions(db: Session = Depends(get_db)):
+async def get_ai_suggestions(
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
+):
     """
     컨텍스트 기반 스마트 제안 API
     현재 상황에 맞는 제안을 반환합니다.
     """
     try:
-        suggestions = get_contextual_suggestions(db, TEST_USER_ID, {})
+        if not current_user:
+            return {"status": 200, "message": "Success", "data": {"suggestions": [], "has_suggestions": False}}
+        
+        suggestions = get_contextual_suggestions(db, current_user.sub, {})
         return {
             "status": 200,
             "message": "Success",
@@ -1325,18 +1350,25 @@ async def get_ai_suggestions(db: Session = Depends(get_db)):
 
 
 @router.get("/ai/briefing")
-async def get_daily_briefing_api(target_date: str = None, db: Session = Depends(get_db)):
+async def get_daily_briefing_api(
+    target_date: str = None, 
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
+):
     """
     일일 브리핑 API
     오늘 또는 특정 날짜의 일정 브리핑을 반환합니다.
     """
     try:
+        if not current_user:
+            return {"status": 200, "message": "Success", "data": None}
+        
         if target_date:
             target = datetime.strptime(target_date, "%Y-%m-%d").date()
         else:
             target = date.today()
         
-        briefing = generate_daily_briefing(db, TEST_USER_ID, target)
+        briefing = generate_daily_briefing(db, current_user.sub, target)
         return {
             "status": 200,
             "message": "Success",
@@ -1352,13 +1384,19 @@ async def get_daily_briefing_api(target_date: str = None, db: Session = Depends(
 
 
 @router.get("/ai/weekly-summary")
-async def get_weekly_summary_api(db: Session = Depends(get_db)):
+async def get_weekly_summary_api(
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
+):
     """
     주간 요약 API
     이번 주 일정 요약을 반환합니다.
     """
     try:
-        summary = generate_weekly_summary(db, TEST_USER_ID)
+        if not current_user:
+            return {"status": 200, "message": "Success", "data": None}
+        
+        summary = generate_weekly_summary(db, current_user.sub)
         return {
             "status": 200,
             "message": "Success",
@@ -1374,13 +1412,19 @@ async def get_weekly_summary_api(db: Session = Depends(get_db)):
 
 
 @router.post("/ai/priority-adjust")
-async def adjust_priorities_api(db: Session = Depends(get_db)):
+async def adjust_priorities_api(
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
+):
     """
     우선순위 자동 조정 API
     마감일 기반으로 우선순위를 자동 조정합니다.
     """
     try:
-        adjustments = auto_adjust_priorities(db, TEST_USER_ID)
+        if not current_user:
+            return {"status": 401, "message": "로그인이 필요합니다.", "data": None}
+        
+        adjustments = auto_adjust_priorities(db, current_user.sub)
         return {
             "status": 200,
             "message": f"{len(adjustments)}건의 우선순위가 조정되었습니다.",
@@ -1399,18 +1443,24 @@ async def adjust_priorities_api(db: Session = Depends(get_db)):
 
 
 @router.get("/ai/conflict-check")
-async def check_conflicts_api(db: Session = Depends(get_db)):
+async def check_conflicts_api(
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
+):
     """
     일정 충돌 확인 API
     향후 2주간 충돌하는 일정을 확인합니다.
     """
     try:
+        if not current_user:
+            return {"status": 200, "message": "충돌하는 일정이 없습니다.", "data": {"conflicts": [], "count": 0, "has_conflicts": False}}
+        
         now = datetime.now()
         
         # 향후 2주간 일정 조회
         schedules = db.query(Schedule).filter(
             and_(
-                Schedule.user_id == TEST_USER_ID,
+                Schedule.user_id == current_user.sub,
                 Schedule.start_at >= now,
                 Schedule.start_at <= now + timedelta(days=14)
             )

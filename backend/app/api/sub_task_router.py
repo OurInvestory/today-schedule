@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from typing import List, Union
 from datetime import date, datetime
 import os
 import re
@@ -15,6 +14,8 @@ from app.models.sub_task import SubTask
 from app.models.schedule import Schedule
 from app.schemas.sub_task import SaveSubTaskRequest, UpdateSubTaskRequest, SubTaskResponse
 from app.schemas.common import ResponseDTO
+from app.core.auth import get_current_user_optional, TokenPayload
+from typing import List, Union, Optional
 
 load_dotenv()
 
@@ -85,11 +86,15 @@ def generate_ai_tip(title: str, category: str = None) -> str:
 
 # 할 일 저장
 @router.post("", response_model=ResponseDTO)
-def create_sub_tasks(
+async def create_sub_tasks(
     obj_in: Union[SaveSubTaskRequest, List[SaveSubTaskRequest]], 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
-    test_user_id = "7822a162-788d-4f36-9366-c956a68393e1"
+    if not current_user:
+        return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
+    
+    user_id = current_user.sub
     items = obj_in if isinstance(obj_in, list) else [obj_in]
     saved_items = []
 
@@ -103,7 +108,7 @@ def create_sub_tasks(
             
             new_task = SubTask(
                 schedule_id=item.schedule_id,
-                user_id=test_user_id,
+                user_id=user_id,
                 title=item.title,
                 date=item.date,
                 estimated_minute=item.estimated_minute,
@@ -178,17 +183,21 @@ def delete_sub_task(sub_task_id: str, db: Session = Depends(get_db)):
 
 # 할 일 조회
 @router.get("", response_model=ResponseDTO)
-def get_sub_tasks(
+async def get_sub_tasks(
     from_date: date = Query(..., alias="from", examples=["2026-06-01"]),
     to_date: date = Query(..., alias="to", examples=["2026-06-30"]),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
     try:
-        test_user_id = "7822a162-788d-4f36-9366-c956a68393e1"
+        if not current_user:
+            return ResponseDTO(status=200, message="할 일 조회에 성공했습니다.", data=[])
+        
+        user_id = current_user.sub
         
         tasks = db.query(SubTask).filter(
             and_(
-                SubTask.user_id == test_user_id,
+                SubTask.user_id == user_id,
                 SubTask.date >= from_date,
                 SubTask.date <= to_date
             )

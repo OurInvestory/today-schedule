@@ -10,6 +10,8 @@ from app.db.database import get_db
 from app.models.schedule import Schedule
 from app.schemas.schedule import SaveScheduleRequest, UpdateScheduleRequest, ScheduleResponse
 from app.schemas.common import ResponseDTO
+from app.core.auth import get_current_user_optional, TokenPayload
+from typing import Optional
 
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -38,11 +40,16 @@ os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'     # 로컬 테스트용 HTTP �
 
 # 일정 저장
 @router.post("", response_model=ResponseDTO)
-def save_schedules(
+async def save_schedules(
     obj_in: Union[SaveScheduleRequest, List[SaveScheduleRequest]], 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
-    test_user_id = "7822a162-788d-4f36-9366-c956a68393e1" 
+    # 로그인하지 않으면 저장 불가
+    if current_user is None:
+        return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
+    
+    user_id = current_user.sub 
 
     items = obj_in if isinstance(obj_in, list) else [obj_in]
     saved_schedules = []
@@ -50,7 +57,7 @@ def save_schedules(
     try:
         for item in items:
             new_schedule = Schedule(
-                user_id=test_user_id,
+                user_id=user_id,
                 title=item.title,
                 type=item.type,
                 category=item.category,
@@ -131,17 +138,22 @@ def delete_schedule(schedule_id: str, db: Session = Depends(get_db)):
 
 # 일정 조회
 @router.get("", response_model=ResponseDTO)
-def get_schedules(
+async def get_schedules(
     from_date: datetime = Query(..., alias="from", examples=["2026-06-01"]),
     to_date: datetime = Query(..., alias="to", examples=["2026-06-30"]),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
     try:
-        test_user_id = "7822a162-788d-4f36-9366-c956a68393e1"
+        # 로그인하지 않으면 빈 배열 반환
+        if current_user is None:
+            return ResponseDTO(status=200, message="일정 조회에 성공했습니다.", data=[])
+        
+        user_id = current_user.sub
 
         schedules = db.query(Schedule).filter(
             and_(
-                Schedule.user_id == test_user_id,
+                Schedule.user_id == user_id,
                 Schedule.end_at >= from_date,
                 Schedule.end_at <= to_date
             )

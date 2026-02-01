@@ -10,20 +10,24 @@ from app.models.schedule import Schedule
 from app.schemas.notification import CreateNotificationRequest, NotificationResponse, CheckNotificationRequest
 from app.schemas.common import ResponseDTO
 from app.core.cache import cache_service
+from app.core.auth import get_current_user_optional, TokenPayload
 
 
 router = APIRouter(prefix="/api/notifications", tags=["Notification"])
 
-TEST_USER_ID = "7822a162-788d-4f36-9366-c956a68393e1"
-
 
 # 알림 생성
 @router.post("", response_model=ResponseDTO)
-def create_notification(
+async def create_notification(
     req: CreateNotificationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
     try:
+        if not current_user:
+            return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
+        
+        user_id = current_user.sub
         schedule_id = req.schedule_id
         notify_at = req.notify_at
         
@@ -31,7 +35,7 @@ def create_notification(
         if not schedule_id and req.schedule_title:
             schedule = db.query(Schedule).filter(
                 and_(
-                    Schedule.user_id == TEST_USER_ID,
+                    Schedule.user_id == user_id,
                     Schedule.title.ilike(f"%{req.schedule_title}%")
                 )
             ).first()
@@ -44,7 +48,7 @@ def create_notification(
                     notify_at = schedule.start_at - timedelta(minutes=req.minutes_before)
         
         new_notification = Notification(
-            user_id=TEST_USER_ID,
+            user_id=user_id,
             schedule_id=schedule_id,
             message=req.message,
             notify_at=notify_at,
@@ -57,7 +61,7 @@ def create_notification(
         db.refresh(new_notification)
         
         # 알림 캐시 무효화
-        cache_service.invalidate_notifications(TEST_USER_ID)
+        cache_service.invalidate_notifications(user_id)
         
         return ResponseDTO(
             status=200,
@@ -71,16 +75,22 @@ def create_notification(
 
 # 대기 중인 알림 조회 (발송할 알림들) - 캐싱 적용
 @router.get("/pending", response_model=ResponseDTO)
-def get_pending_notifications(
-    db: Session = Depends(get_db)
+async def get_pending_notifications(
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
     """
     현재 시간 기준으로 발송해야 할 알림 조회 (is_sent=False, notify_at <= now)
     프론트에서 폴링으로 호출 - Redis 캐싱으로 DB 부하 감소
     """
     try:
+        if not current_user:
+            return ResponseDTO(status=200, message="0건의 알림이 있습니다.", data=[])
+        
+        user_id = current_user.sub
+        
         # 캐시 먼저 확인 (30초 TTL)
-        cached = cache_service.get_pending_notifications(TEST_USER_ID)
+        cached = cache_service.get_pending_notifications(user_id)
         if cached is not None:
             return ResponseDTO(
                 status=200,
@@ -92,7 +102,7 @@ def get_pending_notifications(
         
         notifications = db.query(Notification).filter(
             and_(
-                Notification.user_id == TEST_USER_ID,
+                Notification.user_id == user_id,
                 Notification.is_sent == False,
                 Notification.notify_at <= now
             )
@@ -105,7 +115,7 @@ def get_pending_notifications(
         
         # 결과를 캐시에 저장 (빈 리스트도 캐싱하여 DB 호출 방지)
         result = [NotificationResponse.model_validate(n).model_dump() for n in notifications]
-        cache_service.set_pending_notifications(TEST_USER_ID, result)
+        cache_service.set_pending_notifications(user_id, result)
         
         return ResponseDTO(
             status=200,
@@ -118,14 +128,20 @@ def get_pending_notifications(
 
 # 내 알림 목록 조회
 @router.get("", response_model=ResponseDTO)
-def get_my_notifications(
+async def get_my_notifications(
     limit: int = Query(20, description="조회 개수"),
     include_checked: bool = Query(False, description="확인된 알림도 포함"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
     try:
+        if not current_user:
+            return ResponseDTO(status=200, message="알림 목록을 조회했습니다.", data=[])
+        
+        user_id = current_user.sub
+        
         query = db.query(Notification).filter(
-            Notification.user_id == TEST_USER_ID
+            Notification.user_id == user_id
         )
         
         if not include_checked:
@@ -144,14 +160,20 @@ def get_my_notifications(
 
 # 알림 확인 처리
 @router.post("/check", response_model=ResponseDTO)
-def check_notifications(
+async def check_notifications(
     req: CheckNotificationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
     try:
+        if not current_user:
+            return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
+        
+        user_id = current_user.sub
+        
         updated_count = db.query(Notification).filter(
             and_(
-                Notification.user_id == TEST_USER_ID,
+                Notification.user_id == user_id,
                 Notification.notification_id.in_(req.notification_ids)
             )
         ).update({"is_checked": True}, synchronize_session=False)
@@ -170,15 +192,21 @@ def check_notifications(
 
 # 알림 삭제
 @router.delete("/{notification_id}", response_model=ResponseDTO)
-def delete_notification(
+async def delete_notification(
     notification_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[TokenPayload] = Depends(get_current_user_optional)
 ):
     try:
+        if not current_user:
+            return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
+        
+        user_id = current_user.sub
+        
         notification = db.query(Notification).filter(
             and_(
                 Notification.notification_id == notification_id,
-                Notification.user_id == TEST_USER_ID
+                Notification.user_id == user_id
             )
         ).first()
         
