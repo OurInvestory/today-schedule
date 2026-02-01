@@ -1260,7 +1260,7 @@ async def chat_with_ai(
         )
     
     # 전역 user_id 설정 (핸들러에서 사용)
-    TEST_USER_ID = current_user.sub
+    TEST_USER_ID = current_user.user_id
     
     try:
         model = get_gemini_model()
@@ -1334,7 +1334,7 @@ async def get_ai_suggestions(
         if not current_user:
             return {"status": 200, "message": "Success", "data": {"suggestions": [], "has_suggestions": False}}
         
-        suggestions = get_contextual_suggestions(db, current_user.sub, {})
+        suggestions = get_contextual_suggestions(db, current_user.user_id, {})
         return {
             "status": 200,
             "message": "Success",
@@ -1368,7 +1368,7 @@ async def get_daily_briefing_api(
         else:
             target = date.today()
         
-        briefing = generate_daily_briefing(db, current_user.sub, target)
+        briefing = generate_daily_briefing(db, current_user.user_id, target)
         return {
             "status": 200,
             "message": "Success",
@@ -1396,7 +1396,7 @@ async def get_weekly_summary_api(
         if not current_user:
             return {"status": 200, "message": "Success", "data": None}
         
-        summary = generate_weekly_summary(db, current_user.sub)
+        summary = generate_weekly_summary(db, current_user.user_id)
         return {
             "status": 200,
             "message": "Success",
@@ -1424,7 +1424,7 @@ async def adjust_priorities_api(
         if not current_user:
             return {"status": 401, "message": "로그인이 필요합니다.", "data": None}
         
-        adjustments = auto_adjust_priorities(db, current_user.sub)
+        adjustments = auto_adjust_priorities(db, current_user.user_id)
         return {
             "status": 200,
             "message": f"{len(adjustments)}건의 우선순위가 조정되었습니다.",
@@ -1460,7 +1460,7 @@ async def check_conflicts_api(
         # 향후 2주간 일정 조회
         schedules = db.query(Schedule).filter(
             and_(
-                Schedule.user_id == current_user.sub,
+                Schedule.user_id == current_user.user_id,
                 Schedule.start_at >= now,
                 Schedule.start_at <= now + timedelta(days=14)
             )

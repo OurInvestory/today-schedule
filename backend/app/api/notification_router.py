@@ -27,7 +27,7 @@ async def create_notification(
         if not current_user:
             return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
         schedule_id = req.schedule_id
         notify_at = req.notify_at
         
@@ -87,7 +87,7 @@ async def get_pending_notifications(
         if not current_user:
             return ResponseDTO(status=200, message="0건의 알림이 있습니다.", data=[])
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
         
         # 캐시 먼저 확인 (30초 TTL)
         cached = cache_service.get_pending_notifications(user_id)
@@ -138,7 +138,7 @@ async def get_my_notifications(
         if not current_user:
             return ResponseDTO(status=200, message="알림 목록을 조회했습니다.", data=[])
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
         
         query = db.query(Notification).filter(
             Notification.user_id == user_id
@@ -169,7 +169,7 @@ async def check_notifications(
         if not current_user:
             return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
         
         updated_count = db.query(Notification).filter(
             and_(
@@ -201,7 +201,7 @@ async def delete_notification(
         if not current_user:
             return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
         
         notification = db.query(Notification).filter(
             and_(

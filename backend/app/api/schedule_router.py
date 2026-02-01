@@ -49,7 +49,7 @@ async def save_schedules(
     if current_user is None:
         return ResponseDTO(status=401, message="로그인이 필요합니다.", data=None)
     
-    user_id = current_user.sub 
+    user_id = current_user.user_id 
 
     items = obj_in if isinstance(obj_in, list) else [obj_in]
     saved_schedules = []
@@ -149,7 +149,7 @@ async def get_schedules(
         if current_user is None:
             return ResponseDTO(status=200, message="일정 조회에 성공했습니다.", data=[])
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
 
         schedules = db.query(Schedule).filter(
             and_(

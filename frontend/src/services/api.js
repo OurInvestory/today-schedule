@@ -33,10 +33,17 @@ const api = axios.create({
 // 요청 인터셉터
 api.interceptors.request.use(
   (config) => {
-    // 로컬 스토리지에서 토큰 가져오기
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // 로컬 스토리지에서 토큰 가져오기 (authService와 동일한 키 사용)
+    try {
+      const storedTokens = localStorage.getItem('auth_tokens');
+      if (storedTokens) {
+        const tokens = JSON.parse(storedTokens);
+        if (tokens?.access_token) {
+          config.headers.Authorization = `Bearer ${tokens.access_token}`;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse auth tokens:', e);
     }
     
     return config;
@@ -76,7 +83,17 @@ api.interceptors.response.use(
         originalRequest._retry = true;
         isRefreshing = true;
 
-        const refreshToken = localStorage.getItem('refreshToken');
+        // auth_tokens에서 refresh_token 가져오기
+        let refreshToken = null;
+        try {
+          const storedTokens = localStorage.getItem('auth_tokens');
+          if (storedTokens) {
+            const tokens = JSON.parse(storedTokens);
+            refreshToken = tokens?.refresh_token;
+          }
+        } catch (e) {
+          console.error('Failed to parse auth tokens:', e);
+        }
         
         if (refreshToken) {
           try {
@@ -88,10 +105,12 @@ api.interceptors.response.use(
             
             if (response.data.status === 200 && response.data.data) {
               const { access_token, refresh_token: newRefreshToken } = response.data.data;
-              localStorage.setItem('accessToken', access_token);
-              if (newRefreshToken) {
-                localStorage.setItem('refreshToken', newRefreshToken);
-              }
+              // auth_tokens 형식으로 저장
+              const newTokens = {
+                access_token,
+                refresh_token: newRefreshToken || refreshToken
+              };
+              localStorage.setItem('auth_tokens', JSON.stringify(newTokens));
               
               processQueue(null, access_token);
               originalRequest.headers.Authorization = `Bearer ${access_token}`;
@@ -100,9 +119,8 @@ api.interceptors.response.use(
           } catch (refreshError) {
             processQueue(refreshError, null);
             // 리프레시 토큰도 만료된 경우 로그아웃 처리
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
+            localStorage.removeItem('auth_tokens');
+            localStorage.removeItem('auth_user');
             window.dispatchEvent(new CustomEvent('auth:logout'));
             return Promise.reject(refreshError);
           } finally {
@@ -110,8 +128,8 @@ api.interceptors.response.use(
           }
         } else {
           // 리프레시 토큰이 없으면 로그아웃
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('user');
+          localStorage.removeItem('auth_tokens');
+          localStorage.removeItem('auth_user');
           window.dispatchEvent(new CustomEvent('auth:logout'));
         }
       }

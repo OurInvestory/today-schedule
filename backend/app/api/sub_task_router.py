@@ -193,7 +193,7 @@ async def get_sub_tasks(
         if not current_user:
             return ResponseDTO(status=200, message="할 일 조회에 성공했습니다.", data=[])
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
         
         tasks = db.query(SubTask).filter(
             and_(

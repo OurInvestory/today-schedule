@@ -131,7 +131,7 @@ async def get_lectures(
         if not current_user:
             return ResponseDTO(status=200, message="강의 조회에 성공했습니다.", data=[])
         
-        user_id = current_user.sub
+        user_id = current_user.user_id
         
         # 캐시 키 생성 (날짜 범위 포함)
         cache_key = f"lectures:{user_id}:{from_date}:{to_date}"
