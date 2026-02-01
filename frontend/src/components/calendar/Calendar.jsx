@@ -19,6 +19,7 @@ const Calendar = ({ onDateSelect, isFullMode = false }) => {
     currentDate,
     selectedDate,
     dates,
+    events,
     loading,
     goToPreviousMonth,
     goToNextMonth,
@@ -104,6 +105,7 @@ const Calendar = ({ onDateSelect, isFullMode = false }) => {
         isFullMode={isFullMode}
         getEventsForDate={getEventsForDate}
         getTodosForDate={getTodosForDate}
+        allEvents={events}
       />
 
       {/* 연월 선택 모달 */}

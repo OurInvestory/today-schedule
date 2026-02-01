@@ -55,8 +55,7 @@
 }
 
 .schedule-detail__field input,
-.schedule-detail__field textarea,
-.schedule-detail__field select {
+.schedule-detail__field textarea {
   padding: 12px 14px;
   font-size: var(--font-size-base);
   border: 1px solid var(--color-gray-200);
@@ -65,6 +64,23 @@
   font-family: inherit;
   transition: all 0.2s;
   background: white;
+}
+
+.schedule-detail__field select {
+  padding: 12px 36px 12px 14px;
+  font-size: var(--font-size-base);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 10px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: white;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 
 .schedule-detail__field input:focus,
@@ -259,13 +275,19 @@
 }
 
 .schedule-detail__subtask-input select {
-  padding: 10px 12px;
+  padding: 10px 36px 10px 12px;
   font-size: var(--font-size-base);
   border: 1px solid var(--color-gray-200);
   border-radius: 8px;
   outline: none;
   background: white;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 
 .schedule-detail__subtask-input input:focus,
@@ -404,9 +426,16 @@
   margin-left: var(--spacing-xs);
 }
 
-.schedule-detail__subtask-edit-input,
-.schedule-detail__subtask-edit-select {
+.schedule-detail__subtask-edit-input {
   padding: 8px 10px;
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 6px;
+  outline: none;
+}
+
+.schedule-detail__subtask-edit-select {
+  padding: 8px 36px 8px 10px;
   font-size: var(--font-size-sm);
   border: 1px solid var(--color-gray-200);
   border-radius: 6px;
@@ -422,6 +451,13 @@
 .schedule-detail__subtask-edit-select {
   background: white;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
 }
 
 .schedule-detail__subtask-edit-actions {

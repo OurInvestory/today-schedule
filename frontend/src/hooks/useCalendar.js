@@ -100,23 +100,28 @@ export const useCalendar = () => {
     setSelectedDate(date);
   }, []);
 
-  // 특정 날짜의 이벤트 가져오기
+  // 특정 날짜의 이벤트 가져오기 (시작일~마감일 사이 모든 날짜 포함)
   const getEventsForDate = useCallback((date) => {
+    const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    
     return events.filter(event => {
-      // startDate, date, start_at 순서로 날짜 추출
-      const dateStr = event.startDate || event.date || event.start_at || event.end_at;
-      if (!dateStr) return false;
+      // startDate, date, start_at 순서로 시작일 추출
+      const startDateStr = event.start_at || event.startDate || event.date;
+      // endDate, end_at 순서로 마감일 추출
+      const endDateStr = event.end_at || event.endDate || startDateStr;
       
-      // 날짜 문자열에서 날짜 부분만 추출 (YYYY-MM-DD)
-      const datePart = typeof dateStr === 'string' ? dateStr.split('T')[0] : null;
-      if (!datePart) return false;
+      if (!startDateStr) return false;
       
-      const [yearStr, monthStr, dayStr] = datePart.split('-');
-      return (
-        parseInt(yearStr) === date.getFullYear() &&
-        parseInt(monthStr) === date.getMonth() + 1 &&
-        parseInt(dayStr) === date.getDate()
-      );
+      // 날짜 파싱
+      const startDate = new Date(startDateStr);
+      const endDate = new Date(endDateStr);
+      
+      // 시간 부분 제거하여 날짜만 비교
+      const startOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const endOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      
+      // targetDate가 시작일과 마감일 사이에 있는지 확인
+      return targetDate >= startOnly && targetDate <= endOnly;
     });
   }, [events]);
 

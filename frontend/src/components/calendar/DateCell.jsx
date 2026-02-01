@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { isToday } from '../../utils/dateUtils';
 import './DateCell.css';
 
-const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, hasPending, hasGoogleEvents, onClick, onDoubleClick, isFullMode = false, events = [], todos = [] }) => {
+const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasMultiDayEvent = false, hasCompleted, hasPending, hasGoogleEvents, onClick, onDoubleClick, isFullMode = false, events = [], todos = [] }) => {
   // 할 일 존재 여부 확인 (완료 또는 미완료)
   const hasTodos = hasCompleted || hasPending;
   const lastTapRef = useRef(0);
