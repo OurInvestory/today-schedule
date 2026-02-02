@@ -111,6 +111,15 @@ const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, has
     });
   };
 
+  // 해당 열(날짜)에 지나가는 멀티데이 이벤트 개수 계산
+  const getMultiDayCountForColumn = (weekIndex, colIndex) => {
+    const events = multiDayEventsByWeek[weekIndex] || [];
+    return events.filter(event => {
+      const endCol = event.startCol + event.span - 1;
+      return colIndex >= event.startCol && colIndex <= endCol;
+    }).length;
+  };
+
   return (
     <div className={`calendar-grid ${isFullMode ? 'calendar-grid--full-mode' : ''}`}>
       {/* Weekday headers */}
@@ -130,15 +139,16 @@ const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, has
       <div className="calendar-grid__weeks">
         {weeks.map((weekDates, weekIndex) => (
           <div key={weekIndex} className="calendar-grid__week">
-            {/* 멀티데이 이벤트 바 영역 */}
+            {/* 멀티데이 이벤트 바 영역 - absolute로 위에 겹침 */}
             {isFullMode && multiDayEventsByWeek[weekIndex]?.length > 0 && (
-              <div className="calendar-grid__multiday-events">
+              <div className="calendar-grid__multiday-layer">
                 {multiDayEventsByWeek[weekIndex].map((event, eventIndex) => (
                   <div
                     key={`${event.schedule_id || event.id}-${eventIndex}`}
                     className={`calendar-grid__multiday-bar ${event.isStart ? 'calendar-grid__multiday-bar--start' : ''} ${event.isEnd ? 'calendar-grid__multiday-bar--end' : ''}`}
                     style={{
                       gridColumn: `${event.startCol + 1} / span ${event.span}`,
+                      gridRow: eventIndex + 1,
                       backgroundColor: getEventColor(event),
                     }}
                     title={`${event.title} (${formatDate(new Date(event.start_at || event.startDate), 'MM/DD')} ~ ${formatDate(new Date(event.end_at || event.endDate), 'MM/DD')})`}
@@ -149,8 +159,7 @@ const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, has
                 ))}
               </div>
             )}
-            
-            {/* 날짜 셀들 */}
+            {/* 날짜 셀들 - 숫자와 단일 일정 함께 */}
             <div className="calendar-grid__dates-row">
               {weekDates.map((dateObj, index) => (
                 <DateCell
@@ -160,6 +169,7 @@ const CalendarGrid = ({ dates, selectedDate, onDateClick, onDateDoubleClick, has
                   isSelected={isSameDay(dateObj.date, selectedDate)}
                   hasEvents={hasEventsOnDate(dateObj.date)}
                   hasMultiDayEvent={hasMultiDayEventOnDate(dateObj.date)}
+                  multiDayCount={isFullMode ? getMultiDayCountForColumn(weekIndex, index) : 0}
                   hasCompleted={hasCompletedOnDate ? hasCompletedOnDate(dateObj.date) : false}
                   hasPending={hasPendingOnDate ? hasPendingOnDate(dateObj.date) : false}
                   hasGoogleEvents={hasGoogleEventsOnDate(dateObj.date)}

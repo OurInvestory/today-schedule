@@ -39,51 +39,51 @@ def get_seed_schedules():
     # ========================================
     hackathon_schedules = [
         # Day 1 (1/5 월) - 교육 준비
-        {"title": "IBM AI 해커톤 오프닝", "category": "activity", "start": (1, 5, 9, 30), "end": (1, 5, 10, 30), "priority": 5, "text": "강릉원주대 x 강원대학교 AI 개발자 해커톤"},
-        {"title": "Design Thinking Workshop", "category": "activity", "start": (1, 5, 10, 30), "end": (1, 5, 11, 30), "priority": 4},
-        {"title": "Innovation Studio Tour & AI 특강", "category": "activity", "start": (1, 5, 13, 0), "end": (1, 5, 13, 50), "priority": 4},
-        {"title": "생성형 AI 개념 이해", "category": "activity", "start": (1, 5, 13, 50), "end": (1, 5, 14, 40), "priority": 4},
-        {"title": "IBM watsonx platform 이해", "category": "activity", "start": (1, 5, 15, 0), "end": (1, 5, 15, 50), "priority": 4},
-        {"title": "실습개발환경 준비", "category": "activity", "start": (1, 5, 16, 0), "end": (1, 5, 17, 30), "priority": 4},
+        {"title": "IBM AI 해커톤 오프닝", "category": "activity", "start": (1, 5, 9, 30), "end": (1, 5, 10, 30), "priority": 5, "text": "강릉원주대 x 강원대학교 AI 개발자 해커톤", "color": "#4F8CFF"},
+        {"title": "Design Thinking Workshop", "category": "activity", "start": (1, 5, 10, 30), "end": (1, 5, 11, 30), "priority": 4, "color": "#4F8CFF"},
+        {"title": "Innovation Studio Tour & AI 특강", "category": "activity", "start": (1, 5, 13, 0), "end": (1, 5, 13, 50), "priority": 4, "color": "#4F8CFF"},
+        {"title": "생성형 AI 개념 이해", "category": "activity", "start": (1, 5, 13, 50), "end": (1, 5, 14, 40), "priority": 4, "color": "#4F8CFF"},
+        {"title": "IBM watsonx platform 이해", "category": "activity", "start": (1, 5, 15, 0), "end": (1, 5, 15, 50), "priority": 4, "color": "#4F8CFF"},
+        {"title": "실습개발환경 준비", "category": "activity", "start": (1, 5, 16, 0), "end": (1, 5, 17, 30), "priority": 4, "color": "#4F8CFF"},
         
         # Day 2 (1/6 화) - 생성형 AI 실습
-        {"title": "Prompt Engineering 개념 이해", "category": "activity", "start": (1, 6, 9, 30), "end": (1, 6, 10, 30), "priority": 4, "text": "생성형 AI 실습"},
-        {"title": "Prompt Engineering 실습", "category": "activity", "start": (1, 6, 10, 30), "end": (1, 6, 11, 30), "priority": 4},
-        {"title": "생성형 AI를 활용한 서비스 구현 방안 이해 및 실습", "category": "activity", "start": (1, 6, 13, 0), "end": (1, 6, 13, 50), "priority": 4},
-        {"title": "RAG Pattern 개념 이해 및 실습", "category": "activity", "start": (1, 6, 13, 50), "end": (1, 6, 14, 40), "priority": 4},
-        {"title": "Vector DB 이해 및 실습", "category": "activity", "start": (1, 6, 15, 0), "end": (1, 6, 15, 50), "priority": 4},
-        {"title": "서비스 개발 및 배포 환경 이해", "category": "activity", "start": (1, 6, 16, 0), "end": (1, 6, 17, 0), "priority": 4},
-        {"title": "조별과제 논의", "category": "team", "start": (1, 6, 17, 0), "end": (1, 6, 17, 30), "priority": 3},
+        {"title": "Prompt Engineering 개념 이해", "category": "activity", "start": (1, 6, 9, 30), "end": (1, 6, 10, 30), "priority": 4, "text": "생성형 AI 실습", "color": "#9B7EFF"},
+        {"title": "Prompt Engineering 실습", "category": "activity", "start": (1, 6, 10, 30), "end": (1, 6, 11, 30), "priority": 4, "color": "#9B7EFF"},
+        {"title": "생성형 AI를 활용한 서비스 구현 방안 이해 및 실습", "category": "activity", "start": (1, 6, 13, 0), "end": (1, 6, 13, 50), "priority": 4, "color": "#9B7EFF"},
+        {"title": "RAG Pattern 개념 이해 및 실습", "category": "activity", "start": (1, 6, 13, 50), "end": (1, 6, 14, 40), "priority": 4, "color": "#9B7EFF"},
+        {"title": "Vector DB 이해 및 실습", "category": "activity", "start": (1, 6, 15, 0), "end": (1, 6, 15, 50), "priority": 4, "color": "#9B7EFF"},
+        {"title": "서비스 개발 및 배포 환경 이해", "category": "activity", "start": (1, 6, 16, 0), "end": (1, 6, 17, 0), "priority": 4, "color": "#9B7EFF"},
+        {"title": "조별과제 논의", "category": "team", "start": (1, 6, 17, 0), "end": (1, 6, 17, 30), "priority": 3, "color": "#7ED957"},
         
         # Day 3 (1/7 수) - Agentic AI 실습
-        {"title": "생성형 AI 유즈 케이스 기반 실습 1", "category": "activity", "start": (1, 7, 9, 30), "end": (1, 7, 10, 30), "priority": 4, "text": "Agentic AI 실습"},
-        {"title": "생성형 AI 유즈 케이스 기반 실습 2", "category": "activity", "start": (1, 7, 10, 30), "end": (1, 7, 11, 30), "priority": 4},
-        {"title": "AI Agent 개념 및 플랫폼 소개", "category": "activity", "start": (1, 7, 13, 0), "end": (1, 7, 13, 50), "priority": 4},
-        {"title": "AI Agent 유즈 케이스 기반 실습 1", "category": "activity", "start": (1, 7, 13, 50), "end": (1, 7, 14, 40), "priority": 4},
-        {"title": "AI Agent 유즈 케이스 기반 실습 2", "category": "activity", "start": (1, 7, 15, 0), "end": (1, 7, 15, 50), "priority": 4},
-        {"title": "AI Agent Orchestration 활용 사례 데모", "category": "activity", "start": (1, 7, 16, 0), "end": (1, 7, 17, 0), "priority": 4},
-        {"title": "조별과제 논의", "category": "team", "start": (1, 7, 17, 0), "end": (1, 7, 17, 30), "priority": 3},
+        {"title": "생성형 AI 유즈 케이스 기반 실습 1", "category": "activity", "start": (1, 7, 9, 30), "end": (1, 7, 10, 30), "priority": 4, "text": "Agentic AI 실습", "color": "#4ECDC4"},
+        {"title": "생성형 AI 유즈 케이스 기반 실습 2", "category": "activity", "start": (1, 7, 10, 30), "end": (1, 7, 11, 30), "priority": 4, "color": "#4ECDC4"},
+        {"title": "AI Agent 개념 및 플랫폼 소개", "category": "activity", "start": (1, 7, 13, 0), "end": (1, 7, 13, 50), "priority": 4, "color": "#4ECDC4"},
+        {"title": "AI Agent 유즈 케이스 기반 실습 1", "category": "activity", "start": (1, 7, 13, 50), "end": (1, 7, 14, 40), "priority": 4, "color": "#4ECDC4"},
+        {"title": "AI Agent 유즈 케이스 기반 실습 2", "category": "activity", "start": (1, 7, 15, 0), "end": (1, 7, 15, 50), "priority": 4, "color": "#4ECDC4"},
+        {"title": "AI Agent Orchestration 활용 사례 데모", "category": "activity", "start": (1, 7, 16, 0), "end": (1, 7, 17, 0), "priority": 4, "color": "#4ECDC4"},
+        {"title": "조별과제 논의", "category": "team", "start": (1, 7, 17, 0), "end": (1, 7, 17, 30), "priority": 3, "color": "#7ED957"},
         
         # Day 4 (1/8 목) - Project 준비
-        {"title": "IBM Client Zero 및 watsonx Challenge 사례 소개", "category": "activity", "start": (1, 8, 9, 30), "end": (1, 8, 10, 30), "priority": 4, "text": "Project 준비"},
-        {"title": "watsonx Code Assistant 소개 및 활용 데모", "category": "activity", "start": (1, 8, 10, 30), "end": (1, 8, 11, 30), "priority": 4},
-        {"title": "멘토링 및 프로젝트 절차 소개", "category": "activity", "start": (1, 8, 13, 0), "end": (1, 8, 13, 50), "priority": 4},
-        {"title": "Design Thinking Workshop", "category": "activity", "start": (1, 8, 13, 50), "end": (1, 8, 14, 40), "priority": 4},
-        {"title": "조별 주제 선정", "category": "team", "start": (1, 8, 15, 0), "end": (1, 8, 17, 0), "priority": 5},
-        {"title": "조별 과제 준비", "category": "team", "start": (1, 8, 17, 0), "end": (1, 8, 17, 30), "priority": 4},
+        {"title": "IBM Client Zero 및 watsonx Challenge 사례 소개", "category": "activity", "start": (1, 8, 9, 30), "end": (1, 8, 10, 30), "priority": 4, "text": "Project 준비", "color": "#FFB347"},
+        {"title": "watsonx Code Assistant 소개 및 활용 데모", "category": "activity", "start": (1, 8, 10, 30), "end": (1, 8, 11, 30), "priority": 4, "color": "#FFB347"},
+        {"title": "멘토링 및 프로젝트 절차 소개", "category": "activity", "start": (1, 8, 13, 0), "end": (1, 8, 13, 50), "priority": 4, "color": "#FFB347"},
+        {"title": "Design Thinking Workshop", "category": "activity", "start": (1, 8, 13, 50), "end": (1, 8, 14, 40), "priority": 4, "color": "#FFB347"},
+        {"title": "조별 주제 선정", "category": "team", "start": (1, 8, 15, 0), "end": (1, 8, 17, 0), "priority": 5, "color": "#7ED957"},
+        {"title": "조별 과제 준비", "category": "team", "start": (1, 8, 17, 0), "end": (1, 8, 17, 30), "priority": 4, "color": "#7ED957"},
         
         # Day 5-9 (1/9~14) - Project & Mentoring
-        {"title": "해커톤 프로젝트 수행", "category": "team", "start": (1, 9, 9, 0), "end": (1, 14, 18, 0), "priority": 5, "type": "task", "text": "Project & Mentoring 기간"},
-        {"title": "멘토링 세션", "category": "activity", "start": (1, 9, 17, 0), "end": (1, 9, 17, 30), "priority": 4},
+        {"title": "해커톤 프로젝트 수행", "category": "team", "start": (1, 9, 9, 0), "end": (1, 14, 18, 0), "priority": 5, "type": "task", "text": "Project & Mentoring 기간", "color": "#FF6B6B"},
+        {"title": "멘토링 세션", "category": "activity", "start": (1, 9, 17, 0), "end": (1, 9, 17, 30), "priority": 4, "color": "#FF8ED4"},
         
         # Day 10 (1/15 목) - Project 발표
-        {"title": "현직자와 질의 응답 1", "category": "activity", "start": (1, 15, 9, 30), "end": (1, 15, 10, 30), "priority": 4, "text": "Project 발표"},
-        {"title": "현직자와 질의 응답 2", "category": "activity", "start": (1, 15, 10, 30), "end": (1, 15, 11, 30), "priority": 4},
-        {"title": "해커톤 결과 발표", "category": "activity", "start": (1, 15, 13, 50), "end": (1, 15, 14, 40), "priority": 5},
+        {"title": "현직자와 질의 응답 1", "category": "activity", "start": (1, 15, 9, 30), "end": (1, 15, 10, 30), "priority": 4, "text": "Project 발표", "color": "#FF8ED4"},
+        {"title": "현직자와 질의 응답 2", "category": "activity", "start": (1, 15, 10, 30), "end": (1, 15, 11, 30), "priority": 4, "color": "#FF8ED4"},
+        {"title": "해커톤 결과 발표", "category": "activity", "start": (1, 15, 13, 50), "end": (1, 15, 14, 40), "priority": 5, "color": "#FF6B6B"},
         
         # Day 11 (1/16 금) - 최종 발표 및 시상
-        {"title": "해커톤 최종 발표", "category": "activity", "start": (1, 16, 15, 0), "end": (1, 16, 17, 0), "priority": 5, "text": "최종 발표"},
-        {"title": "🏆 시상 및 종료", "category": "activity", "start": (1, 16, 17, 0), "end": (1, 16, 17, 30), "priority": 5, "text": "강릉원주대 x 강원대학교 AI 개발자 해커톤 종료"},
+        {"title": "해커톤 최종 발표", "category": "activity", "start": (1, 16, 15, 0), "end": (1, 16, 17, 0), "priority": 5, "text": "최종 발표", "color": "#FF6B6B"},
+        {"title": "🏆 시상 및 종료", "category": "activity", "start": (1, 16, 17, 0), "end": (1, 16, 17, 30), "priority": 5, "text": "강릉원주대 x 강원대학교 AI 개발자 해커톤 종료", "color": "#FFE066"},
     ]
     
     # ========================================
@@ -91,45 +91,45 @@ def get_seed_schedules():
     # ========================================
     kangwon_schedules = [
         # 2월
-        {"title": "제1차 정시모집 합격자 발표", "category": "other", "start": (2, 6, 10, 0), "end": (2, 6, 18, 0), "priority": 3},
-        {"title": "제1차 정시모집 등록", "category": "other", "start": (2, 10, 9, 0), "end": (2, 12, 16, 0), "priority": 3},
-        {"title": "제2차 정시모집 합격자 발표", "category": "other", "start": (2, 16, 10, 0), "end": (2, 16, 18, 0), "priority": 3},
-        {"title": "제2차 정시모집 등록", "category": "other", "start": (2, 19, 9, 0), "end": (2, 20, 16, 0), "priority": 3},
-        {"title": "추가모집 합격자 발표", "category": "other", "start": (2, 25, 10, 0), "end": (2, 25, 18, 0), "priority": 3},
-        {"title": "추가모집 등록", "category": "other", "start": (2, 26, 9, 0), "end": (2, 27, 16, 0), "priority": 3},
-        {"title": "학위수여식", "category": "activity", "start": (2, 20, 11, 0), "end": (2, 20, 12, 0), "priority": 4},
+        {"title": "제1차 정시모집 합격자 발표", "category": "other", "start": (2, 6, 10, 0), "end": (2, 6, 18, 0), "priority": 3, "color": "#A0A0A0"},
+        {"title": "제1차 정시모집 등록", "category": "other", "start": (2, 10, 9, 0), "end": (2, 12, 16, 0), "priority": 3, "color": "#A0A0A0"},
+        {"title": "제2차 정시모집 합격자 발표", "category": "other", "start": (2, 16, 10, 0), "end": (2, 16, 18, 0), "priority": 3, "color": "#A0A0A0"},
+        {"title": "제2차 정시모집 등록", "category": "other", "start": (2, 19, 9, 0), "end": (2, 20, 16, 0), "priority": 3, "color": "#A0A0A0"},
+        {"title": "추가모집 합격자 발표", "category": "other", "start": (2, 25, 10, 0), "end": (2, 25, 18, 0), "priority": 3, "color": "#A0A0A0"},
+        {"title": "추가모집 등록", "category": "other", "start": (2, 26, 9, 0), "end": (2, 27, 16, 0), "priority": 3, "color": "#A0A0A0"},
+        {"title": "학위수여식", "category": "activity", "start": (2, 20, 11, 0), "end": (2, 20, 12, 0), "priority": 4, "color": "#FFE066"},
         
         # 3월
-        {"title": "1학기 개강", "category": "class", "start": (3, 2, 9, 0), "end": (3, 2, 18, 0), "priority": 5, "text": "2026학년도 1학기 시작"},
-        {"title": "수강신청 정정기간", "category": "class", "start": (3, 2, 9, 0), "end": (3, 6, 17, 0), "priority": 4, "type": "task"},
-        {"title": "1학기 등록금 납부기간", "category": "other", "start": (3, 2, 9, 0), "end": (3, 13, 16, 0), "priority": 4},
-        {"title": "삼일절 (휴일)", "category": "other", "start": (3, 1, 0, 0), "end": (3, 1, 23, 59), "priority": 2},
-        {"title": "수강철회 기간", "category": "class", "start": (3, 23, 9, 0), "end": (3, 27, 17, 0), "priority": 3, "type": "task"},
+        {"title": "1학기 개강", "category": "class", "start": (3, 2, 9, 0), "end": (3, 2, 18, 0), "priority": 5, "text": "2026학년도 1학기 시작", "color": "#4F8CFF"},
+        {"title": "수강신청 정정기간", "category": "class", "start": (3, 2, 9, 0), "end": (3, 6, 17, 0), "priority": 4, "type": "task", "color": "#9B7EFF"},
+        {"title": "1학기 등록금 납부기간", "category": "other", "start": (3, 2, 9, 0), "end": (3, 13, 16, 0), "priority": 4, "color": "#FFB347"},
+        {"title": "삼일절 (휴일)", "category": "other", "start": (3, 1, 0, 0), "end": (3, 1, 23, 59), "priority": 2, "color": "#FF6B6B"},
+        {"title": "수강철회 기간", "category": "class", "start": (3, 23, 9, 0), "end": (3, 27, 17, 0), "priority": 3, "type": "task", "color": "#9B7EFF"},
         
         # 4월
-        {"title": "중간고사 기간", "category": "exam", "start": (4, 20, 9, 0), "end": (4, 24, 18, 0), "priority": 5, "type": "task", "text": "1학기 중간고사"},
+        {"title": "중간고사 기간", "category": "exam", "start": (4, 20, 9, 0), "end": (4, 24, 18, 0), "priority": 5, "type": "task", "text": "1학기 중간고사", "color": "#FF6B6B"},
         
         # 5월
-        {"title": "어린이날 (휴일)", "category": "other", "start": (5, 5, 0, 0), "end": (5, 5, 23, 59), "priority": 2},
-        {"title": "석가탄신일 (휴일)", "category": "other", "start": (5, 24, 0, 0), "end": (5, 24, 23, 59), "priority": 2},
-        {"title": "대동제 (축제)", "category": "activity", "start": (5, 13, 18, 0), "end": (5, 15, 22, 0), "priority": 4, "text": "강원대학교 대동제"},
+        {"title": "어린이날 (휴일)", "category": "other", "start": (5, 5, 0, 0), "end": (5, 5, 23, 59), "priority": 2, "color": "#7ED957"},
+        {"title": "석가탄신일 (휴일)", "category": "other", "start": (5, 24, 0, 0), "end": (5, 24, 23, 59), "priority": 2, "color": "#7ED957"},
+        {"title": "대동제 (축제)", "category": "activity", "start": (5, 13, 18, 0), "end": (5, 15, 22, 0), "priority": 4, "text": "강원대학교 대동제", "color": "#FF8ED4"},
         
         # 6월
-        {"title": "현충일 (휴일)", "category": "other", "start": (6, 6, 0, 0), "end": (6, 6, 23, 59), "priority": 2},
-        {"title": "기말고사 기간", "category": "exam", "start": (6, 15, 9, 0), "end": (6, 19, 18, 0), "priority": 5, "type": "task", "text": "1학기 기말고사"},
-        {"title": "1학기 종강", "category": "class", "start": (6, 19, 9, 0), "end": (6, 19, 18, 0), "priority": 4},
-        {"title": "1학기 성적입력 기간", "category": "class", "start": (6, 22, 9, 0), "end": (6, 26, 17, 0), "priority": 3},
-        {"title": "1학기 성적열람 및 이의신청", "category": "class", "start": (6, 29, 9, 0), "end": (7, 1, 17, 0), "priority": 3, "type": "task"},
+        {"title": "현충일 (휴일)", "category": "other", "start": (6, 6, 0, 0), "end": (6, 6, 23, 59), "priority": 2, "color": "#A0A0A0"},
+        {"title": "기말고사 기간", "category": "exam", "start": (6, 15, 9, 0), "end": (6, 19, 18, 0), "priority": 5, "type": "task", "text": "1학기 기말고사", "color": "#FF6B6B"},
+        {"title": "1학기 종강", "category": "class", "start": (6, 19, 9, 0), "end": (6, 19, 18, 0), "priority": 4, "color": "#4F8CFF"},
+        {"title": "1학기 성적입력 기간", "category": "class", "start": (6, 22, 9, 0), "end": (6, 26, 17, 0), "priority": 3, "color": "#9B7EFF"},
+        {"title": "1학기 성적열람 및 이의신청", "category": "class", "start": (6, 29, 9, 0), "end": (7, 1, 17, 0), "priority": 3, "type": "task", "color": "#9B7EFF"},
         
         # 7월
-        {"title": "여름방학 시작", "category": "other", "start": (7, 1, 0, 0), "end": (7, 1, 23, 59), "priority": 3, "text": "여름방학"},
-        {"title": "계절학기 수강신청", "category": "class", "start": (7, 6, 9, 0), "end": (7, 8, 17, 0), "priority": 3},
-        {"title": "하계 계절학기", "category": "class", "start": (7, 13, 9, 0), "end": (8, 7, 18, 0), "priority": 3, "type": "task"},
+        {"title": "여름방학 시작", "category": "other", "start": (7, 1, 0, 0), "end": (7, 1, 23, 59), "priority": 3, "text": "여름방학", "color": "#4ECDC4"},
+        {"title": "계절학기 수강신청", "category": "class", "start": (7, 6, 9, 0), "end": (7, 8, 17, 0), "priority": 3, "color": "#9B7EFF"},
+        {"title": "하계 계절학기", "category": "class", "start": (7, 13, 9, 0), "end": (8, 7, 18, 0), "priority": 3, "type": "task", "color": "#4ECDC4"},
         
         # 8월
-        {"title": "2학기 수강신청", "category": "class", "start": (8, 17, 9, 0), "end": (8, 21, 17, 0), "priority": 4, "type": "task", "text": "2학기 수강신청 기간"},
-        {"title": "광복절 (휴일)", "category": "other", "start": (8, 15, 0, 0), "end": (8, 15, 23, 59), "priority": 2},
-        {"title": "2학기 개강", "category": "class", "start": (8, 31, 9, 0), "end": (8, 31, 18, 0), "priority": 5, "text": "2026학년도 2학기 시작"},
+        {"title": "2학기 수강신청", "category": "class", "start": (8, 17, 9, 0), "end": (8, 21, 17, 0), "priority": 4, "type": "task", "text": "2학기 수강신청 기간", "color": "#9B7EFF"},
+        {"title": "광복절 (휴일)", "category": "other", "start": (8, 15, 0, 0), "end": (8, 15, 23, 59), "priority": 2, "color": "#FF6B6B"},
+        {"title": "2학기 개강", "category": "class", "start": (8, 31, 9, 0), "end": (8, 31, 18, 0), "priority": 5, "text": "2026학년도 2학기 시작", "color": "#4F8CFF"},
     ]
     
     # 일정 데이터 변환
@@ -150,6 +150,7 @@ def get_seed_schedules():
             "priority_score": item["priority"],
             "original_text": item.get("text"),
             "source": "manual",
+            "color": item.get("color"),
         }
         schedules.append(schedule)
     

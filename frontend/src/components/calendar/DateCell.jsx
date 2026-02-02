@@ -2,11 +2,14 @@ import React, { useRef, useState } from 'react';
 import { isToday } from '../../utils/dateUtils';
 import './DateCell.css';
 
-const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasMultiDayEvent = false, hasCompleted, hasPending, hasGoogleEvents, onClick, onDoubleClick, isFullMode = false, events = [], todos = [] }) => {
+const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasMultiDayEvent = false, multiDayCount = 0, hasCompleted, hasPending, hasGoogleEvents, onClick, onDoubleClick, isFullMode = false, events = [], todos = [] }) => {
   // 할 일 존재 여부 확인 (완료 또는 미완료)
   const hasTodos = hasCompleted || hasPending;
   const lastTapRef = useRef(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // 멀티데이 바 개수에 따른 상단 여백 계산 (각 바 당 20px: height 18px + margin 2px)
+  const multiDayPadding = multiDayCount > 0 ? multiDayCount * 20 : 0;
   
   const cellClass = [
     'date-cell',
@@ -182,6 +185,10 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasMultiDayEven
       aria-pressed={isSelected}
     >
       <span className="date-cell__number">{date.getDate()}</span>
+      {/* 멀티데이 바를 위한 여백 */}
+      {isFullMode && multiDayCount > 0 && (
+        <div className="date-cell__multiday-spacer" style={{ height: `${multiDayPadding}px` }} />
+      )}
       {isFullMode ? (
         renderDetailedEvents()
       ) : (

@@ -28,6 +28,8 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-gray-900);
+  position: relative;
+  z-index: 1;
 }
 
 .date-cell--other-month .date-cell__number {
@@ -54,6 +56,11 @@
 
 .date-cell--selected:hover {
   background-color: var(--color-primary-600);
+}
+
+/* 멀티데이 바를 위한 여백 */
+.date-cell__multiday-spacer {
+  flex-shrink: 0;
 }
 
 /* 날짜 셀 하단 인디케이터 */
@@ -166,9 +173,9 @@
 /* 이벤트 바 - 갤럭시 캘린더 스타일 */
 .date-cell__event-bar {
   width: 100%;
-  padding: 2px 6px;
+  padding: 3px 6px;
   border-radius: 3px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: var(--font-weight-medium);
   color: white;
   background-color: var(--color-primary-500);
@@ -177,10 +184,12 @@
   white-space: nowrap;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
-  transition: background-color var(--transition-base);
-  text-align: center;
+  transition: filter 0.2s;
+  text-align: left;
+  height: 18px;
+  margin: 1px 0;
 }
 
 .date-cell__event-bar:hover {
@@ -243,8 +252,8 @@
 /* 할 일 아이템 - 텍스트만 */
 .date-cell__todo-item {
   width: 100%;
-  padding: 2px 6px 2px 2px;
-  font-size: 13px;
+  padding: 3px 6px 3px 10px;
+  font-size: 10px !important;
   font-weight: var(--font-weight-medium);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -253,15 +262,16 @@
   align-items: center;
   gap: 4px;
   position: relative;
-  padding-left: 10px;
+  height: 18px;
+  margin: 1px 0;
 }
 
 .date-cell__todo-item::before {
   content: '';
   position: absolute;
   left: 2px;
-  top: 2px;
-  bottom: 2px;
+  top: 3px;
+  bottom: 3px;
   width: 3px;
   background-color: var(--todo-bar-color, #3b82f6);
   border-radius: 1px;
@@ -271,6 +281,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 10px !important;
 }
 
 /* 더보기 버튼 */
