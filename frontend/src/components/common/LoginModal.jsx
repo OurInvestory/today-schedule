@@ -40,7 +40,7 @@ const LoginModal = () => {
 
     try {
       const response = await login(formData.email, formData.password);
-      if (response.status === 200) {
+      if (response.success) {
         setFormData({ email: '', password: '' });
         closeLoginModal();
       } else {

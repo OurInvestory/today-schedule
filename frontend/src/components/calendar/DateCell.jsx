@@ -2,11 +2,14 @@ import React, { useRef, useState } from 'react';
 import { isToday } from '../../utils/dateUtils';
 import './DateCell.css';
 
-const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, hasPending, hasGoogleEvents, onClick, onDoubleClick, isFullMode = false, events = [], todos = [] }) => {
+const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasMultiDayEvent = false, multiDayCount = 0, hasCompleted, hasPending, hasGoogleEvents, onClick, onDoubleClick, isFullMode = false, events = [], todos = [] }) => {
   // 할 일 존재 여부 확인 (완료 또는 미완료)
   const hasTodos = hasCompleted || hasPending;
   const lastTapRef = useRef(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  
+  // 멀티데이 바 개수에 따른 상단 여백 계산 (각 바 당 20px: height 18px + margin 2px)
+  const multiDayPadding = multiDayCount > 0 ? multiDayCount * 20 : 0;
   
   const cellClass = [
     'date-cell',
@@ -95,8 +98,8 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
           if (item.type === 'event') {
             const event = item.data;
             const isGoogleEvent = event.source === 'google';
-            // 구글 일정: 빨간색, 일반 일정: 파란색
-            const eventColor = isGoogleEvent ? '#ea4335' : '#3b82f6';
+            // 이벤트 색상: 구글=빨강, 사용자 지정 색상 우선, 없으면 파란색
+            const eventColor = isGoogleEvent ? '#ea4335' : (event.color || '#3b82f6');
             
             return (
               <div
@@ -110,15 +113,17 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
               </div>
             );
           } else {
-            // 할일: 완료=초록색, 미완료=노란색
+            // 할일: 일정 색상 사용 (없으면 완료=초록색, 미완료=노란색)
             const todo = item.data;
-            const todoColor = todo.completed ? '#10b981' : '#eab308';
+            // schedule 객체에서 color 가져오기 (schedule.color 또는 todo.schedule_color)
+            const scheduleColor = todo.schedule?.color || todo.schedule_color;
+            const todoColor = scheduleColor || (todo.completed ? '#10b981' : '#eab308');
             
             return (
               <div
                 key={`todo-${todo.id || idx}`}
                 className="date-cell__todo-item"
-                style={{ color: todoColor }}
+                style={{ color: todoColor, '--todo-bar-color': todoColor }}
                 title={todo.title}
               >
                 <span className="todo-item__title">{todo.title}</span>
@@ -180,6 +185,10 @@ const DateCell = ({ date, isCurrentMonth, isSelected, hasEvents, hasCompleted, h
       aria-pressed={isSelected}
     >
       <span className="date-cell__number">{date.getDate()}</span>
+      {/* 멀티데이 바를 위한 여백 */}
+      {isFullMode && multiDayCount > 0 && (
+        <div className="date-cell__multiday-spacer" style={{ height: `${multiDayPadding}px` }} />
+      )}
       {isFullMode ? (
         renderDetailedEvents()
       ) : (

@@ -51,10 +51,127 @@
   color: var(--color-primary-500);
 }
 
+/* 주별 컨테이너 */
+.calendar-grid__weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.calendar-grid--full-mode .calendar-grid__weeks {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-grid__week {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.calendar-grid--full-mode .calendar-grid__week {
+  flex: 1;
+  min-height: 0;
+}
+
+.calendar-grid__dates-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calendar-grid--full-mode .calendar-grid__dates-row {
+  flex: 1;
+  min-height: 0;
+}
+
 .calendar-grid__dates {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
+}
+
+/* 멀티데이 이벤트 바 영역 - absolute 레이어 */
+.calendar-grid__multiday-layer {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 20px;
+  gap: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.calendar-grid__multiday-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  color: white;
+  background-color: var(--color-primary-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: filter 0.2s;
+  margin: 1px 4px;
+  height: 18px;
+}
+
+.calendar-grid__multiday-bar:hover {
+  filter: brightness(1.1);
+}
+
+/* 중간 부분 - 둥글기 없음 */
+.calendar-grid__multiday-bar:not(.calendar-grid__multiday-bar--start):not(.calendar-grid__multiday-bar--end) {
+  border-radius: 0;
+}
+
+/* 시작 부분 - 왼쪽만 둥글게 */
+.calendar-grid__multiday-bar--start {
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-left: 4px;
+}
+
+/* 끝 부분 - 오른쪽만 둥글게 */
+.calendar-grid__multiday-bar--end {
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-right: 4px;
+}
+
+/* 시작이면서 끝인 경우 (한 주 안에 끝남) - 양쪽 둥글게 */
+.calendar-grid__multiday-bar--start.calendar-grid__multiday-bar--end {
+  border-radius: 3px;
+}
+
+.multiday-bar__google-icon {
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.3);
+  padding: 1px 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.multiday-bar__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
 }
 
 @media (max-width: 640px) {
@@ -67,7 +184,17 @@
     padding: var(--spacing-xs);
   }
 
-  .calendar-grid__dates {
+  .calendar-grid__dates,
+  .calendar-grid__dates-row {
     gap: 2px;
+  }
+
+  .calendar-grid__multiday-events {
+    min-height: 18px;
+  }
+
+  .calendar-grid__multiday-bar {
+    font-size: 10px;
+    padding: 1px 4px;
   }
 }

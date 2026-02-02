@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import Calendar from '../components/calendar/Calendar';
 import TodoList from '../components/todo/TodoList';
 import TodoFilter from '../components/todo/TodoFilter';
-import ChatbotButton from '../components/chatbot/ChatbotButton';
-import ChatbotWindow from '../components/chatbot/ChatbotWindow';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import Input from '../components/common/Input';
 import SearchableSelect from '../components/common/SearchableSelect';
 import { useTodo } from '../hooks/useTodo';
-import { useChatbot } from '../hooks/useChatbot';
 import { useCalendar } from '../hooks/useCalendar';
 import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
@@ -47,22 +44,6 @@ const Home = () => {
 
   // 일정 목록 가져오기 (할일 추가 시 일정 선택용)
   const { events: schedules } = useCalendar();
-
-  const {
-    isOpen: isChatOpen,
-    messages,
-    loading: chatLoading,
-    messagesEndRef,
-    toggleChatbot,
-    sendMessage,
-    confirmAction,
-    cancelAction,
-    clearMessages,
-    retryLastMessage,
-    lastUserMessage,
-    selectScheduleForNotification,
-    handleChoiceSelect,
-  } = useChatbot();
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
@@ -188,24 +169,6 @@ const Home = () => {
           </div>
         </main>
       </div>
-
-      {/* Chatbot */}
-      <ChatbotButton onClick={() => requireAuth(() => toggleChatbot())} />
-      <ChatbotWindow
-        isOpen={isChatOpen}
-        onClose={toggleChatbot}
-        messages={messages}
-        onSendMessage={sendMessage}
-        loading={chatLoading}
-        messagesEndRef={messagesEndRef}
-        onConfirmAction={confirmAction}
-        onCancelAction={cancelAction}
-        onClearHistory={clearMessages}
-        onRetry={retryLastMessage}
-        canRetry={!!lastUserMessage}
-        onSelectScheduleForNotification={selectScheduleForNotification}
-        onChoiceSelect={handleChoiceSelect}
-      />
 
       {/* Add Todo Modal */}
       <Modal

@@ -99,8 +99,8 @@ api.interceptors.response.use(
           try {
             const response = await axios.post(
               `${API_BASE_URL}/api/auth/refresh`,
-              null,
-              { params: { refresh_token: refreshToken } }
+              { refresh_token: refreshToken },
+              { headers: { 'Content-Type': 'application/json' } }
             );
             
             if (response.data.status === 200 && response.data.data) {

@@ -50,6 +50,31 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
   // 팁 (백엔드 tip 우선, 없으면 응원 문구)
   const tip = useMemo(() => getTip(todo), [todo]);
 
+  // 일정 색상 가져오기 (schedule.color 또는 기본 초록색)
+  const scheduleColor = useMemo(() => {
+    return todo.schedule?.color || todo.scheduleColor || null;
+  }, [todo]);
+
+  // 팁 배경색 계산 (일정 색상 기반 파스텔톤)
+  const tipStyle = useMemo(() => {
+    if (!scheduleColor) {
+      // 기본 초록색 스타일
+      return {
+        background: 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)',
+        borderColor: '#D1FAE5',
+        iconColor: '#10B981',
+        textColor: '#047857',
+      };
+    }
+    // 일정 색상 기반 파스텔톤 생성
+    return {
+      background: `linear-gradient(135deg, ${scheduleColor}15 0%, ${scheduleColor}20 100%)`,
+      borderColor: `${scheduleColor}40`,
+      iconColor: scheduleColor,
+      textColor: scheduleColor,
+    };
+  }, [scheduleColor]);
+
   const handleCheckboxChange = (e) => {
     e.stopPropagation();
     onToggle(todo.id, !todo.completed);
@@ -211,15 +236,21 @@ const TodoItem = ({ todo, onToggle, onEdit, onDelete }) => {
       </div>
       
       {tip && (
-        <div className="todo-item__tip">
-          <div className="tip-icon">
+        <div 
+          className="todo-item__tip"
+          style={{
+            background: tipStyle.background,
+            borderColor: tipStyle.borderColor,
+          }}
+        >
+          <div className="tip-icon" style={{ color: tipStyle.iconColor }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="16" x2="12" y2="12" />
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
           </div>
-          <span className="tip-text">{tip}</span>
+          <span className="tip-text" style={{ color: tipStyle.textColor }}>{tip}</span>
         </div>
       )}
     </div>

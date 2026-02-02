@@ -217,19 +217,29 @@ async def get_sub_tasks(
                 "update_text": task.update_text,
                 "priority": task.priority if task.priority else "medium",
                 "category": task.category if task.category else "other",
-                "tip": task.tip if task.tip else None
+                "tip": task.tip if task.tip else None,
+                "schedule": None  # 일정 정보 추가용
             }
             
-            # tip이 없는 경우 보완 로직
-            if not task_dict["tip"]:
-                if task.schedule_id:
-                    schedule = db.query(Schedule).filter(Schedule.schedule_id == task.schedule_id).first()
-                    if schedule and hasattr(schedule, 'tip') and schedule.tip:
+            # 일정 정보 조회 및 추가
+            if task.schedule_id:
+                schedule = db.query(Schedule).filter(Schedule.schedule_id == task.schedule_id).first()
+                if schedule:
+                    task_dict["schedule"] = {
+                        "schedule_id": schedule.schedule_id,
+                        "title": schedule.title,
+                        "color": schedule.color,
+                        "category": schedule.category,
+                        "start_at": schedule.start_at.isoformat() if schedule.start_at else None,
+                        "end_at": schedule.end_at.isoformat() if schedule.end_at else None,
+                    }
+                    # tip이 없는 경우 일정에서 가져오기
+                    if not task_dict["tip"] and hasattr(schedule, 'tip') and schedule.tip:
                         task_dict["tip"] = schedule.tip
-                    else:
-                        task_dict["tip"] = get_random_encouragement()
-                else:
-                    task_dict["tip"] = get_random_encouragement()
+            
+            # tip이 여전히 없는 경우 랜덤 응원 메시지
+            if not task_dict["tip"]:
+                task_dict["tip"] = get_random_encouragement()
             
             response_data.append(SubTaskResponse(**task_dict))
 

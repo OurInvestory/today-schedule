@@ -27,7 +27,23 @@ const ScheduleDetail = () => {
     category: '',
     priority_score: 5,
     estimated_minute: null,
+    color: '',
   });
+
+  // 일정 색상 옵션 (부드러운 파스텔톤 11가지)
+  const COLOR_OPTIONS = [
+    { value: '', label: '기본', color: '#4F8CFF' },
+    { value: '#FF6B6B', label: '코랄', color: '#FF6B6B' },
+    { value: '#FFB347', label: '오렌지', color: '#FFB347' },
+    { value: '#FFE066', label: '옐로우', color: '#FFE066' },
+    { value: '#7ED957', label: '그린', color: '#7ED957' },
+    { value: '#4ECDC4', label: '민트', color: '#4ECDC4' },
+    { value: '#4F8CFF', label: '블루', color: '#4F8CFF' },
+    { value: '#9B7EFF', label: '퍼플', color: '#9B7EFF' },
+    { value: '#FF8ED4', label: '핑크', color: '#FF8ED4' },
+    { value: '#A0A0A0', label: '그레이', color: '#A0A0A0' },
+    { value: '#8B6F47', label: '브라운', color: '#8B6F47' },
+  ];
 
   // 할 일 목록 관련 상태
   const [subTasks, setSubTasks] = useState([]);
@@ -359,6 +375,29 @@ const ScheduleDetail = () => {
                 />
               </div>
 
+              {/* 색상 선택 */}
+              <div className="schedule-detail__field">
+                <label>색상</label>
+                <div className="schedule-detail__color-picker">
+                  {COLOR_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`schedule-detail__color-option ${formData.color === option.value ? 'schedule-detail__color-option--selected' : ''}`}
+                      style={{ backgroundColor: option.color }}
+                      onClick={() => setFormData(prev => ({ ...prev, color: option.value }))}
+                      title={option.label}
+                    >
+                      {formData.color === option.value && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="schedule-detail__field">
                 <label>우선순위 (1-10)</label>
                 <input
@@ -460,6 +499,17 @@ const ScheduleDetail = () => {
                     <span className="schedule-detail__info-value">{schedule.category}</span>
                   </div>
                 )}
+                {/* 색상 표시 */}
+                <div className="schedule-detail__info-row">
+                  <span className="schedule-detail__info-label">🎨 색상</span>
+                  <span className="schedule-detail__info-value">
+                    <span 
+                      className="schedule-detail__color-badge"
+                      style={{ backgroundColor: schedule.color || '#4F8CFF' }}
+                    />
+                    {COLOR_OPTIONS.find(c => c.value === (schedule.color || ''))?.label || '기본'}
+                  </span>
+                </div>
                 <div className="schedule-detail__info-row">
                   <span className="schedule-detail__info-label">🎯 우선순위</span>
                   <span 

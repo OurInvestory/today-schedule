@@ -529,3 +529,74 @@ export const getContextualSuggestions = async () => {
     };
   }
 };
+
+/**
+ * URL에서 학사일정/이벤트 추출
+ * @param {string} url - 학사일정 또는 공고 URL
+ * @returns {Promise<Object>} 추출된 일정 데이터
+ */
+export const parseUrlSchedule = async (url) => {
+  try {
+    const response = await api.post('/api/advanced/parse-url', null, {
+      params: { url },
+      timeout: 60000, // URL 파싱은 시간이 걸릴 수 있음
+    });
+    
+    const data = response.data?.data;
+    
+    return {
+      success: response.data?.status === 200,
+      message: response.data?.message || 'URL 파싱 완료',
+      schedules: data?.schedules || [],
+      summary: data?.summary || '',
+      sourceType: data?.source_type || 'other',
+      sourceUrl: data?.source_url || url,
+      pageTitle: data?.page_title || '',
+    };
+  } catch (error) {
+    console.error('Failed to parse URL:', error);
+    throw error;
+  }
+};
+
+/**
+ * 이미지에서 일정/할일 추출 (챗봇용)
+ * @param {File} imageFile - 이미지 파일
+ * @returns {Promise<Object>} 추출된 일정/할일 데이터
+ */
+export const analyzeImageForSchedule = async (imageFile) => {
+  try {
+    const result = await analyzeTimetableImage(imageFile);
+    
+    // 결과를 챗봇 형식으로 변환
+    const actions = result.actions || [];
+    const lectures = result.lectures || [];
+    
+    let schedules = [];
+    let subTasks = [];
+    
+    // actions에서 일정과 할일 분리
+    for (const action of actions) {
+      if (action.target === 'LECTURES') {
+        // 강의 데이터는 별도 처리
+        continue;
+      } else if (action.target === 'SUB_TASK') {
+        subTasks.push(action.payload);
+      } else {
+        schedules.push(action.payload);
+      }
+    }
+    
+    return {
+      success: true,
+      message: result.message,
+      schedules,
+      subTasks,
+      lectures,
+      imagePreview: result.imagePreview,
+    };
+  } catch (error) {
+    console.error('Failed to analyze image:', error);
+    throw error;
+  }
+};

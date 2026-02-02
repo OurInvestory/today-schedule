@@ -8,6 +8,7 @@ class SaveScheduleRequest(BaseModel):
     title: str = Field(..., example="캡스톤 디자인 최종 발표")
     type: Optional[str] = Field("task", example="task")
     category: Optional[str] = Field("assignment", example="assignment")
+    color: Optional[str] = Field(None, example="#4F8CFF")
     start_at: Optional[datetime] = Field(None, example="2026-06-20T00:00:00")
     end_at: datetime = Field(..., example="2026-06-20T23:59:59")
     priority_score: int = Field(1, ge=0, le=10, example=8)
@@ -22,6 +23,7 @@ class ScheduleResponse(BaseModel):
     title: str
     type: Optional[str]
     category: Optional[str]
+    color: Optional[str]
     start_at: Optional[datetime]
     end_at: datetime
     priority_score: int
@@ -44,6 +46,7 @@ class UpdateScheduleRequest(BaseModel):
     title: Optional[str] = Field(None, example="캡스톤 디자인 최종 발표")
     type: Optional[str] = Field(None, example="task")
     category: Optional[str] = Field(None, example="assignment")
+    color: Optional[str] = Field(None, example="#4F8CFF")
     start_at: Optional[datetime] = Field(None, example="2026-06-21T00:00:00")
     end_at: Optional[datetime] = Field(None, example="2026-06-21T23:59:59")
     priority_score: Optional[int] = Field(None, ge=0, le=10, example=2)

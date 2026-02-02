@@ -4,15 +4,15 @@ import ChatInput from './ChatInput';
 import { getRandomLoadingMessage } from '../../hooks/useChatbot';
 import './ChatbotWindow.css';
 
-// 추천 질문 목록 - 확장 (스마트 기능 포함)
+// 추천 질문 목록 - 확장 (스마트 기능 + 이미지/URL 분석 포함)
 const suggestedQuestions = [
   { id: 1, text: '오늘 일정 요약해줘', icon: '📋', category: 'briefing' },
   { id: 2, text: '이번 주 어땠어?', icon: '📊', category: 'analysis' },
   { id: 3, text: '겹치는 일정 있어?', icon: '⚠️', category: 'conflict' },
   { id: 4, text: '과제 언제 하면 좋을까?', icon: '💡', category: 'suggest' },
-  { id: 5, text: '빈 시간 채워줘', icon: '⏰', category: 'gap' },
-  { id: 6, text: '우선순위 자동 조정해줘', icon: '🔄', category: 'priority' },
-  { id: 7, text: '할 일 추천해줘', icon: '✅', category: 'recommend' },
+  { id: 5, text: '📷 시간표 사진 분석', icon: '🖼️', category: 'image', isSpecial: true },
+  { id: 6, text: '🔗 학사일정 URL 추가', icon: '🌐', category: 'url', isSpecial: true },
+  { id: 7, text: '우선순위 자동 조정해줘', icon: '🔄', category: 'priority' },
   { id: 8, text: '내일 3시에 회의 추가해줘', icon: '📅', category: 'create' },
 ];
 
@@ -212,12 +212,19 @@ const ChatbotWindow = ({
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSuggestedQuestion = (question) => {
-    // "시간표 사진에 있는 강의 추가해줘" 클릭 시 파일 선택 열기 (isTimetable=true)
-    if (question.includes('시간표 사진')) {
+  const handleSuggestedQuestion = (question, questionObj) => {
+    // 📷 시간표 사진 분석 클릭 시 파일 선택 열기
+    if (questionObj?.category === 'image' || question.includes('시간표 사진')) {
       handleFileUpload(true);
       return;
     }
+    
+    // 🔗 학사일정 URL 추가 클릭 시 URL 입력 안내
+    if (questionObj?.category === 'url' || question.includes('URL')) {
+      onSendMessage('학사일정이나 공모전 URL을 입력해주세요. 예: https://www.kangwon.ac.kr/www/contents.do?key=233');
+      return;
+    }
+    
     onSendMessage(question);
   };
 
@@ -346,8 +353,8 @@ const ChatbotWindow = ({
             <button
               key={q.id}
               type="button"
-              className="chatbot-window__suggestion-card"
-              onClick={() => !isDragging && handleSuggestedQuestion(q.text)}
+              className={`chatbot-window__suggestion-card ${q.isSpecial ? 'chatbot-window__suggestion-card--special' : ''}`}
+              onClick={() => !isDragging && handleSuggestedQuestion(q.text, q)}
             >
               <span className="chatbot-window__suggestion-icon">{q.icon}</span>
               <span className="chatbot-window__suggestion-text">{q.text}</span>

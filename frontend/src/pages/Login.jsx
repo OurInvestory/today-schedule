@@ -35,7 +35,7 @@ const Login = () => {
 
     try {
       const response = await login(formData.email, formData.password);
-      if (response.status === 200) {
+      if (response.success) {
         navigate('/');
       } else {
         setError(response.message || '로그인에 실패했습니다.');

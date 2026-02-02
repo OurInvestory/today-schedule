@@ -8,6 +8,7 @@ import {
   createLectureFromAI,
   saveLectures,
   searchSchedulesByKeyword,
+  parseUrlSchedule,
 } from '../services/aiService';
 import {
   scheduleReminder,
@@ -308,6 +309,96 @@ export const useChatbot = () => {
             role: 'assistant',
             content:
               '이미지 분석에 실패했어요. 😢\n시간표가 잘 보이는 선명한 이미지로 다시 시도해주세요.',
+            timestamp: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // URL 감지 및 학사일정/이벤트 파싱
+      const urlPattern = /https?:\/\/[^\s]+/gi;
+      const urls = text.match(urlPattern);
+      
+      if (urls && urls.length > 0) {
+        const url = urls[0]; // 첫 번째 URL 사용
+        
+        try {
+          const urlResult = await parseUrlSchedule(url);
+          
+          if (urlResult && urlResult.success && urlResult.schedules && urlResult.schedules.length > 0) {
+            // URL에서 일정 추출 성공
+            const schedules = urlResult.schedules;
+            
+            // 일정을 액션 형태로 변환
+            const actions = schedules.map(schedule => ({
+              op: 'CREATE',
+              target: 'SCHEDULE',
+              payload: {
+                title: schedule.title,
+                start_time: schedule.start_time || schedule.startTime,
+                end_time: schedule.end_time || schedule.endTime,
+                memo: schedule.description || schedule.memo || '',
+                category: schedule.category || 'ACADEMIC',
+                type: 'EVENT',
+              }
+            }));
+            
+            let displayMessage = `🔗 **${urlResult.pageTitle || '웹페이지'}**에서 **${schedules.length}개**의 일정을 찾았어요!\n\n`;
+            
+            if (urlResult.summary) {
+              displayMessage += `📋 ${urlResult.summary}\n\n`;
+            }
+            
+            // 일정 목록 표시 (최대 5개)
+            const previewSchedules = schedules.slice(0, 5);
+            previewSchedules.forEach((s, i) => {
+              const date = s.start_time || s.startTime;
+              const dateStr = date ? new Date(date).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) : '날짜 미정';
+              displayMessage += `${i + 1}. **${s.title}** - ${dateStr}\n`;
+            });
+            
+            if (schedules.length > 5) {
+              displayMessage += `\n... 외 ${schedules.length - 5}개 더`;
+            }
+            
+            displayMessage += '\n\n캘린더에 추가할까요?';
+            
+            const newAssistantMessage = {
+              id: Date.now() + 1,
+              role: 'assistant',
+              content: displayMessage,
+              timestamp: new Date().toISOString(),
+              parsedResult: {
+                intent: 'URL_SCHEDULE_PARSE',
+                source_url: url,
+                source_type: urlResult.sourceType,
+              },
+              actions: actions,
+              urlAnalysis: urlResult,
+            };
+            setMessages((prev) => [...prev, newAssistantMessage]);
+            setLoading(false);
+            return;
+          } else {
+            // URL 파싱 실패 또는 일정 없음
+            const noScheduleMessage = {
+              id: Date.now() + 1,
+              role: 'assistant',
+              content: `🔗 URL을 분석했지만 일정 정보를 찾지 못했어요.\n\n${urlResult?.summary || '페이지에서 날짜가 포함된 일정/이벤트를 찾을 수 없습니다.'}\n\n다른 페이지나 학사일정 링크로 다시 시도해주세요! 📅`,
+              timestamp: new Date().toISOString(),
+            };
+            setMessages((prev) => [...prev, noScheduleMessage]);
+            setLoading(false);
+            return;
+          }
+        } catch (urlError) {
+          console.error('URL parsing failed:', urlError);
+          const errorMessage = {
+            id: Date.now() + 1,
+            role: 'assistant',
+            content: '🔗 URL 분석 중 오류가 발생했어요. 😢\n\n접근 가능한 페이지인지 확인해주세요. 일부 사이트는 로그인이 필요하거나 접근이 제한될 수 있어요.',
             timestamp: new Date().toISOString(),
           };
           setMessages((prev) => [...prev, errorMessage]);
