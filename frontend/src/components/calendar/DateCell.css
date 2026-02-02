@@ -277,11 +277,11 @@
   border-radius: 1px;
 }
 
-.todo-item__title {
+.date-cell__events .todo-item__title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px !important;
+  font-size: 12px !important;
 }
 
 /* 더보기 버튼 */

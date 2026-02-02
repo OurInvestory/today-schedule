@@ -1,6 +1,13 @@
 # 5늘의 일정
 
-> Google Gemini AI 기반 대학생 맞춤형 AI 학업 스케줄 도우미
+<p align="center">
+  <img width="1440" height="810" alt="IBM AI 해커톤 5조" src="https://github.com/user-attachments/assets/87b420b0-ba9a-4d2f-a575-bd6f50edd35c" />
+</p>
+
+
+<p align="center">
+  <strong>🏆 IBM AI Hackathon 최우수상 수상</strong>
+</p>
 
 ## 📌 프로젝트 소개
 
